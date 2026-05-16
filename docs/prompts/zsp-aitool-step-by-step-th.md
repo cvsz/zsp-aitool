@@ -11,9 +11,9 @@
 ```text
 คุณคือ Senior Full-Stack Engineer และ Software Architect
 
-ฉันต้องการสร้างโปรเจกต์ชื่อ ShopeeLeaz
+ฉันต้องการสร้างโปรเจกต์ชื่อ zsp-aitool
 
-ShopeeLeaz คือระบบช่วยคนทำ Shopee Affiliate ให้สามารถ:
+zsp-aitool คือระบบช่วยคนทำ Shopee Affiliate ให้สามารถ:
 1. เก็บข้อมูลสินค้า Shopee ได้ง่าย
 2. บันทึกสินค้าไว้ในฐานข้อมูล
 3. ใช้ AI สร้างโพสต์โปรโมตสำหรับ Facebook, Instagram, Threads, X
@@ -58,7 +58,7 @@ Tech Stack:
 ## คำสั่งที่ 1: วาง Architecture และ Folder Structure
 
 ```text
-เริ่มจากออกแบบ Architecture ทั้งระบบของ ShopeeLeaz
+เริ่มจากออกแบบ Architecture ทั้งระบบของ zsp-aitool
 
 ให้สร้าง:
 1. ภาพรวมระบบ
@@ -82,7 +82,7 @@ Tech Stack:
 ## คำสั่งที่ 2: สร้าง Project Setup
 
 ```text
-สร้างไฟล์ setup เริ่มต้นของโปรเจกต์ ShopeeLeaz
+สร้างไฟล์ setup เริ่มต้นของโปรเจกต์ zsp-aitool
 
 ให้สร้างไฟล์ต่อไปนี้แบบสมบูรณ์:
 
@@ -115,7 +115,7 @@ Requirements:
 ## คำสั่งที่ 3: สร้าง Prisma Schema และ Database Seed
 
 ```text
-สร้าง Prisma schema และ seed data สำหรับ ShopeeLeaz
+สร้าง Prisma schema และ seed data สำหรับ zsp-aitool
 
 Models ที่ต้องมี:
 - User
@@ -153,7 +153,7 @@ Requirements:
 ## คำสั่งที่ 4: สร้าง Utility และ Shared Types
 
 ```text
-สร้าง shared utilities และ TypeScript types สำหรับ ShopeeLeaz
+สร้าง shared utilities และ TypeScript types สำหรับ zsp-aitool
 
 ให้สร้างไฟล์:
 - src/types/product.ts
@@ -184,7 +184,7 @@ Requirements:
 ## คำสั่งที่ 5: สร้างระบบ Auth
 
 ```text
-สร้างระบบ Authentication สำหรับ ShopeeLeaz
+สร้างระบบ Authentication สำหรับ zsp-aitool
 
 Features:
 - Register
@@ -223,7 +223,7 @@ Requirements:
 ## คำสั่งที่ 6: สร้าง Product Module
 
 ```text
-สร้าง Product Module สำหรับ ShopeeLeaz
+สร้าง Product Module สำหรับ zsp-aitool
 
 Features:
 - เพิ่มสินค้าด้วย manual form
@@ -269,7 +269,7 @@ Compliance:
 ## คำสั่งที่ 7: สร้าง AI Provider และ Prompt Builder
 
 ```text
-สร้าง AI Provider abstraction และ Prompt Builder สำหรับ ShopeeLeaz
+สร้าง AI Provider abstraction และ Prompt Builder สำหรับ zsp-aitool
 
 Features:
 - รองรับ OpenAI-compatible API
@@ -360,7 +360,7 @@ Requirements:
 ## คำสั่งที่ 9: สร้าง Prompt Template System
 
 ```text
-สร้างระบบ Prompt Template สำหรับ ShopeeLeaz
+สร้างระบบ Prompt Template สำหรับ zsp-aitool
 
 Features:
 - สร้าง template
@@ -414,7 +414,7 @@ Default templates ภาษาไทย:
 ## คำสั่งที่ 10: สร้าง OCR Module
 
 ```text
-สร้าง OCR Module สำหรับ ShopeeLeaz
+สร้าง OCR Module สำหรับ zsp-aitool
 
 Goal:
 ให้ผู้ใช้อัปโหลดภาพ screenshot สินค้า แล้วระบบ OCR อ่านข้อความจากภาพ จากนั้นให้ผู้ใช้ตรวจและแก้ไขก่อนบันทึกสินค้า
@@ -452,7 +452,7 @@ Rules:
 ## คำสั่งที่ 11: สร้าง Similar Product Module
 
 ```text
-สร้าง Similar Product Recommendation Module สำหรับ ShopeeLeaz
+สร้าง Similar Product Recommendation Module สำหรับ zsp-aitool
 
 Goal:
 แนะนำสินค้าที่คล้ายกันจากสินค้าที่ผู้ใช้บันทึกไว้เอง
@@ -488,7 +488,7 @@ Rules:
 ## คำสั่งที่ 12: สร้าง Dashboard Layout และ UI หลัก
 
 ```text
-สร้าง Dashboard UI หลักของ ShopeeLeaz
+สร้าง Dashboard UI หลักของ zsp-aitool
 
 Pages:
 - Landing page
@@ -544,7 +544,7 @@ Requirements:
 ## คำสั่งที่ 13: สร้าง Export Module
 
 ```text
-สร้าง Export Module สำหรับ ShopeeLeaz
+สร้าง Export Module สำหรับ zsp-aitool
 
 Features:
 - Export products เป็น CSV
@@ -581,10 +581,10 @@ Requirements:
 ## คำสั่งที่ 14: สร้าง Chrome Extension
 
 ```text
-สร้าง Chrome Extension Manifest V3 สำหรับ ShopeeLeaz
+สร้าง Chrome Extension Manifest V3 สำหรับ zsp-aitool
 
 Purpose:
-ให้ผู้ใช้เก็บข้อมูลสินค้าจากหน้า Shopee ที่กำลังเปิดอยู่ แล้วส่งเข้า ShopeeLeaz web app
+ให้ผู้ใช้เก็บข้อมูลสินค้าจากหน้า Shopee ที่กำลังเปิดอยู่ แล้วส่งเข้า zsp-aitool web app
 
 Compliance:
 - ดึงเฉพาะข้อมูลที่มองเห็นได้ในหน้าเว็บ
@@ -607,7 +607,7 @@ Features:
    - description ถ้าเห็น
    - current page URL
 5. Manual edit in popup
-6. Send data to ShopeeLeaz API
+6. Send data to zsp-aitool API
 7. Settings page สำหรับ API endpoint และ token
 8. Success/error message
 9. Quick generate Facebook post
@@ -638,7 +638,7 @@ Features:
 ## คำสั่งที่ 15: สร้าง Settings Page
 
 ```text
-สร้าง Settings Module สำหรับ ShopeeLeaz
+สร้าง Settings Module สำหรับ zsp-aitool
 
 Features:
 - ตั้งค่า AI Provider
@@ -669,7 +669,7 @@ Security:
 ## คำสั่งที่ 16: สร้าง Tests
 
 ```text
-สร้าง test suite สำหรับ ShopeeLeaz
+สร้าง test suite สำหรับ zsp-aitool
 
 ให้สร้าง tests สำหรับ:
 - ProductService
@@ -713,7 +713,7 @@ Requirements:
 ## คำสั่งที่ 17: ตรวจสอบความสมบูรณ์ของ Source Code
 
 ```text
-ตรวจสอบ source code ทั้งหมดของ ShopeeLeaz
+ตรวจสอบ source code ทั้งหมดของ zsp-aitool
 
 ให้ตรวจ:
 1. ไฟล์ไหนยังขาด
@@ -739,7 +739,7 @@ Requirements:
 ## คำสั่งที่ 18: สร้าง README ฉบับสมบูรณ์
 
 ```text
-สร้าง README.md ฉบับสมบูรณ์สำหรับ ShopeeLeaz
+สร้าง README.md ฉบับสมบูรณ์สำหรับ zsp-aitool
 
 ต้องมี:
 - Project overview
@@ -772,7 +772,7 @@ Requirements:
 ## คำสั่งที่ 19: สร้าง Production Checklist
 
 ```text
-สร้าง Production Readiness Checklist สำหรับ ShopeeLeaz
+สร้าง Production Readiness Checklist สำหรับ zsp-aitool
 
 ครอบคลุม:
 - Security
@@ -865,7 +865,7 @@ continue
 # Prompt สั่งให้สรุปสถานะโปรเจกต์
 
 ```text
-สรุปสถานะโปรเจกต์ ShopeeLeaz ตอนนี้
+สรุปสถานะโปรเจกต์ zsp-aitool ตอนนี้
 
 ให้ตอบเป็นตาราง:
 - Module
