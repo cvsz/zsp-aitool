@@ -2,18 +2,38 @@
   "name": "zsp-aitool",
   "version": "0.1.0",
   "private": true,
-  "description": "Initial implementation foundation for ZSP AI Tool.",
-  "license": "MIT",
+  "description": "ZSP AI Tool starter app",
   "scripts": {
-    "dev": "node --watch src/index.ts",
-    "build": "tsc -p tsconfig.json",
-    "check": "npm run typecheck && npm run test",
-    "lint": "tsc --noEmit -p tsconfig.json",
-    "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "vitest run"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:generate": "prisma generate",
+    "prisma:seed": "prisma db seed"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.15.0",
+    "next": "14.2.5",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
-    "typescript": "^5.8.3",
-    "vitest": "^2.1.8"
+    "@types/node": "^20.14.12",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "autoprefixer": "^10.4.19",
+    "eslint": "^8.57.0",
+    "eslint-config-next": "14.2.5",
+    "postcss": "^8.4.39",
+    "prisma": "^5.15.0",
+    "tailwindcss": "^3.4.7",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.4"
+  },
+  "prisma": {
+    "seed": "ts-node --transpile-only prisma/seed.ts"
   }
 }
