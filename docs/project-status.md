@@ -18,3 +18,8 @@ The prompt pack (`docs/prompts/`) currently targets a full Next.js + Prisma + ex
 ## Repository / Branch Protection
 
 Repository settings and branch protection cannot be changed from local source edits. These should be configured in GitHub repository settings (e.g., required PR reviews, required status checks from CI).
+
+
+## Latest Update
+
+- Added `docs/architecture-system-v1.md` with a step-by-step architecture baseline aligned to the Thai prompt sequence (system overview, modules, DB/API/UI/extension flows, compliance, and planned folder structure).
