@@ -5,10 +5,10 @@
 ## Prompt หลัก: Full Source Code ทั้งระบบ
 
 ```text
-You are a senior full-stack engineer. Generate the complete production-ready source code for a SaaS web app and browser extension named “ShopeeLeaz”.
+You are a senior full-stack engineer. Generate the complete production-ready source code for a SaaS web app and browser extension named “zsp-aitool”.
 
 Project concept:
-ShopeeLeaz helps Shopee Affiliate users collect product information in one click and use AI to generate promotional content for Facebook, Instagram, Threads, X, short comments, captions, blog posts, and SEO articles.
+zsp-aitool helps Shopee Affiliate users collect product information in one click and use AI to generate promotional content for Facebook, Instagram, Threads, X, short comments, captions, blog posts, and SEO articles.
 
 Important compliance rules:
 - Do not bypass CAPTCHA, login walls, anti-bot systems, rate limits, or private user data.
@@ -76,7 +76,7 @@ Output format:
 ## Prompt เสริม 1: Database + Prisma Schema
 
 ```text
-Create the complete PostgreSQL + Prisma database schema for ShopeeLeaz.
+Create the complete PostgreSQL + Prisma database schema for zsp-aitool.
 
 The system needs these entities:
 - User
@@ -113,7 +113,7 @@ Requirements:
 ## Prompt เสริม 2: Backend API
 
 ```text
-Generate the complete backend API for ShopeeLeaz using Next.js API routes with TypeScript.
+Generate the complete backend API for zsp-aitool using Next.js API routes with TypeScript.
 
 Required API modules:
 
@@ -186,7 +186,7 @@ Requirements:
 ## Prompt เสริม 3: AI Content Generator
 
 ```text
-Create the full AI content generation module for ShopeeLeaz.
+Create the full AI content generation module for zsp-aitool.
 
 Goal:
 Generate affiliate promotional content from saved product data.
@@ -267,7 +267,7 @@ Generate:
 ## Prompt เสริม 4: Frontend Dashboard
 
 ```text
-Generate the complete frontend for ShopeeLeaz using Next.js, TypeScript, and Tailwind CSS.
+Generate the complete frontend for zsp-aitool using Next.js, TypeScript, and Tailwind CSS.
 
 Pages:
 1. Landing page
@@ -330,10 +330,10 @@ Generate all source files, reusable hooks, API client utilities, and example moc
 ## Prompt เสริม 5: Chrome Extension Manifest V3
 
 ```text
-Generate a complete Chrome Extension Manifest V3 source code for ShopeeLeaz.
+Generate a complete Chrome Extension Manifest V3 source code for zsp-aitool.
 
 Purpose:
-The extension lets a user collect product information from a Shopee product page they are currently viewing and send it to the ShopeeLeaz web app.
+The extension lets a user collect product information from a Shopee product page they are currently viewing and send it to the zsp-aitool web app.
 
 Compliance:
 - Only extract visible page information from the page the user actively opens.
@@ -355,7 +355,7 @@ Extension features:
    - description if visible
    - current page URL
 5. Allow manual editing in popup
-6. Send data to ShopeeLeaz API
+6. Send data to zsp-aitool API
 7. Store API endpoint and user token in extension settings
 8. Show success/error messages
 9. Quick button: generate Facebook post
@@ -383,7 +383,7 @@ Generate:
 ## Prompt เสริม 6: Product Import Logic
 
 ```text
-Create the product import and extraction module for ShopeeLeaz.
+Create the product import and extraction module for zsp-aitool.
 
 Supported import methods:
 1. Manual form input
@@ -431,7 +431,7 @@ Generate:
 ## Prompt เสริม 7: OCR Feature
 
 ```text
-Generate the OCR feature for ShopeeLeaz.
+Generate the OCR feature for zsp-aitool.
 
 Goal:
 Allow users to upload a product screenshot and extract useful product information from visible text.
@@ -470,7 +470,7 @@ Generate:
 ## Prompt เสริม 8: Similar Product Recommendation
 
 ```text
-Generate the similar product recommendation module for ShopeeLeaz.
+Generate the similar product recommendation module for zsp-aitool.
 
 Goal:
 Recommend similar saved products from the user’s own product library.
@@ -504,7 +504,7 @@ Generate:
 ## Prompt เสริม 9: Prompt Template System
 
 ```text
-Generate a complete prompt template system for ShopeeLeaz.
+Generate a complete prompt template system for zsp-aitool.
 
 Users should be able to create and edit AI prompt presets.
 
@@ -561,7 +561,7 @@ Generate:
 ## Prompt เสริม 10: README + Deployment
 
 ```text
-Create a complete README and deployment guide for ShopeeLeaz.
+Create a complete README and deployment guide for zsp-aitool.
 
 Include:
 - Project overview
@@ -597,9 +597,9 @@ Also generate:
 ## Prompt แบบ One-shot สั้นกว่า สำหรับใช้ทันที
 
 ```text
-Build a complete full-stack source code project named ShopeeLeaz.
+Build a complete full-stack source code project named zsp-aitool.
 
-ShopeeLeaz is a Shopee Affiliate productivity tool that lets users save product data in one click and generate AI promotional content for Facebook, Instagram, Threads, X, blog posts, SEO articles, captions, and comments.
+zsp-aitool is a Shopee Affiliate productivity tool that lets users save product data in one click and generate AI promotional content for Facebook, Instagram, Threads, X, blog posts, SEO articles, captions, and comments.
 
 Use:
 - Next.js
@@ -660,7 +660,7 @@ Use clean, secure, maintainable code.
 ## Prompt สำหรับให้ AI แบ่งงานเป็นไฟล์ทีละชุด
 
 ```text
-You will generate the ShopeeLeaz source code in multiple parts.
+You will generate the zsp-aitool source code in multiple parts.
 
 Rules:
 - First output only the folder structure and implementation plan.
@@ -688,7 +688,7 @@ Modules to generate in order:
 13. Docker and README
 
 Project:
-ShopeeLeaz is a Shopee Affiliate content automation tool with one-click product collection and AI-generated promotional content for Facebook, Instagram, Threads, X, blog, SEO articles, captions, and comments.
+zsp-aitool is a Shopee Affiliate content automation tool with one-click product collection and AI-generated promotional content for Facebook, Instagram, Threads, X, blog, SEO articles, captions, and comments.
 
 Use Next.js, TypeScript, Tailwind CSS, PostgreSQL, Prisma, Chrome Extension Manifest V3, and OpenAI-compatible AI provider abstraction.
 
