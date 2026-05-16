@@ -1,0 +1,6 @@
+interface:
+  display_name: "Zsp Aitool"
+  short_description: "Repo-specific patterns and workflows for zsp-aitool"
+  default_prompt: "Use the zsp-aitool repo skill to follow existing architecture, testing, and workflow conventions."
+policy:
+  allow_implicit_invocation: true
