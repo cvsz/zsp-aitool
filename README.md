@@ -4,7 +4,7 @@ ZSP AI Tool is an AI-native workspace for structured prompt packs, persistent pr
 
 ## Overview
 
-`ZSP AI Tool` is a ZeaZDev ai-tooling repository designed for production-oriented development, clear documentation, and AI-native project workflows.
+`ZSP AI Tool` is a ZeaZDev ai-tooling repository for building, storing, and operating AI-native project prompts, persistent context files, automation scaffolds, and full-stack generation workflows.
 
 ## Repository Contents
 
@@ -27,8 +27,6 @@ git clone git@github.com:cvsz/zsp-aitool.git
 cd zsp-aitool
 ```
 
-Add project-specific setup commands here.
-
 ## Project Context
 
 This repository uses `.faf` for persistent AI project context. AI agents and automation tools should read:
@@ -50,7 +48,7 @@ before making changes.
 
 ## Status
 
-Initial professional repository template.
+Professional repository template regenerated for `zsp-aitool`.
 
 ## License
 

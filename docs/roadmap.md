@@ -1,25 +1,25 @@
 # Roadmap
 
-## Phase 1 — Foundation
+## Phase 1 — Repository Foundation
 
-- [ ] Define project scope
-- [ ] Confirm architecture
-- [ ] Add initial implementation
-- [ ] Add tests or validation workflow
-- [ ] Confirm prompt pack workflow
+- [x] Rename or create `zsp-aitool`
+- [x] Add professional template files
+- [x] Add persistent project context
+- [x] Add prompt pack
+- [x] Add CI scaffold
 
-## Phase 2 — Productization
+## Phase 2 — Tooling Productization
 
-- [ ] Improve documentation
-- [ ] Add CI checks
+- [ ] Add prompt-pack validator
+- [ ] Add .FAF schema validation
+- [ ] Add prompt execution workflows
+- [ ] Add project generation examples
 - [ ] Add release process
-- [ ] Add operational runbook
-- [ ] Add project-specific prompt refinements
 
 ## Phase 3 — Scale
 
-- [ ] Add observability
 - [ ] Add integration tests
 - [ ] Add deployment automation
-- [ ] Review project posture
+- [ ] Add documentation site
+- [ ] Add multi-project prompt registry
 

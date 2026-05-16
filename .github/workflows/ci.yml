@@ -29,9 +29,7 @@ jobs:
           test -f docs/roadmap.md
           test -f docs/prompts/README.md
 
-      - name: Check prompt pack
+      - name: List prompt pack
         run: |
-          if [ -d docs/prompts ]; then
-            find docs/prompts -maxdepth 1 -type f -name '*.md' -print
-          fi
+          find docs/prompts -maxdepth 1 -type f -name '*.md' -print
 

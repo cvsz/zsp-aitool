@@ -7,7 +7,7 @@ project:
   description: "ZSP AI Tool is an AI-native workspace for structured prompt packs, persistent project context, automation scaffolds, and full-stack app generation workflows."
 
 architecture:
-  style: "modular"
+  style: "ai-tooling-workspace"
   documentation:
     - README.md
     - AGENTS.md
@@ -37,7 +37,7 @@ constraints:
   - "Keep public repository content professional and accurate."
 
 goals:
-  - "Provide a clean professional starting point for ZSP AI Tool."
+  - "Provide a professional AI tooling repository for ZSP workflows."
   - "Support AI-assisted development through persistent project context."
   - "Store full project prompt content in the repository."
   - "Maintain clear architecture, security, and contribution standards."

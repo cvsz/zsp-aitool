@@ -27,7 +27,7 @@ Before making changes, read:
 The project prompt pack is stored under `docs/prompts/`.
 
 Use the step-by-step prompt sequence for controlled module generation.
-Use the full-source prompt pack for one-shot planning or for validating completeness.
+Use the full-source prompt pack for one-shot planning or completeness validation.
 
 ## Completion Checklist
 

@@ -1,6 +1,6 @@
 # Prompt Pack
 
-This directory stores full project-generation prompts for `ZSP AI Tool`.
+This directory stores project-generation prompts for `ZSP AI Tool`.
 
 ## Files
 

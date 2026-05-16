@@ -2,7 +2,7 @@
 
 ## Overview
 
-`ZSP AI Tool` is a ZeaZDev ai-tooling repository.
+`ZSP AI Tool` is an AI-native tooling repository for persistent context, project prompt packs, and automation scaffolds.
 
 ## Context
 
@@ -32,9 +32,10 @@ zsp-aitool/
 
 | Component | Responsibility |
 |---|---|
-| Core | Main project logic |
-| Docs | Architecture, roadmap, prompt pack, and operational notes |
-| Prompt Pack | AI coding instructions and project-generation workflows |
+| .faf | Persistent AI project context |
+| AGENTS.md | Coding-agent operating instructions |
+| docs/prompts | Project prompt pack and generation workflows |
+| docs | Architecture, roadmap, and operational notes |
 | CI | Validation and automation |
 
 ## Prompt-Driven Development Flow

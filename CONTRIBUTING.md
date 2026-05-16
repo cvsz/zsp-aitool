@@ -11,8 +11,8 @@
 ## Commit Examples
 
 ```text
-feat(api): add payment session endpoint
-fix(auth): handle expired session state
+feat(prompts): add product generation workflow
+fix(docs): align prompt pack with architecture
 docs(readme): update quick start
 chore(repo): update project metadata
 ```
@@ -22,7 +22,7 @@ chore(repo): update project metadata
 - [ ] Purpose is clear
 - [ ] Changes are scoped
 - [ ] Documentation updated if needed
-- [ ] Prompt pack updated if project-generation workflow changed
+- [ ] Prompt pack updated if needed
 - [ ] CI passes
 - [ ] No private local files included
 
