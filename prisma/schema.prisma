@@ -7,10 +7,61 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Platform {
+  FACEBOOK
+  INSTAGRAM
+  THREADS
+  X
+}
+
+enum Tone {
+  FRIENDLY
+  PROFESSIONAL
+  EXCITED
+  CASUAL
+}
+
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                 String              @id @default(cuid())
+  email              String              @unique
+  name               String?
+  products           Product[]
+  contentGenerations ContentGeneration[]
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model ContentGeneration {
+  id           String   @id @default(cuid())
+  userId       String?
+  productId    String
+  platform     Platform
+  tone         Tone
+  language     String
+  customPrompt String?
+  versions     Int
+  outputJson   Json
+  tokenUsage   Int?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user    User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  product Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([platform])
+  @@index([createdAt])
 }
