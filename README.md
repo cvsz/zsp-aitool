@@ -1,47 +1,78 @@
-# ZSP AI Tool
+# ZSP AI Tool (Starter)
 
-ZSP AI Tool is an AI-native workspace for structured prompt packs, persistent project context, automation scaffolds, and full-stack app generation workflows.
+Starter template for `zsp-aitool` using **Next.js + TypeScript + Tailwind CSS + Prisma + PostgreSQL + Docker Compose**.
 
-## Quick Start
+## Tech Stack
+
+- Next.js (App Router)
+- TypeScript (strict mode)
+- Tailwind CSS
+- Prisma ORM
+- PostgreSQL
+- Docker / Docker Compose
+
+## Getting Started
+
+1. Copy environment variables:
 
 ```bash
-git clone git@github.com:cvsz/zsp-aitool.git
-cd zsp-aitool
-npm install
-npm run typecheck
-npm run test
-npm run build
+cp .env.example .env
 ```
 
-## Project-Specific Setup
+2. Install dependencies:
 
 ```bash
-# 1) Install dependencies
 npm install
-
-# 2) Validate architecture-aligned prompt docs before coding
-npm run typecheck
-
-# 3) Run module tests for import logic and shared utilities
-npm run test
-
-# 4) Build distributable TypeScript output
-npm run build
 ```
 
-## Repository Contents
+3. Start PostgreSQL (Docker):
 
-- Persistent project context with `.faf`
-- Agent instructions in `AGENTS.md`
-- Full prompt pack under `docs/prompts/`
-- Architecture and roadmap documentation
-- TypeScript source modules under `src/`
-- Vitest test suite under `tests/`
+```bash
+docker compose up -d db
+```
 
-## Documentation
+4. Run Prisma migration:
 
-- [Architecture](docs/architecture.md)
-- [Roadmap](docs/roadmap.md)
-- [Prompt Pack](docs/prompts/README.md)
-- [Security Policy](SECURITY.md)
-- [Contributing](CONTRIBUTING.md)
+```bash
+npm run prisma:migrate
+```
+
+5. Run development server:
+
+```bash
+npm run dev
+```
+
+Open http://localhost:3000
+
+## Scripts
+
+- `npm run dev` - start dev server
+- `npm run build` - production build
+- `npm run start` - start production server
+- `npm run lint` - run lint
+- `npm run prisma:migrate` - run prisma migrations
+- `npm run prisma:generate` - generate prisma client
+- `npm run prisma:seed` - seed database
+
+## Docker
+
+Run all services:
+
+```bash
+docker compose up --build
+```
+
+## Initial Structure
+
+```text
+prisma/
+  schema.prisma
+  seed.ts
+src/
+  app/
+  components/
+  lib/
+  services/
+  types/
+```
