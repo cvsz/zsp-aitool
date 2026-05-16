@@ -2,9 +2,32 @@
 
 ZSP AI Tool is an AI-native workspace for structured prompt packs, persistent project context, automation scaffolds, and full-stack app generation workflows.
 
-## Overview
+## Quick Start
 
-`ZSP AI Tool` is a ZeaZDev ai-tooling repository for building, storing, and operating AI-native project prompts, persistent context files, automation scaffolds, and full-stack generation workflows.
+```bash
+git clone git@github.com:cvsz/zsp-aitool.git
+cd zsp-aitool
+npm install
+npm run typecheck
+npm run test
+npm run build
+```
+
+## Project-Specific Setup
+
+```bash
+# 1) Install dependencies
+npm install
+
+# 2) Validate architecture-aligned prompt docs before coding
+npm run typecheck
+
+# 3) Run module tests for import logic and shared utilities
+npm run test
+
+# 4) Build distributable TypeScript output
+npm run build
+```
 
 ## Repository Contents
 
@@ -12,31 +35,8 @@ ZSP AI Tool is an AI-native workspace for structured prompt packs, persistent pr
 - Agent instructions in `AGENTS.md`
 - Full prompt pack under `docs/prompts/`
 - Architecture and roadmap documentation
-- GitHub Actions CI scaffold
-- Pull request and issue templates
-- Security and contribution guidelines
-
-## Tech Stack
-
-Next.js,TypeScript,Tailwind CSS,PostgreSQL,Prisma,Chrome Extension MV3,Docker Compose,GitHub Actions
-
-## Quick Start
-
-```bash
-git clone git@github.com:cvsz/zsp-aitool.git
-cd zsp-aitool
-```
-
-## Project Context
-
-This repository uses `.faf` for persistent AI project context. AI agents and automation tools should read:
-
-1. `.faf`
-2. `AGENTS.md`
-3. `docs/prompts/README.md`
-4. the relevant prompt file under `docs/prompts/`
-
-before making changes.
+- TypeScript source modules under `src/`
+- Vitest test suite under `tests/`
 
 ## Documentation
 
@@ -45,12 +45,3 @@ before making changes.
 - [Prompt Pack](docs/prompts/README.md)
 - [Security Policy](SECURITY.md)
 - [Contributing](CONTRIBUTING.md)
-
-## Status
-
-Phase 1 foundation initialized for `zsp-aitool` (prompt-pack scaffold -> implementation baseline).
-
-## License
-
-See [LICENSE](LICENSE).
-
