@@ -6,8 +6,8 @@ This directory stores project-generation prompts for `ZSP AI Tool`.
 
 | File | Purpose |
 |---|---|
-| `shopeeleaz-step-by-step-th.md` | Thai step-by-step prompt sequence for generating ShopeeLeaz module by module |
-| `shopeeleaz-full-source-en.md` | English full-source prompt pack and focused module prompts |
+| `zsp-aitool-step-by-step-th.md` | Thai step-by-step prompt sequence for generating zsp-aitool module by module |
+| `zsp-aitool-full-source-en.md` | English full-source prompt pack and focused module prompts |
 
 ## Recommended Usage
 

@@ -48,7 +48,7 @@ before making changes.
 
 ## Status
 
-Professional repository template regenerated for `zsp-aitool`.
+Phase 1 foundation initialized for `zsp-aitool` (prompt-pack scaffold -> implementation baseline).
 
 ## License
 

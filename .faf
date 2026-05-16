@@ -15,8 +15,8 @@ architecture:
     - docs/roadmap.md
     - docs/prompts/README.md
   prompt_sources:
-    - docs/prompts/shopeeleaz-step-by-step-th.md
-    - docs/prompts/shopeeleaz-full-source-en.md
+    - docs/prompts/zsp-aitool-step-by-step-th.md
+    - docs/prompts/zsp-aitool-full-source-en.md
   automation:
     - .github/workflows/ci.yml
 
