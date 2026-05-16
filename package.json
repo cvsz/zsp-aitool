@@ -5,12 +5,15 @@
   "description": "Initial implementation foundation for ZSP AI Tool.",
   "license": "MIT",
   "scripts": {
+    "dev": "node --watch src/index.ts",
     "build": "tsc -p tsconfig.json",
-    "check": "npm run typecheck",
+    "check": "npm run typecheck && npm run test",
     "lint": "tsc --noEmit -p tsconfig.json",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
   },
   "devDependencies": {
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vitest": "^2.1.8"
   }
 }

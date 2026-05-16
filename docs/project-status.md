@@ -1,21 +1,20 @@
 # Project Status
 
-## Phase 1 — Foundation (In Progress)
+## Current Baseline
 
-This repository has been transitioned from a prompt-pack scaffold into the first implementation foundation for `zsp-aitool`.
+- Added project-specific setup commands to README.
+- Implemented shared source modules for:
+  - product/content/api types
+  - API response helpers
+  - error abstraction
+  - slug and JSON utility helpers
+  - in-memory product import service with duplicate URL merge behavior
+- Added Vitest-based tests for product import flows.
 
-### Completed in Phase 1
+## Prompt Pack vs Architecture Review
 
-- Standardized repository naming to `zsp-aitool` across core project context documentation.
-- Confirmed prompt pack assets are tracked as:
-  - `docs/prompts/zsp-aitool-step-by-step-th.md`
-  - `docs/prompts/zsp-aitool-full-source-en.md`
-- Added Node/TypeScript project metadata with `package.json`.
-- Added baseline `tsconfig.json` for strict TypeScript checks.
-- Added basic scripts for build and type checking.
+The prompt pack (`docs/prompts/`) currently targets a full Next.js + Prisma + extension monorepo, while the live architecture is a lightweight TypeScript workspace. This mismatch is now explicitly tracked and should be reconciled in a future architecture expansion phase.
 
-### Notes
+## Repository / Branch Protection
 
-- Prompt pack content remains intact.
-- Prompt references were updated only where naming consistency required it.
-- Additional implementation phases will add runtime source modules under `src/` and associated tooling.
+Repository settings and branch protection cannot be changed from local source edits. These should be configured in GitHub repository settings (e.g., required PR reviews, required status checks from CI).
