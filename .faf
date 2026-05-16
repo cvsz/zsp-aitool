@@ -1,0 +1,44 @@
+faf_version: "0.1"
+project:
+  name: "ZSP AI Tool"
+  owner: "ZeaZDev"
+  repository: "cvsz/zsp-aitool"
+  type: "ai-tooling"
+  description: "ZSP AI Tool is an AI-native workspace for structured prompt packs, persistent project context, automation scaffolds, and full-stack app generation workflows."
+
+architecture:
+  style: "modular"
+  documentation:
+    - README.md
+    - AGENTS.md
+    - docs/architecture.md
+    - docs/roadmap.md
+    - docs/prompts/README.md
+  prompt_sources:
+    - docs/prompts/shopeeleaz-step-by-step-th.md
+    - docs/prompts/shopeeleaz-full-source-en.md
+  automation:
+    - .github/workflows/ci.yml
+
+stack:
+  summary: "Next.js,TypeScript,Tailwind CSS,PostgreSQL,Prisma,Chrome Extension MV3,Docker Compose,GitHub Actions"
+
+conventions:
+  commit_style: "conventional commits"
+  branch_strategy: "main + feature branches"
+  documentation: "README + AGENTS + docs + .faf"
+  prompt_policy: "Project prompts live in docs/prompts and must stay aligned with architecture."
+  pull_requests: "small, reviewed, and linked to issues when possible"
+
+constraints:
+  - "Keep project documentation aligned with implementation."
+  - "Keep generated and temporary files out of version control."
+  - "Review production-impacting changes before merge."
+  - "Keep public repository content professional and accurate."
+
+goals:
+  - "Provide a clean professional starting point for ZSP AI Tool."
+  - "Support AI-assisted development through persistent project context."
+  - "Store full project prompt content in the repository."
+  - "Maintain clear architecture, security, and contribution standards."
+

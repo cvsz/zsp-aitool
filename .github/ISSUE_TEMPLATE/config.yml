@@ -1,0 +1,6 @@
+blank_issues_enabled: true
+contact_links:
+  - name: ZeaZDev project context
+    url: https://github.com/cvsz/zsp-aitool
+    about: Review README.md, .faf, AGENTS.md, and docs/prompts before filing architecture-related issues.
+
