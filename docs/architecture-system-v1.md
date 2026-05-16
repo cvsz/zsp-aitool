@@ -1,0 +1,203 @@
+# ZSP AI Tool System Architecture v1
+
+## 1) ภาพรวมระบบ (System Overview)
+
+`zsp-aitool` เป็นระบบสำหรับผู้ทำ Shopee Affiliate ที่เน้น **human-in-the-loop** และ **compliance-first**:
+- เก็บข้อมูลสินค้าเฉพาะข้อมูลที่ผู้ใช้เห็นและยืนยันเอง
+- จัดการ Product Library ในฐานข้อมูล
+- สร้างคอนเทนต์โปรโมตหลายแพลตฟอร์มด้วย AI โดยมี Affiliate Disclosure เสมอ
+- รองรับ OCR สำหรับดึงข้อมูลจากภาพ และให้ผู้ใช้ตรวจแก้ก่อนบันทึก
+- รองรับ Chrome Extension (MV3) สำหรับช่วยเก็บข้อมูลจากหน้าเว็บที่ผู้ใช้เปิดอยู่
+
+## 2) โมดูลหลัก (Core Modules)
+
+1. **Auth & Session Module**
+   - ลงทะเบียน / เข้าสู่ระบบ / ออกจากระบบ / current user
+2. **Product Module**
+   - CRUD สินค้า, import จาก URL/JSON/Extension payload, duplicate check
+3. **AI Content Module**
+   - สร้างโพสต์ Facebook, Instagram, Threads, X
+   - สร้าง short article, SEO article, caption, comment
+4. **Prompt Template Module**
+   - จัดการ template, duplicate, restore defaults, preview variables
+5. **OCR Module**
+   - อัปโหลดภาพ, extract text, review ก่อน save
+6. **Similar Product Module**
+   - แนะนำสินค้าที่คล้ายกันจาก library ของ user เดียวกัน
+7. **Export Module**
+   - ส่งออก CSV/Markdown/TXT
+8. **Extension Integration Module**
+   - รับ payload จาก Chrome Extension อย่างปลอดภัยและตรวจสอบ schema
+9. **Compliance & Safety Module**
+   - กฎการใช้งาน AI, affiliate disclosure, no fake reviews, no overclaim
+
+## 3) Database Design Overview
+
+ใช้ PostgreSQL + Prisma โดยมีตารางหลัก:
+- `User`
+- `Product`, `ProductImage`, `AffiliateLink`
+- `ContentGeneration`, `PlatformPost`
+- `ContentTemplate`, `PromptPreset`
+- `OCRJob`
+- `SimilarProduct`
+- `UserSetting`
+- `APIUsageLog`
+
+แนวทางสำคัญ:
+- ทุก record ที่เป็น business object มี `createdAt`, `updatedAt`, `deletedAt`
+- แยก raw metadata ที่ไม่แน่นอนเป็น JSON field
+- ทำ index สำหรับ `userId`, `originalUrl`, `platform`, `status`, `createdAt`
+
+## 4) API Overview
+
+ใช้ Next.js API Routes (App Router Route Handlers):
+- `/api/auth/*`
+- `/api/products/*`
+- `/api/ai/*`
+- `/api/content-history/*`
+- `/api/templates/*`
+- `/api/ocr/*`
+- `/api/settings`
+- `/api/export/*`
+
+หลักการ:
+- Zod validation ทุก endpoint
+- รูปแบบ response กลางเดียวกัน
+- auth required สำหรับ endpoint ที่เกี่ยวกับข้อมูลผู้ใช้
+
+## 5) Frontend Pages Overview
+
+- `/` Landing
+- `/login`, `/register`
+- `/dashboard`
+- `/dashboard/products`
+- `/dashboard/products/new`
+- `/dashboard/products/[id]`
+- `/dashboard/products/[id]/similar`
+- `/dashboard/generator`
+- `/dashboard/content-history`
+- `/dashboard/templates`
+- `/dashboard/ocr`
+- `/dashboard/settings`
+
+## 6) Chrome Extension Overview
+
+Manifest V3:
+- popup สำหรับกด collect และแก้ไขข้อมูล
+- content script สำหรับอ่าน DOM ที่มองเห็นได้
+- options page สำหรับตั้ง API endpoint/token
+- background สำหรับ message handling
+
+ข้อกำกับ:
+- ไม่เรียก private Shopee API
+- ไม่ bypass CAPTCHA/login
+- ส่งเฉพาะข้อมูลที่ผู้ใช้เห็นและกดยืนยัน
+
+## 7) AI Content Generation Flow
+
+1. ผู้ใช้เลือกสินค้า + platform + tone + language + จำนวนเวอร์ชัน
+2. ระบบ build prompt จาก template และข้อมูลสินค้าจริง
+3. ContentSafety ตรวจเงื่อนไขห้าม overclaim/fake review
+4. ส่งเข้า AI Provider abstraction (OpenAI-compatible หรือ mock)
+5. parse เป็น structured JSON
+6. บังคับมี affiliate disclosure ก่อนส่งผลลัพธ์กลับ
+7. บันทึก history + token usage
+
+## 8) OCR Flow
+
+1. ผู้ใช้อัปโหลดภาพ
+2. ระบบเรียก OCR provider ผ่าน interface
+3. ได้ extracted text/fields + confidence (ถ้ามี)
+4. แสดงผลให้ผู้ใช้แก้ไข
+5. ผู้ใช้กดยืนยันแล้วค่อยบันทึกเป็น Product
+6. บันทึก OCR job status และ error message (ถ้ามี)
+
+## 9) Product Import Flow
+
+- **URL Import:** เก็บ URL และเปิดฟอร์มให้ผู้ใช้ยืนยันข้อมูล
+- **JSON Import:** รับเฉพาะ schema ที่กำหนด
+- **Extension Import:** รับ payload ที่ผู้ใช้รวบรวมจากหน้าที่เห็น
+
+ทุกช่องทาง:
+- ตรวจ duplicate จาก `originalUrl` ต่อผู้ใช้
+- sanitize + validate ก่อนบันทึก
+- บันทึก raw metadata แยกจากข้อมูล normalized
+
+## 10) Security and Compliance Notes
+
+- ไม่ใช้ private API และไม่หลบระบบป้องกันเว็บ
+- ไม่จัดเก็บรหัสผ่านแบบ plain text
+- ไม่เก็บ secret key ลง DB แบบ plain text
+- ใช้ env vars สำหรับ provider keys
+- บังคับ affiliate disclosure ในคอนเทนต์
+- ไม่สร้างรีวิวปลอมและไม่แต่งข้อมูลเกินจริง
+- บันทึก usage log และรองรับ rate limiting ในชั้น API
+
+## 11) Full Folder Structure (Planned)
+
+```text
+zsp-aitool/
+  docs/
+    prompts/
+    architecture.md
+    architecture-system-v1.md
+  prisma/
+    schema.prisma
+    seed.ts
+  extension/
+    manifest.json
+    package.json
+    vite.config.ts
+    src/
+      popup.html
+      popup.ts
+      popup.css
+      content-script.ts
+      background.ts
+      options.html
+      options.ts
+      api-client.ts
+      types.ts
+  src/
+    app/
+      api/
+        auth/
+        products/
+        ai/
+        content-history/
+        templates/
+        ocr/
+        export/
+        settings/
+      dashboard/
+      login/
+      register/
+      page.tsx
+    components/
+      auth/
+      products/
+      ai/
+      templates/
+      ocr/
+      export/
+      settings/
+      layout/
+      ui/
+    hooks/
+    lib/
+    middleware/
+    schemas/
+    services/
+      ai/
+      ocr/
+    types/
+  tests/
+    services/
+    api/
+    components/
+  Dockerfile
+  docker-compose.yml
+  .env.example
+  package.json
+  tsconfig.json
+```
