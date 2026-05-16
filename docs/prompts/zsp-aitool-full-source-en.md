@@ -1,4 +1,4 @@
-ด้านล่างคือ **ชุด Prompt สำหรับสั่ง AI ให้สร้าง Full Source Code** ของระบบแนว **ShopeeLeaz** ครบทั้งเว็บ, backend, database, AI content generator และ browser extension
+ด้านล่างคือ **ชุด Prompt สำหรับสั่ง AI ให้สร้าง Full Source Code** ของระบบ ครบทั้งเว็บ, backend, database, AI content generator และ browser extension
 
 ---
 
