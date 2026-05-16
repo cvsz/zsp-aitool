@@ -31,6 +31,21 @@
 9. **Compliance & Safety Module**
    - กฎการใช้งาน AI, affiliate disclosure, no fake reviews, no overclaim
 
+### Module Boundaries (High-Level)
+
+- **Presentation Layer**
+  - Next.js App Router pages/components
+  - Chrome Extension popup/options UX
+- **Application Layer**
+  - Route Handlers + service orchestration
+  - DTO mapping + validation entry points
+- **Domain Layer**
+  - Product, Content Generation, OCR, Template, Similarity rules
+- **Infrastructure Layer**
+  - Prisma/PostgreSQL
+  - AI/OCR provider adapters
+  - Logging/usage metrics
+
 ## 3) Database Design Overview
 
 ใช้ PostgreSQL + Prisma โดยมีตารางหลัก:
@@ -47,6 +62,18 @@
 - ทุก record ที่เป็น business object มี `createdAt`, `updatedAt`, `deletedAt`
 - แยก raw metadata ที่ไม่แน่นอนเป็น JSON field
 - ทำ index สำหรับ `userId`, `originalUrl`, `platform`, `status`, `createdAt`
+
+### Key Relationships
+
+- `User 1—N Product`
+- `Product 1—N ProductImage`
+- `Product 1—N AffiliateLink`
+- `Product 1—N ContentGeneration`
+- `Product 1—N OCRJob` (ผ่าน workflow อ้างอิงสินค้าเมื่อยืนยัน)
+- `Product N—N Product` ผ่าน `SimilarProduct` (source/related)
+- `User 1—N ContentTemplate`
+- `User 1—1 UserSetting`
+- `User 1—N APIUsageLog`
 
 ## 4) API Overview
 
@@ -65,6 +92,16 @@
 - รูปแบบ response กลางเดียวกัน
 - auth required สำหรับ endpoint ที่เกี่ยวกับข้อมูลผู้ใช้
 
+### API Groups by Responsibility
+
+- **Auth APIs:** identity/session lifecycle
+- **Product APIs:** product CRUD/import/image/affiliate links
+- **AI APIs:** single + batch generation, generation history
+- **Template APIs:** prompt-template lifecycle and preview support
+- **OCR APIs:** extraction job lifecycle + review state
+- **Export APIs:** user-scoped data export
+- **Settings APIs:** per-user defaults and configuration status
+
 ## 5) Frontend Pages Overview
 
 - `/` Landing
@@ -80,6 +117,15 @@
 - `/dashboard/ocr`
 - `/dashboard/settings`
 
+### Primary User Journey
+
+1. Login/Register
+2. Add/Import Product
+3. Review product data and affiliate link
+4. Generate multi-platform content
+5. Save and reuse prompt templates
+6. Export outputs and track history
+
 ## 6) Chrome Extension Overview
 
 Manifest V3:
@@ -92,6 +138,12 @@ Manifest V3:
 - ไม่เรียก private Shopee API
 - ไม่ bypass CAPTCHA/login
 - ส่งเฉพาะข้อมูลที่ผู้ใช้เห็นและกดยืนยัน
+
+### Extension → Web App Contract
+
+- Payload ต้องถูก schema-validate ก่อนรับเข้า backend
+- ระบุ `sourceUrl` ทุกครั้งเพื่อ traceability
+- ข้อมูลสำคัญที่ไม่มั่นใจให้แนบ `confidence: low` หรือ note ใน metadata
 
 ## 7) AI Content Generation Flow
 
@@ -132,6 +184,12 @@ Manifest V3:
 - บังคับ affiliate disclosure ในคอนเทนต์
 - ไม่สร้างรีวิวปลอมและไม่แต่งข้อมูลเกินจริง
 - บันทึก usage log และรองรับ rate limiting ในชั้น API
+
+### Compliance Guardrails in Flows
+
+- ทุก flow ที่อาจตีความข้อมูลอัตโนมัติ (Import/OCR/AI) ต้องมี user confirmation ก่อน persist/final publish
+- แยก “facts from product data” กับ “creative phrasing” ชัดเจนใน prompt policy
+- รองรับ moderation/error state เมื่อผลลัพธ์ AI ฝ่าฝืนกฎการตลาด/affiliate
 
 ## 11) Full Folder Structure (Planned)
 
@@ -201,3 +259,11 @@ zsp-aitool/
   package.json
   tsconfig.json
 ```
+
+### Folder Design Notes
+
+- `src/services/*` = business orchestration layer
+- `src/schemas/*` = request/DTO validation schemas
+- `src/lib/*` = reusable low-level helpers/utilities
+- `src/app/api/*` = thin transport adapters
+- `extension/src/*` = browser runtime logic separated from app backend
