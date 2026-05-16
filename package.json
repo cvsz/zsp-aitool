@@ -1,0 +1,16 @@
+{
+  "name": "zsp-aitool",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Initial implementation foundation for ZSP AI Tool.",
+  "license": "MIT",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check": "npm run typecheck",
+    "lint": "tsc --noEmit -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  }
+}
