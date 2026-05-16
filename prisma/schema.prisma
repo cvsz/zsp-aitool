@@ -89,6 +89,9 @@ model Product {
 
 model ProductImage {
   id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String
   productId String
   url       String
   altText   String?
