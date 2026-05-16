@@ -1,0 +1,281 @@
+# Instincts generated from https://github.com/cvsz/zsp-aitool
+# Generated: 2026-05-16T23:26:41.531Z
+# Version: 2.0
+# NOTE: This file supplements (does not replace) any existing curated instincts.
+# High-confidence manually curated instincts should be preserved alongside these.
+
+---
+id: zsp-aitool-commit-conventional
+trigger: "when writing a commit message"
+confidence: 0.85
+domain: git
+source: repo-analysis
+source_repo: https://github.com/cvsz/zsp-aitool
+---
+
+# Zsp Aitool Commit Conventional
+
+## Action
+
+Use conventional commit format with prefixes: feat
+
+## Evidence
+
+- 1 commits analyzed
+- Detected conventional commit pattern
+- Examples: feat: bootstrap phase 1 foundation for zsp-aitool
+
+---
+id: zsp-aitool-commit-length
+trigger: "when writing a commit message"
+confidence: 0.6
+domain: git
+source: repo-analysis
+source_repo: https://github.com/cvsz/zsp-aitool
+---
+
+# Zsp Aitool Commit Length
+
+## Action
+
+Keep commit messages concise (~49 characters)
+
+## Evidence
+
+- Average commit message length: 49 chars
+- Based on 1 commits
+
+---
+id: zsp-aitool-naming-files
+trigger: "when creating a new file"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/cvsz/zsp-aitool
+---
+
+# Zsp Aitool Naming Files
+
+## Action
+
+Use camelCase naming convention
+
+## Evidence
+
+- Analyzed file naming patterns in repository
+- Dominant pattern: camelCase
+
+---
+id: zsp-aitool-import-relative
+trigger: "when importing modules"
+confidence: 0.75
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/cvsz/zsp-aitool
+---
+
+# Zsp Aitool Import Relative
+
+## Action
+
+Use relative imports for project files
+
+## Evidence
+
+- Import analysis shows relative import pattern
+- Example: import { x } from '../lib/x'
+
+---
+id: zsp-aitool-export-style
+trigger: "when exporting from a module"
+confidence: 0.7
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/cvsz/zsp-aitool
+---
+
+# Zsp Aitool Export Style
+
+## Action
+
+Prefer named exports
+
+## Evidence
+
+- Export pattern analysis
+- Dominant style: named
+
+---
+id: zsp-aitool-test-separate
+trigger: "when writing tests"
+confidence: 0.8
+domain: testing
+source: repo-analysis
+source_repo: https://github.com/cvsz/zsp-aitool
+---
+
+# Zsp Aitool Test Separate
+
+## Action
+
+Place tests in the tests/ or __tests__/ directory, mirroring src structure
+
+## Evidence
+
+- Separate test directory pattern detected
+- Tests live in dedicated test folders
+
+---
+id: zsp-aitool-instinct-file-naming
+trigger: "When creating a new file in the codebase"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: cvsz/zsp-aitool
+---
+
+# Zsp Aitool Instinct File Naming
+
+## Action
+
+Name the file using camelCase
+
+## Evidence
+
+- Pattern: namingConventions.files = camelCase
+
+---
+id: zsp-aitool-instinct-function-naming
+trigger: "When defining a new function"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: cvsz/zsp-aitool
+---
+
+# Zsp Aitool Instinct Function Naming
+
+## Action
+
+Use camelCase for the function name
+
+## Evidence
+
+- Pattern: namingConventions.functions = camelCase
+
+---
+id: zsp-aitool-instinct-class-naming
+trigger: "When defining a new class"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: cvsz/zsp-aitool
+---
+
+# Zsp Aitool Instinct Class Naming
+
+## Action
+
+Use PascalCase for the class name
+
+## Evidence
+
+- Pattern: namingConventions.classes = PascalCase
+
+---
+id: zsp-aitool-instinct-constant-naming
+trigger: "When declaring a constant"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: cvsz/zsp-aitool
+---
+
+# Zsp Aitool Instinct Constant Naming
+
+## Action
+
+Use SCREAMING_SNAKE_CASE for the constant name
+
+## Evidence
+
+- Pattern: namingConventions.constants = SCREAMING_SNAKE_CASE
+
+---
+id: zsp-aitool-instinct-import-style
+trigger: "When importing modules within the project"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: cvsz/zsp-aitool
+---
+
+# Zsp Aitool Instinct Import Style
+
+## Action
+
+Use relative import paths
+
+## Evidence
+
+- Pattern: importStyle = relative
+
+---
+id: zsp-aitool-instinct-export-style
+trigger: "When exporting modules or functions"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: cvsz/zsp-aitool
+---
+
+# Zsp Aitool Instinct Export Style
+
+## Action
+
+Use named exports
+
+## Evidence
+
+- Pattern: exportStyle = named
+
+---
+id: zsp-aitool-instinct-git-commit-format
+trigger: "When making a git commit"
+confidence: 0.9
+domain: git
+source: repo-analysis
+source_repo: cvsz/zsp-aitool
+---
+
+# Zsp Aitool Instinct Git Commit Format
+
+## Action
+
+Use the conventional commit format with 'feat' as the prefix for new features
+
+## Evidence
+
+- Pattern: commits.type = conventional
+- Pattern: commits.prefixes includes 'feat'
+- Example: 'feat: bootstrap phase 1 foundation for zsp-aitool'
+
+---
+id: zsp-aitool-instinct-test-location
+trigger: "When adding new tests"
+confidence: 0.7
+domain: testing
+source: repo-analysis
+source_repo: cvsz/zsp-aitool
+---
+
+# Zsp Aitool Instinct Test Location
+
+## Action
+
+Place test files in a separate directory from source files
+
+## Evidence
+
+- Pattern: testLocation = separate
+
