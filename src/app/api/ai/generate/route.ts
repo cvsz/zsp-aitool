@@ -4,6 +4,8 @@ import { z } from "zod";
 import { success, failure } from "@/lib/api-response";
 import { ProductService } from "@/services/product-service";
 import { AIContentService } from "@/services/ai-content-service";
+import { env } from "@/lib/env";
+import { enforceUsageQuota } from "@/lib/usage-guard";
 
 const bodySchema = z.object({
   productId: z.string().min(1),
@@ -16,6 +18,11 @@ const bodySchema = z.object({
 
 export async function POST(request: Request) {
   try {
+    const quota = enforceUsageQuota({ request, namespace: "ai", maxRequestsPerMinute: env.AI_MAX_REQUESTS_PER_MINUTE });
+    if (!quota.allowed) {
+      return NextResponse.json(failure("RATE_LIMITED", "AI request quota exceeded. Please retry later."), { status: 429 });
+    }
+
     const payload = bodySchema.parse(await request.json());
     const product = await ProductService.getProductById(payload.productId);
 

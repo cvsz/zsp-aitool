@@ -1,25 +1,37 @@
 # Project Status
 
-## Current Baseline
+## Snapshot (2026-05-17)
 
-- Added project-specific setup commands to README.
-- Implemented shared source modules for:
-  - product/content/api types
-  - API response helpers
-  - error abstraction
-  - slug and JSON utility helpers
-  - in-memory product import service with duplicate URL merge behavior
-- Added Vitest-based tests for product import flows.
+`zsp-aitool` is currently a full-stack Next.js + Prisma + Chrome Extension workspace with runnable APIs, dashboard pages, domain services, and automated tests.
 
-## Prompt Pack vs Architecture Review
+## Completed Modules
 
-The prompt pack (`docs/prompts/`) currently targets a full Next.js + Prisma + extension monorepo, while the live architecture is a lightweight TypeScript workspace. This mismatch is now explicitly tracked and should be reconciled in a future architecture expansion phase.
+- **Core app + architecture docs**: README, architecture docs, prompt pack, and system architecture baseline are present and aligned to the full-stack scope.
+- **Auth**: register/login/logout/me endpoints, cookie session token flow, password hashing, and middleware.
+- **Products**: CRUD + import-url + import-json + extension-import + affiliate-link update.
+- **AI generation**: single and batch endpoints, provider abstraction, prompt builder, history persistence.
+- **Templates**: CRUD, duplicate, and restore-defaults APIs + dashboard UI.
+- **OCR**: provider abstraction with mock provider + extract and job lookup APIs.
+- **Similar products**: lookup and refresh routes + service logic.
+- **Export**: products CSV, content CSV/Markdown/TXT routes.
+- **Dashboard UI**: products, generator, templates, OCR, history, similar, and settings pages.
+- **Extension (MV3)**: content script + popup/options/background + app API client.
+- **Testing**: service tests, API tests, and component tests via Vitest + Testing Library.
 
-## Repository / Branch Protection
+## Security, Compliance, and Controls (Current)
 
-Repository settings and branch protection cannot be changed from local source edits. These should be configured in GitHub repository settings (e.g., required PR reviews, required status checks from CI).
+- Added auth endpoint request throttling to reduce brute-force abuse on `/api/auth/login` and `/api/auth/register`.
+- Added AI/OCR per-minute quota guards at API level.
+- Production readiness checklist exists and is now the canonical launch-gate artifact.
 
+## CI Status (Current)
 
-## Latest Update
+- CI now validates required docs/files.
+- CI now validates Prisma flow (`prisma generate`, `prisma migrate`, `prisma seed`).
+- CI runs lint, typecheck, tests, and build.
 
-- Added `docs/architecture-system-v1.md` with a step-by-step architecture baseline aligned to the Thai prompt sequence (system overview, modules, DB/API/UI/extension flows, compliance, and planned folder structure).
+## Open Gaps Before Production
+
+- Persisted/distributed rate-limit backend (Redis/edge) is still recommended over in-memory for multi-instance deployment.
+- Daily AI budget enforcement is currently configuration-only (budget value exposed in env) and should be backed by persisted usage accounting + alerts.
+- Several production-readiness checklist items remain operational tasks (backup drills, secret rotation, formal security monitoring/on-call process).

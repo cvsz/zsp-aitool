@@ -5,16 +5,30 @@ import { failure, success } from "@/lib/api-response";
 import { createSessionToken, setSessionCookie } from "@/lib/auth";
 import { verifyPassword } from "@/lib/password";
 import { prisma } from "@/lib/prisma";
+import { applyRateLimit, createRateLimitKey } from "@/lib/rate-limit";
 
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1)
 });
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const LOGIN_MAX_ATTEMPTS_PER_IP = 20;
+const LOGIN_MAX_ATTEMPTS_PER_EMAIL = 7;
 
 export async function POST(request: Request): Promise<NextResponse> {
   try {
     const body = await request.json();
     const input = loginSchema.parse(body);
+
+    const ipBucket = applyRateLimit(createRateLimitKey(request, "auth:login:ip"), LOGIN_MAX_ATTEMPTS_PER_IP, LOGIN_WINDOW_MS);
+    if (!ipBucket.allowed) {
+      return NextResponse.json(failure("RATE_LIMITED", "Too many login attempts. Please try again later."), { status: 429 });
+    }
+
+    const emailBucket = applyRateLimit(createRateLimitKey(request, "auth:login:email", input.email.toLowerCase()), LOGIN_MAX_ATTEMPTS_PER_EMAIL, LOGIN_WINDOW_MS);
+    if (!emailBucket.allowed) {
+      return NextResponse.json(failure("RATE_LIMITED", "Too many login attempts for this account. Please try again later."), { status: 429 });
+    }
 
     const user = await prisma.user.findUnique({ where: { email: input.email } });
     if (!user) {

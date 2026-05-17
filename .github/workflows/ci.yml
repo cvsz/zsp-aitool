@@ -14,9 +14,39 @@ jobs:
     name: Validate repository
     runs-on: ubuntu-latest
 
+    services:
+      db:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: zsp_aitool
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d zsp_aitool"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/zsp_aitool?schema=public
+      SHADOW_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/zsp_aitool_shadow?schema=public
+      AUTH_SECRET: ci-secret
+      OPENAI_API_KEY: ci-placeholder
+
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
 
       - name: Validate required files
         run: |
@@ -33,3 +63,20 @@ jobs:
         run: |
           find docs/prompts -maxdepth 1 -type f -name '*.md' -print
 
+      - name: Validate Prisma flow
+        run: |
+          npm run prisma:generate
+          npm run prisma:migrate -- --name ci-validate
+          npm run prisma:seed
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm run test
+
+      - name: Build
+        run: npm run build

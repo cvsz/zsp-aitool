@@ -5,6 +5,7 @@ import { failure, success } from "@/lib/api-response";
 import { createSessionToken, setSessionCookie } from "@/lib/auth";
 import { hashPassword } from "@/lib/password";
 import { prisma } from "@/lib/prisma";
+import { applyRateLimit, createRateLimitKey } from "@/lib/rate-limit";
 
 const registerSchema = z.object({
   email: z.string().email(),
@@ -12,10 +13,18 @@ const registerSchema = z.object({
   name: z.string().min(1).max(100).optional()
 });
 
+const REGISTER_WINDOW_MS = 60 * 60 * 1000;
+const REGISTER_MAX_ATTEMPTS_PER_IP = 10;
+
 export async function POST(request: Request): Promise<NextResponse> {
   try {
     const body = await request.json();
     const input = registerSchema.parse(body);
+
+    const ipBucket = applyRateLimit(createRateLimitKey(request, "auth:register:ip"), REGISTER_MAX_ATTEMPTS_PER_IP, REGISTER_WINDOW_MS);
+    if (!ipBucket.allowed) {
+      return NextResponse.json(failure("RATE_LIMITED", "Too many registration attempts. Please try again later."), { status: 429 });
+    }
 
     const existingUser = await prisma.user.findUnique({ where: { email: input.email } });
     if (existingUser) {
