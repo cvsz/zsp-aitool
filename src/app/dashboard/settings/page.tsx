@@ -1,3 +1,10 @@
+import { SettingsForm } from "@/components/settings/SettingsForm";
+
+export default function SettingsPage() {
+  return (
+    <main className="p-6">
+      <SettingsForm />
+    </main>
 "use client";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
