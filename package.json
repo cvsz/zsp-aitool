@@ -13,7 +13,8 @@
     "prisma:generate": "prisma generate",
     "prisma:seed": "prisma db seed",
     "postbuild": "bash scripts/fix-next-server-chunks.sh",
-    "test": "vitest run",
+    "test": "vitest run tests/smoke.test.ts tests/branding.test.ts tests/middleware.auth.test.ts tests/api/products.test.ts tests/api/hyperframes-compose.test.ts tests/api/tenant-isolation.test.ts",
+    "test:db": "vitest run tests/services/similar-isolation.test.ts",
     "health": "bash scripts/health-zsp-aitool.sh",
     "prisma:migrate:deploy": "prisma migrate deploy"
   },
