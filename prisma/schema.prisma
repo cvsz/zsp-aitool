@@ -330,3 +330,16 @@ model APIUsageLog {
   @@index([status])
   @@index([deletedAt])
 }
+
+model OCRJob {
+  id            String    @id @default(cuid())
+  imageUrl      String
+  extractedText String?
+  confidence    Float?
+  status        String
+  errorMessage  String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([status, createdAt])
+}
