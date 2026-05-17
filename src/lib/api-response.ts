@@ -1,9 +1,9 @@
 import type { ApiFailure, ApiSuccess } from "../types/api";
 
-export function success<T>(data: T): ApiSuccess<T> {
-  return { ok: true, data };
+export function success<T>(data: T, meta?: Record<string, unknown>): ApiSuccess<T> {
+  return { ok: true, data, meta };
 }
 
-export function failure(code: string, message: string): ApiFailure {
-  return { ok: false, error: { code, message } };
+export function failure(code: string, message: string, details?: unknown): ApiFailure {
+  return { ok: false, error: { code, message, details } };
 }

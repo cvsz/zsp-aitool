@@ -20,5 +20,26 @@ export default function Page() {
       {!loading && !error && data && data.length > 0 ? <pre className="overflow-auto rounded-xl bg-slate-900 p-4 text-xs text-slate-100">{JSON.stringify(data, null, 2)}</pre> : null}
       {toast ? <Toast message={toast.message} type={toast.type} /> : null}
     </section>
+
+import { useState } from "react";
+import { OCRResultReview } from "@/components/ocr/OCRResultReview";
+import { OCRUploadBox } from "@/components/ocr/OCRUploadBox";
+
+export default function OCRDashboardPage() {
+  const [jobId, setJobId] = useState<string | null>(null);
+  const [result, setResult] = useState<any>(null);
+
+  return (
+    <main className="mx-auto max-w-3xl space-y-4 p-6">
+      <h1 className="text-2xl font-bold">OCR เครื่องมืออ่านข้อมูลจากภาพสินค้า</h1>
+      <OCRUploadBox
+        onExtracted={(payload) => {
+          setJobId(payload.jobId);
+          setResult(payload.result);
+        }}
+      />
+      {jobId ? <p className="text-xs text-gray-500">OCR Job ID: {jobId}</p> : null}
+      <OCRResultReview result={result} />
+    </main>
   );
 }
