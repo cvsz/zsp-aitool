@@ -5,7 +5,6 @@ import { AIContentService } from "@/services/AIContentService";
 import { productService } from "@/services/ProductService";
 import { withAuth } from "@/middleware/auth-middleware";
 import { AppError } from "@/lib/errors";
-import { PromptBuilder } from "@/services/ai/PromptBuilder";
 
 const bodySchema = z.object({
   productId: z.string().min(1),
@@ -20,9 +19,9 @@ export const POST = withAuth(async (request) => {
     const payload = bodySchema.parse(await request.json());
     const product = await productService.getById(request.auth.userId, payload.productId);
     const service = new AIContentService(new MockAIProvider());
-    const outputs = await service.generate({
+    const generationInput = {
       ...payload,
-      contentLength: "medium",
+      contentLength: "medium" as const,
       product: {
         title: product.title,
         description: product.description ?? undefined,
@@ -32,22 +31,12 @@ export const POST = withAuth(async (request) => {
         rating: product.rating == null ? undefined : Number(product.rating),
         soldCount: product.soldCount ?? undefined,
         category: product.category ?? undefined,
+        affiliateUrl: product.affiliateUrl ?? undefined,
       },
-    });
-    const prompt = PromptBuilder.build({
-      ...payload,
-      contentLength: "medium",
-      product: {
-        title: product.title,
-        description: product.description ?? undefined,
-        price: Number(product.price),
-        currency: product.currency,
-        shopName: product.shopName ?? undefined,
-        rating: product.rating == null ? undefined : Number(product.rating),
-        soldCount: product.soldCount ?? undefined,
-        category: product.category ?? undefined,
-      },
-    });
+    };
+
+    const prompt = service.buildPrompt(generationInput);
+    const outputs = await service.generate(generationInput);
 
     await Promise.all(outputs.map((item) => service.saveGenerationHistory({
       userId: request.auth.userId,

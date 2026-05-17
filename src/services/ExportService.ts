@@ -11,7 +11,7 @@ export interface ExportFilter {
 }
 
 function buildContentWhereClause(userId: string, filter: ExportFilter): Prisma.Sql {
-  const clauses: Prisma.Sql[] = [Prisma.sql`"userId" = ${userId}`];
+  const clauses: Prisma.Sql[] = [Prisma.sql`"userId" = ${userId}`, Prisma.sql`"deletedAt" IS NULL`];
 
   if (filter.platform) {
     clauses.push(Prisma.sql`"platform" = ${filter.platform}`);
@@ -33,7 +33,7 @@ export class ExportService {
     const rows = await prisma.$queryRaw<Array<Record<string, string | number | null>>>(Prisma.sql`
       SELECT id, title, price, currency, "originalUrl", "affiliateUrl", "shopName", rating, "soldCount", "createdAt"
       FROM "Product"
-      WHERE "userId" = ${userId}
+      WHERE "userId" = ${userId} AND "deletedAt" IS NULL
       ORDER BY "createdAt" DESC
     `);
 
@@ -68,7 +68,7 @@ export class ExportService {
     const rows = await prisma.$queryRaw<Array<{ id: string; platform: string; prompt: string | null; output: string | null; createdAt: Date }>>(Prisma.sql`
       SELECT id, platform, prompt, output, "createdAt"
       FROM "ContentGeneration"
-      WHERE id = ${id} AND "userId" = ${userId}
+      WHERE id = ${id} AND "userId" = ${userId} AND "deletedAt" IS NULL
       LIMIT 1
     `);
 
