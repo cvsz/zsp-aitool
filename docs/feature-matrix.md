@@ -1,4 +1,4 @@
-# ShopeeLeaz / cvsz/zsp-aitool Feature Matrix (Audit)
+# zsp-aitool / cvsz/zsp-aitool Feature Matrix (Audit)
 
 Last audited: 2026-05-17
 
