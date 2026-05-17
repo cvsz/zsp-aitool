@@ -28,3 +28,8 @@ prisma/dev.db-journal
 
 # test output
 /coverage
+
+# extension workspace
+/extension/node_modules
+/extension/dist
+/extension/.vite
