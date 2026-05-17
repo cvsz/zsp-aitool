@@ -7,12 +7,12 @@ import { useApi } from "@/hooks/use-api";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Page() {
-  const { data, loading, error, refetch } = useApi<unknown[]>("/api/ai/suggestions");
+  const { data, loading, error, refetch } = useApi<unknown[]>("/api/products/similar");
   const { toast, showToast } = useToast();
 
   return (
     <section>
-      <PageTitle title="AI Generator" subtitle="เชื่อมต่อข้อมูลผ่าน API client" />
+      <PageTitle title="สินค้าที่คล้ายกัน" subtitle="เชื่อมต่อข้อมูลผ่าน API client" />
       <button className="mb-4 rounded border px-3 py-2 text-sm" onClick={() => { void refetch(); showToast("รีเฟรชข้อมูลแล้ว", "success"); }}>รีเฟรช</button>
       {loading ? <LoadingSpinner /> : null}
       {error ? <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">เกิดข้อผิดพลาด: {error}</div> : null}
@@ -21,8 +21,4 @@ export default function Page() {
       {toast ? <Toast message={toast.message} type={toast.type} /> : null}
     </section>
   );
-import { ContentGeneratorForm } from "@/components/ai/ContentGeneratorForm";
-
-export default function GeneratorPage() {
-  return <main className="p-6 space-y-4"><h1 className="text-2xl font-bold">AI Content Generator</h1><ContentGeneratorForm /></main>;
 }
