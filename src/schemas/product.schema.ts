@@ -29,9 +29,10 @@ export const extensionImportSchema = z.object({
     originalUrl: z.string().trim().url().max(2000),
     price: nonNegativeNumber.optional(),
     currency: z.string().trim().min(1).max(10).optional(),
-    shopName: z.string().trim().max(200).optional(),
     description: z.string().trim().max(10000).optional(),
     images: z.array(productImageSchema).max(30).optional(),
+    rating: z.number().min(0).max(5).optional(),
+    soldCount: z.number().int().min(0).optional(),
     visibleDataOnly: z.literal(true),
   }),
 });
