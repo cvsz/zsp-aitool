@@ -61,7 +61,7 @@ export class ExportService {
       ORDER BY "createdAt" DESC
     `);
 
-    return contentHistoryToMarkdown(rows.map((row) => ({ ...row, output: row.output ?? "" })));
+    return contentHistoryToMarkdown(rows.map((row) => ({ id: row.id ?? "", platform: row.platform ?? "", output: row.output ?? "" })));
   }
 
   async exportSingleContentTxt(userId: string, id: string): Promise<string | null> {

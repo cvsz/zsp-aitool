@@ -1,6 +1,8 @@
+import { Language, Tone } from "@prisma/client";
+
 import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
-import { settingsInputSchema, type SettingsInput } from "@/schemas/settings.schema";
+import { settingsInputSchema } from "@/schemas/settings.schema";
 
 const providerKeyMap: Record<string, string> = {
   openai: "OPENAI_API_KEY",
@@ -17,6 +19,25 @@ const ocrKeyMap: Record<string, string> = {
   other: "CUSTOM_OCR_PROVIDER_KEY",
 };
 
+function toLanguage(value: "th" | "en" | "mixed"): Language {
+  return value === "en" ? Language.EN : Language.TH;
+}
+
+function toTone(value: "friendly" | "professional" | "casual" | "sales" | "minimal"): Tone {
+  switch (value) {
+    case "professional":
+      return Tone.PROFESSIONAL;
+    case "casual":
+      return Tone.CASUAL;
+    case "sales":
+      return Tone.SALES;
+    case "minimal":
+      return Tone.FRIENDLY;
+    default:
+      return Tone.FRIENDLY;
+  }
+}
+
 export class UserSettingService {
   static getProviderStatus(provider: string) {
     const envName = providerKeyMap[provider] ?? "";
@@ -32,11 +53,7 @@ export class UserSettingService {
     const row = await prisma.userSetting.findUnique({ where: { userId } });
     if (!row) return null;
 
-    return {
-      ...row,
-      aiProviderKeyStatus: this.getProviderStatus(row.aiProvider),
-      ocrProviderKeyStatus: this.getOcrProviderStatus(row.ocrProvider),
-    };
+    return row;
   }
 
   static async upsert(userId: string, payload: unknown) {
@@ -45,20 +62,33 @@ export class UserSettingService {
       throw new AppError("VALIDATION_ERROR", parsed.error.flatten().formErrors.join(", ") || "Invalid settings payload", 422);
     }
 
-    const data: SettingsInput = parsed.data;
+    const data = parsed.data;
     const saved = await prisma.userSetting.upsert({
       where: { userId },
       create: {
         userId,
-        ...data,
+        defaultLanguage: toLanguage(data.defaultLanguage),
+        defaultTone: toTone(data.defaultTone),
+        affiliateDisclosure: data.affiliateDisclosure,
+        defaultHashtags: [],
+        ctaStyle: data.defaultCtaStyle,
       },
-      update: data,
+      update: {
+        defaultLanguage: toLanguage(data.defaultLanguage),
+        defaultTone: toTone(data.defaultTone),
+        affiliateDisclosure: data.affiliateDisclosure,
+        ctaStyle: data.defaultCtaStyle,
+      },
     });
 
     return {
       ...saved,
-      aiProviderKeyStatus: this.getProviderStatus(saved.aiProvider),
-      ocrProviderKeyStatus: this.getOcrProviderStatus(saved.ocrProvider),
+      aiProvider: data.aiProvider,
+      ocrProvider: data.ocrProvider,
+      defaultHashtagPreference: data.defaultHashtagPreference,
+      profile: data.profile,
+      aiProviderKeyStatus: this.getProviderStatus(data.aiProvider),
+      ocrProviderKeyStatus: this.getOcrProviderStatus(data.ocrProvider),
     };
   }
 }
