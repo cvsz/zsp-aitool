@@ -1,92 +1,77 @@
-import { AppError } from "../lib/errors";
-import type { CreateProductInput, UpdateProductInput } from "../schemas/product.schema";
+import { Prisma } from "@prisma/client";
 
-export interface ProductRecord extends CreateProductInput {
-  id: string;
-  deletedAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
+import { AppError } from "@/lib/errors";
+import { prisma } from "@/lib/prisma";
+import type { CreateProductInput, UpdateProductInput } from "@/schemas/product.schema";
 
-class ProductService {
-  private products = new Map<string, ProductRecord>();
+const productInclude = {
+  images: {
+    where: { deletedAt: null },
+    orderBy: { sortOrder: "asc" as const },
+  },
+} satisfies Prisma.ProductInclude;
 
-  list() {
-    return Array.from(this.products.values()).filter((p) => !p.deletedAt);
+export class ProductService {
+  async list(userId: string) {
+    return prisma.product.findMany({ where: { userId, deletedAt: null }, include: productInclude, orderBy: { createdAt: "desc" } });
   }
 
-  getById(id: string) {
-    const product = this.products.get(id);
-    if (!product || product.deletedAt) throw new AppError("NOT_FOUND", "Product not found", 404);
+  async getById(userId: string, id: string) {
+    const product = await prisma.product.findFirst({ where: { id, userId, deletedAt: null }, include: productInclude });
+    if (!product) throw new AppError("NOT_FOUND", "Product not found", 404);
     return product;
   }
 
-  create(input: CreateProductInput) {
-    this.ensureNoDuplicateUrl(input.originalUrl);
-    const now = new Date().toISOString();
-    const id = crypto.randomUUID();
-    const product: ProductRecord = { ...input, id, deletedAt: null, createdAt: now, updatedAt: now };
-    this.products.set(id, product);
-    return product;
+  async create(userId: string, input: CreateProductInput) {
+    return prisma.product.create({
+      data: {
+        userId,
+        ...input,
+        price: new Prisma.Decimal(input.price),
+        rating: input.rating == null ? undefined : new Prisma.Decimal(input.rating),
+        images: { create: input.images.map((url, sortOrder) => ({ url, sortOrder })) },
+      }, include: productInclude,
+    });
   }
 
-  update(id: string, input: UpdateProductInput) {
-    const existing = this.getById(id);
-    if (input.originalUrl && input.originalUrl !== existing.originalUrl) {
-      this.ensureNoDuplicateUrl(input.originalUrl, id);
+  async update(userId: string, id: string, input: UpdateProductInput) {
+    await this.getById(userId, id);
+    if (input.images) {
+      await prisma.productImage.updateMany({ where: { productId: id, deletedAt: null }, data: { deletedAt: new Date() } });
     }
-    const updated = { ...existing, ...input, updatedAt: new Date().toISOString() };
-    this.products.set(id, updated);
-    return updated;
+    return prisma.product.update({
+      where: { id },
+      data: {
+        ...input,
+        price: input.price == null ? undefined : new Prisma.Decimal(input.price),
+        rating: input.rating == null ? undefined : new Prisma.Decimal(input.rating),
+        images: input.images ? { create: input.images.map((url, sortOrder) => ({ url, sortOrder })) } : undefined,
+      }, include: productInclude,
+    });
   }
 
-  softDelete(id: string) {
-    const existing = this.getById(id);
-    const now = new Date().toISOString();
-    existing.deletedAt = now;
-    existing.updatedAt = now;
-    this.products.set(id, existing);
+  async softDelete(userId: string, id: string) {
+    await this.getById(userId, id);
+    await prisma.product.update({ where: { id }, data: { deletedAt: new Date() } });
   }
 
-  importByUrl(originalUrl: string) {
-    const duplicate = this.findByOriginalUrl(originalUrl);
+  async importByUrl(userId: string, originalUrl: string) {
+    const duplicate = await prisma.product.findFirst({ where: { userId, originalUrl, deletedAt: null }, include: productInclude });
     if (duplicate) return { duplicate: true, product: duplicate };
     return { duplicate: false, draft: { originalUrl, note: "Please confirm or fill product details manually." } };
   }
 
-  importFromExtension(payload: { title: string; originalUrl: string; price?: number; currency?: string; shopName?: string; description?: string; images?: string[]; visibleDataOnly: true; }) {
-    return this.create({
-      title: payload.title,
-      originalUrl: payload.originalUrl,
-      price: payload.price ?? 0,
-      currency: payload.currency ?? "THB",
-      shopName: payload.shopName,
-      description: payload.description,
-      images: payload.images ?? [],
-    });
+  async importFromExtension(userId: string, payload: CreateProductInput & { visibleDataOnly: true }) {
+    return this.create(userId, payload);
   }
 
-  importJson(products: CreateProductInput[]) {
-    return products.map((p) => {
-      const duplicate = this.findByOriginalUrl(p.originalUrl);
-      return duplicate ? this.update(duplicate.id, p) : this.create(p);
-    });
+  async importJson(userId: string, products: CreateProductInput[]) {
+    return Promise.all(products.map((product) => this.create(userId, product)));
   }
 
-  updateAffiliateLink(id: string, affiliateUrl: string) {
-    return this.update(id, { affiliateUrl });
-  }
-
-  private findByOriginalUrl(originalUrl: string) {
-    return this.list().find((p) => p.originalUrl === originalUrl);
-  }
-
-  private ensureNoDuplicateUrl(originalUrl: string, ignoreId?: string) {
-    const duplicate = this.list().find((p) => p.originalUrl === originalUrl && p.id !== ignoreId);
-    if (duplicate) throw new AppError("DUPLICATE_URL", "Product with this originalUrl already exists", 409);
+  async updateAffiliateLink(userId: string, id: string, affiliateUrl: string) {
+    return this.update(userId, id, { affiliateUrl });
   }
 }
 
-const globalState = globalThis as unknown as { productService?: ProductService };
-export const productService = globalState.productService ?? new ProductService();
-if (!globalState.productService) globalState.productService = productService;
+export const productService = new ProductService();
