@@ -1,0 +1,1 @@
+export class TemplateRenderer { render(template:string,variables:Record<string,string|number>){ return template.replace(/{{\s*(\w+)\s*}}/g,(_m,key:string)=>{const v=variables[key]; return v===undefined?'':String(v);}); }}
