@@ -1,11 +1,18 @@
 import { NextResponse } from "next/server";
 import { extractOCRSchema } from "@/schemas/ocr.schema";
 import { OCRService } from "@/services/OCRService";
+import { env } from "@/lib/env";
+import { enforceUsageQuota } from "@/lib/usage-guard";
 
 const service = new OCRService();
 
 export async function POST(request: Request) {
   try {
+    const quota = enforceUsageQuota({ request, namespace: "ocr", maxRequestsPerMinute: env.OCR_MAX_REQUESTS_PER_MINUTE });
+    if (!quota.allowed) {
+      return NextResponse.json({ error: "OCR request quota exceeded. Please retry later." }, { status: 429 });
+    }
+
     const payload = await request.json();
     const parsed = extractOCRSchema.safeParse(payload);
 
