@@ -3,6 +3,7 @@ export function validateSession(session: SessionLike){ return Boolean(session.us
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 import { NextRequest } from "next/server";
+import { redirect } from "next/navigation";
 
 const SESSION_COOKIE_NAME = "zsp_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
@@ -91,6 +92,22 @@ export function getSessionFromRequest(request: NextRequest): SessionPayload | nu
   } catch {
     return null;
   }
+}
+
+export async function getAuthenticatedUserIdForServer(): Promise<string> {
+  const token = (await cookies()).get(SESSION_COOKIE_NAME)?.value;
+  if (token) {
+    const session = verifySessionToken(token);
+    if (session?.userId) {
+      return session.userId;
+    }
+  }
+
+  if (process.env.ZSP_ENABLE_DEMO_USER === "true" && process.env.DEFAULT_USER_ID) {
+    return process.env.DEFAULT_USER_ID;
+  }
+
+  redirect("/login");
 }
 
 export { SESSION_COOKIE_NAME };
