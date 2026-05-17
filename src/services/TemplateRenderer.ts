@@ -1,4 +1,3 @@
-export class TemplateRenderer { render(template:string,variables:Record<string,string|number>){ return template.replace(/{{\s*(\w+)\s*}}/g,(_m,key:string)=>{const v=variables[key]; return v===undefined?'':String(v);}); }}
 import { TEMPLATE_VARIABLES } from "@/schemas/template.schema";
 
 export type TemplateRenderInput = Record<string, string>;
