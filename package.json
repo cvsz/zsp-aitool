@@ -13,7 +13,8 @@
     "prisma:generate": "prisma generate",
     "prisma:seed": "prisma db seed",
     "postbuild": "bash scripts/fix-next-server-chunks.sh",
-    "test": "vitest run tests/smoke.test.ts"
+    "test": "vitest run tests/smoke.test.ts",
+    "health": "bash scripts/health-zsp-aitool.sh"
   },
   "dependencies": {
     "@prisma/client": "^5.15.0",

@@ -45,6 +45,43 @@ npm run lint
 npm run typecheck
 npm run test
 npm run build
+npm run health
+```
+
+## Deployment verification
+
+Use environment-appropriate checks:
+
+### Production server verification (systemd host)
+
+Run these on the actual production machine where `zsp-aitool` service and local PostgreSQL are running:
+
+```bash
+systemctl status zsp-aitool --no-pager
+curl -I http://127.0.0.1:3001
+curl -I http://127.0.0.1:3001/dashboard
+curl -I http://127.0.0.1:3001/dashboard/products
+npx prisma migrate status
+npm run health
+```
+
+### Codex/CI/container verification
+
+In Codex, CI, or generic containers:
+
+- `systemctl` may be unavailable because systemd is not PID 1.
+- `127.0.0.1:3001` may be unreachable because the production service is not running inside that environment.
+- `npx prisma migrate status` may fail if PostgreSQL is not running or not reachable.
+- `https://studio.zeaz.dev/*` can return Cloudflare challenge `403` (`cf-mitigated: challenge`), which is not automatically an app failure.
+
+Use these baseline checks:
+
+```bash
+git status
+npm run typecheck
+npm run test
+npm run build
+npm run health
 ```
 
 ## Project structure
