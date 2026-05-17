@@ -8,7 +8,7 @@
 You are a senior full-stack engineer. Generate the complete production-ready source code for a SaaS web app and browser extension named “zsp-aitool”.
 
 Project concept:
-zsp-aitool helps Shopee Affiliate users collect product information in one click and use AI to generate promotional content for Facebook, Instagram, Threads, X, short comments, captions, blog posts, and SEO articles.
+zsp-aitool helps Shopee Affiliate users collect product information in one click and use AI to generate promotional content for Facebook, Instagram, Threads, X, HyperFrames, short comments, captions, blog posts, and SEO articles.
 
 Important compliance rules:
 - Do not bypass CAPTCHA, login walls, anti-bot systems, rate limits, or private user data.
@@ -97,7 +97,7 @@ Requirements:
 - A user can save many products.
 - A product has title, price, currency, original URL, affiliate URL, shop name, rating, sold count, description, category, images, and raw extracted metadata.
 - Content generations must store platform, tone, language, prompt, AI output, status, token usage, and created date.
-- Support platforms: Facebook, Instagram, Threads, X, Blog, SEO Article, Comment, Short Caption.
+- Support platforms: Facebook, Instagram, Threads, X, HyperFrames, Blog, SEO Article, Comment, Short Caption.
 - Store AI prompt templates separately so users can customize them.
 - OCR jobs should store image URL, extracted text, status, and error message.
 - Similar products should reference the source product and related product.
@@ -213,6 +213,7 @@ Platforms:
 - Instagram
 - Threads
 - X
+- HyperFrames
 - Blog
 - SEO Article
 - Short Caption
@@ -293,7 +294,7 @@ UI requirements:
 - Cards for products
 - Product image preview
 - Copy-to-clipboard buttons
-- Platform selector: Facebook, Instagram, Threads, X, Blog, SEO
+- Platform selector: Facebook, Instagram, Threads, X, HyperFrames, Blog, SEO
 - Tone selector
 - Language selector
 - AI generated content preview
@@ -599,7 +600,7 @@ Also generate:
 ```text
 Build a complete full-stack source code project named zsp-aitool.
 
-zsp-aitool is a Shopee Affiliate productivity tool that lets users save product data in one click and generate AI promotional content for Facebook, Instagram, Threads, X, blog posts, SEO articles, captions, and comments.
+zsp-aitool is a Shopee Affiliate productivity tool that lets users save product data in one click and generate AI promotional content for Facebook, Instagram, Threads, X, HyperFrames, blog posts, SEO articles, captions, and comments.
 
 Use:
 - Next.js
