@@ -4,6 +4,7 @@ import { NextRequest } from "next/server";
 import { POST as importUrlPost } from "@/app/api/products/import-url/route";
 import { POST as extensionImportPost } from "@/app/api/products/extension-import/route";
 import { getSessionFromRequest } from "@/lib/auth";
+import { AppError } from "@/lib/errors";
 import { productService } from "@/services/ProductService";
 
 vi.mock("@/lib/auth", async () => {
@@ -64,5 +65,19 @@ describe("product import routes", () => {
     const response = await extensionImportPost(request);
     expect(response.status).toBe(201);
     expect(productService.importFromExtension).toHaveBeenCalledWith("auth-user", expect.any(Object));
+  });
+
+  it("returns controlled 409 for duplicate product URL", async () => {
+    vi.mocked(getSessionFromRequest).mockReturnValueOnce({ userId: "u1", email: "u1@example.com" });
+    vi.mocked(productService.importByUrl).mockRejectedValueOnce(new AppError("DUPLICATE_PRODUCT_URL", "Product URL already exists for this user", 409));
+
+    const request = new NextRequest("http://localhost/api/products/import-url", {
+      method: "POST",
+      body: JSON.stringify({ originalUrl: "https://example.com/item" }),
+      headers: { "content-type": "application/json" },
+    });
+
+    const response = await importUrlPost(request);
+    expect(response.status).toBe(409);
   });
 });

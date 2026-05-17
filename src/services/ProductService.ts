@@ -1,7 +1,7 @@
 import { Prisma } from "@prisma/client";
 
 import { AppError } from "@/lib/errors";
-import { parsePriceSafely, normalizeProductUrl, sanitizeOptionalText, ensureHttpUrl } from "@/lib/product-validation";
+import { parsePriceSafely, normalizeProductUrl, sanitizeOptionalText, ensureHttpUrl, validateAndNormalizeTags, validateImportFields } from "@/lib/product-validation";
 import { prisma } from "@/lib/prisma";
 import { fetchWithSafety } from "@/lib/url-safety";
 import type { CreateProductInput, UpdateProductInput } from "@/schemas/product.schema";
@@ -20,6 +20,17 @@ export class ProductService {
   async getById(userId: string, id: string) { const product = await prisma.product.findFirst({ where: { id, userId, deletedAt: null }, include: productInclude }); if (!product) throw new AppError("NOT_FOUND", "Product not found", 404); return product; }
 
   private sanitizeCreateInput(input: CreateProductInput): CreateProductInput {
+    validateImportFields({
+      title: input.title,
+      originalUrl: input.originalUrl,
+      price: input.price,
+      imageUrls: input.images,
+      rating: input.rating,
+      reviewCount: input.reviewCount,
+      soldCount: input.soldCount,
+      tags: (input.rawMetadata as Record<string, unknown> | undefined)?.tags,
+    });
+
     return {
       ...input,
       price: parsePriceSafely(input.price),
@@ -38,7 +49,10 @@ export class ProductService {
     const sanitized = this.sanitizeCreateInput(input);
     const duplicate = await prisma.product.findFirst({ where: { userId, originalUrl: sanitized.originalUrl, deletedAt: null } });
     if (duplicate) throw new AppError("DUPLICATE_PRODUCT_URL", "Product URL already exists for this user", 409);
-    return prisma.product.create({ data: { userId, ...sanitized, price: new Prisma.Decimal(sanitized.price), rating: sanitized.rating == null ? undefined : new Prisma.Decimal(sanitized.rating), rawMetadata: { ...(sanitized.rawMetadata as object | undefined), rawOriginalUrl: input.originalUrl } as Prisma.InputJsonValue | undefined, images: { create: sanitized.images.map((url, sortOrder) => ({ url, sortOrder })) } }, include: productInclude });
+    const rawMetadataInput = (sanitized.rawMetadata as Record<string, unknown> | undefined) ?? {};
+    const normalizedTags = validateAndNormalizeTags(rawMetadataInput.tags);
+    const { images, reviewCount, ...productInput } = sanitized;
+    return prisma.product.create({ data: { userId, ...productInput, price: new Prisma.Decimal(sanitized.price), rating: sanitized.rating == null ? undefined : new Prisma.Decimal(sanitized.rating), rawMetadata: { ...rawMetadataInput, rawOriginalUrl: input.originalUrl, reviewCount, tags: normalizedTags } as Prisma.InputJsonValue | undefined, images: { create: images.map((url, sortOrder) => ({ url, sortOrder })) } }, include: productInclude });
   }
 
   async update(userId: string, id: string, input: UpdateProductInput) {
@@ -52,7 +66,7 @@ export class ProductService {
   async importByUrl(userId: string, originalUrl: string) {
     const normalizedUrl = normalizeProductUrl(originalUrl);
     const duplicate = await prisma.product.findFirst({ where: { userId, originalUrl: normalizedUrl, deletedAt: null }, include: productInclude });
-    if (duplicate) return { duplicate: true, product: duplicate };
+    if (duplicate) throw new AppError("DUPLICATE_PRODUCT_URL", "Product URL already exists for this user", 409);
 
     let previewTitle: string | undefined;
     try {

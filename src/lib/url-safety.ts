@@ -47,7 +47,12 @@ function isBlockedIp(host: string): boolean {
 }
 
 export async function assertSafeImportUrl(rawUrl: string): Promise<void> {
-  const parsed = new URL(rawUrl);
+  let parsed: URL;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    throw new AppError("VALIDATION_ERROR", "URL must be valid", 400);
+  }
   if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
     throw new AppError("VALIDATION_ERROR", "Only HTTP/HTTPS URLs are allowed for product import", 400);
   }
@@ -91,6 +96,10 @@ export async function fetchWithSafety(rawUrl: string): Promise<string> {
         currentUrl = new URL(location, currentUrl).toString();
         await assertSafeImportUrl(currentUrl);
         continue;
+      }
+
+      if (response.status < 200 || response.status >= 300) {
+        throw new AppError("VALIDATION_ERROR", "Unable to import URL content", 400);
       }
 
       const contentType = (response.headers.get("content-type") ?? "").toLowerCase();
