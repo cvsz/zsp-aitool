@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 
 import { AppError } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
+import { assertSafeImportUrl } from "@/lib/url-safety";
 import type { CreateProductInput, UpdateProductInput } from "@/schemas/product.schema";
 
 const productInclude = {
@@ -60,6 +61,8 @@ export class ProductService {
   }
 
   async importByUrl(userId: string, originalUrl: string) {
+    assertSafeImportUrl(originalUrl);
+
     const duplicate = await prisma.product.findFirst({ where: { userId, originalUrl, deletedAt: null }, include: productInclude });
     if (duplicate) return { duplicate: true, product: duplicate };
     return { duplicate: false, draft: { originalUrl, note: "Please confirm or fill product details manually." } };
