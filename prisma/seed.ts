@@ -8,7 +8,8 @@ async function main() {
     update: { name: "ผู้ใช้เดโม ZSP" },
     create: {
       email: "demo@zsp-aitool.local",
-      name: "ผู้ใช้เดโม ZSP"
+      name: "ผู้ใช้เดโม ZSP",
+      password: "demo-password-hash"
     }
   });
 
@@ -142,8 +143,8 @@ async function main() {
     ]
   });
 
-  await prisma.ocrJob.deleteMany({ where: { userId: demoUser.id } });
-  await prisma.ocrJob.create({
+  await prisma.oCRJob.deleteMany({ where: { userId: demoUser.id } });
+  await prisma.oCRJob.create({
     data: {
       userId: demoUser.id,
       imageUrl: "https://images.example.com/demo-ocr-product.jpg",

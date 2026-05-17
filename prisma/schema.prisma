@@ -15,14 +15,6 @@ enum Platform {
 }
 
 enum Tone {
-  FRIENDLY
-  PROFESSIONAL
-  EXCITED
-  CASUAL
-  BLOG
-}
-
-enum Tone {
   CASUAL
   FRIENDLY
   PROFESSIONAL
@@ -43,73 +35,13 @@ enum JobStatus {
 }
 
 model User {
-  id          String      @id @default(cuid())
-  email       String      @unique
-  name        String?
-  userSetting UserSetting?
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-}
-
-model UserSetting {
-  id                       String   @id @default(cuid())
-  userId                   String   @unique
-  aiProvider               String
-  defaultLanguage          String
-  defaultTone              String
-  affiliateDisclosure      String
-  defaultHashtagPreference String
-  defaultCtaStyle          String
-  ocrProvider              String
-  profile                  Json
-  createdAt                DateTime @default(now())
-  updatedAt                DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   id                 String              @id @default(cuid())
   email              String              @unique
   name               String?
+  password           String?
   products           Product[]
   contentGenerations ContentGeneration[]
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-}
-
-model Product {
-  id          String   @id @default(cuid())
-  userId      String
-  title       String
-  description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-}
-
-model ContentGeneration {
-  id           String   @id @default(cuid())
-  userId       String?
-  productId    String
-  platform     Platform
-  tone         Tone
-  language     String
-  customPrompt String?
-  versions     Int
-  outputJson   Json
-  tokenUsage   Int?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  user    User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  product Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-  @@index([productId])
-  @@index([platform])
-  @@index([createdAt])
   affiliateLinks     AffiliateLink[]
-  contentGenerations ContentGeneration[]
   contentTemplates   ContentTemplate[]
   promptPresets      PromptPreset[]
   ocrJobs            OCRJob[]
@@ -118,10 +50,6 @@ model ContentGeneration {
   apiUsageLogs       APIUsageLog[]
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
-  deletedAt          DateTime?
-
-  @@index([createdAt])
-  @@index([deletedAt])
 }
 
 model Product {
@@ -145,6 +73,7 @@ model Product {
   sourceSimilarities SimilarProduct[]    @relation("SourceProduct")
   relatedSimilarTo   SimilarProduct[]    @relation("RelatedProduct")
   platformPosts      PlatformPost[]
+  ocrJobs            OCRJob[]
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
   deletedAt          DateTime?
@@ -157,9 +86,6 @@ model Product {
 
 model ProductImage {
   id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  password  String
   productId String
   url       String
   altText   String?
@@ -174,19 +100,19 @@ model ProductImage {
 }
 
 model AffiliateLink {
-  id            String   @id @default(cuid())
-  userId        String
-  productId     String
-  platform      Platform
-  originalUrl   String
-  affiliateUrl  String
-  trackingCode  String?
-  clickCount    Int      @default(0)
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  product       Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  deletedAt     DateTime?
+  id           String   @id @default(cuid())
+  userId       String
+  productId    String
+  platform     Platform
+  originalUrl  String
+  affiliateUrl String
+  trackingCode String?
+  clickCount   Int      @default(0)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product      Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  deletedAt    DateTime?
 
   @@index([userId, platform])
   @@index([productId])
@@ -194,21 +120,22 @@ model AffiliateLink {
 }
 
 model ContentGeneration {
-  id          String    @id @default(cuid())
-  userId      String
-  productId   String
-  platform    Platform
-  tone        Tone
-  language    Language
-  prompt      String
-  output      Json
-  tokenUsage  Int?
-  status      JobStatus @default(PENDING)
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  deletedAt   DateTime?
+  id         String    @id @default(cuid())
+  userId     String
+  productId  String
+  platform   Platform
+  tone       Tone
+  language   Language
+  prompt     String
+  output     Json
+  tokenUsage Int?
+  status     JobStatus @default(PENDING)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product    Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  platformPosts PlatformPost[]
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  deletedAt  DateTime?
 
   @@index([userId, createdAt])
   @@index([productId])
@@ -238,18 +165,18 @@ model ContentTemplate {
 }
 
 model PromptPreset {
-  id          String    @id @default(cuid())
-  userId      String
-  name        String
-  platform    Platform?
-  tone        Tone?
-  language    Language?
-  prompt      String
-  isDefault   Boolean   @default(false)
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  deletedAt   DateTime?
+  id        String    @id @default(cuid())
+  userId    String
+  name      String
+  platform  Platform?
+  tone      Tone?
+  language  Language?
+  prompt    String
+  isDefault Boolean   @default(false)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 
   @@index([userId, platform])
   @@index([deletedAt])
@@ -261,10 +188,12 @@ model OCRJob {
   productId     String?
   imageUrl      String
   extractedText String?
+  confidence    Float?
   status        JobStatus @default(PENDING)
   errorMessage  String?
   rawResult     Json?
   user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product       Product?  @relation(fields: [productId], references: [id], onDelete: SetNull)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   deletedAt     DateTime?
@@ -292,7 +221,7 @@ model SimilarProduct {
 }
 
 model PlatformPost {
-  id                  String            @id @default(cuid())
+  id                  String             @id @default(cuid())
   userId              String
   productId           String
   contentGenerationId String?
@@ -301,12 +230,12 @@ model PlatformPost {
   hashtags            String[]
   postedAt            DateTime?
   externalPostId      String?
-  status              JobStatus         @default(PENDING)
-  user                User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  product             Product           @relation(fields: [productId], references: [id], onDelete: Cascade)
+  status              JobStatus          @default(PENDING)
+  user                User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product             Product            @relation(fields: [productId], references: [id], onDelete: Cascade)
   contentGeneration   ContentGeneration? @relation(fields: [contentGenerationId], references: [id], onDelete: SetNull)
-  createdAt           DateTime          @default(now())
-  updatedAt           DateTime          @updatedAt
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
   deletedAt           DateTime?
 
   @@index([userId, platform, createdAt])
@@ -315,54 +244,41 @@ model PlatformPost {
 }
 
 model UserSetting {
-  id                   String    @id @default(cuid())
-  userId               String    @unique
-  defaultLanguage      Language  @default(TH)
-  defaultTone          Tone      @default(FRIENDLY)
-  defaultPlatform      Platform? 
-  affiliateDisclosure  String?
-  defaultHashtags      String[]
-  ctaStyle             String?
-  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
-  deletedAt            DateTime?
+  id                  String    @id @default(cuid())
+  userId              String    @unique
+  defaultLanguage     Language  @default(TH)
+  defaultTone         Tone      @default(FRIENDLY)
+  defaultPlatform     Platform?
+  affiliateDisclosure String?
+  defaultHashtags     String[]
+  ctaStyle            String?
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  deletedAt           DateTime?
 
   @@index([deletedAt])
 }
 
 model APIUsageLog {
-  id           String    @id @default(cuid())
-  userId       String
-  provider     String
-  endpoint     String
-  model        String?
-  requestToken Int?
+  id            String    @id @default(cuid())
+  userId        String
+  provider      String
+  endpoint      String
+  model         String?
+  requestToken  Int?
   responseToken Int?
-  totalToken   Int?
-  costUsd      Decimal?  @db.Decimal(12, 6)
-  status       JobStatus
-  metadata     Json?
-  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  deletedAt    DateTime?
+  totalToken    Int?
+  costUsd       Decimal?  @db.Decimal(12, 6)
+  status        JobStatus
+  metadata      Json?
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
 
   @@index([userId, createdAt])
   @@index([provider, endpoint])
   @@index([status])
   @@index([deletedAt])
-}
-
-model OCRJob {
-  id            String    @id @default(cuid())
-  imageUrl      String
-  extractedText String?
-  confidence    Float?
-  status        String
-  errorMessage  String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  @@index([status, createdAt])
 }
