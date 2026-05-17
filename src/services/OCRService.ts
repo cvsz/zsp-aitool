@@ -1,5 +1,3 @@
-export interface OCRProvider { extractText:(imageUrl:string)=>Promise<{text:string;confidence?:number}>; }
-export class OCRService { constructor(private readonly provider: OCRProvider) {} async extract(imageUrl:string){ if(!imageUrl) throw new Error('imageUrl is required'); return this.provider.extractText(imageUrl);} }
 import { prisma } from "@/lib/prisma";
 import type { ExtractOCRInput } from "@/schemas/ocr.schema";
 import type { OCRProvider, OCRResult } from "@/services/ocr/OCRProvider";
