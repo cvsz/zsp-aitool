@@ -1,4 +1,4 @@
-import { JobStatus, Prisma } from "@prisma/client";
+import { JobStatus, Language, Platform, Prisma, Tone } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { AIGenerationInput, AIOutput, aiGenerationInputSchema } from "@/schemas/ai.schema";
@@ -25,6 +25,6 @@ export class AIContentService {
     output: Prisma.InputJsonValue;
     tokenUsage?: number;
   }) {
-    return prisma.contentGeneration.create({ data: { ...params, status: JobStatus.COMPLETED } });
+    return prisma.contentGeneration.create({ data: { ...params, platform: params.platform.toUpperCase() as Platform, tone: params.tone.toUpperCase() as Tone, language: params.language.toUpperCase() as Language, status: JobStatus.COMPLETED } });
   }
 }
