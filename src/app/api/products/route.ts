@@ -1,3 +1,6 @@
+import { NextResponse } from 'next/server';
+import { ProductService } from '@/services/ProductService';
+export async function GET(){ const service=new ProductService({product:{findFirst:async()=>null,create:async()=>{throw new Error('not used');},findMany:async()=>[]}}); const products=await service.listByUser('demo-user'); return NextResponse.json({data:products}); }
 import { NextResponse } from "next/server";
 import { success, failure } from "@/lib/api-response";
 import { ProductService } from "@/services/product-service";
