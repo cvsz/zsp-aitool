@@ -22,6 +22,7 @@ zsp-aitool is a Thai-first full-stack SaaS foundation for Shopee Affiliate workf
 - Zod
 - Vitest
 - Docker Compose
+- HyperFrames (planned integration target for content workflows)
 
 ## Quick start
 
