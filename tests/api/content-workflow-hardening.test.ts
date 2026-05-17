@@ -13,6 +13,7 @@ import { getSessionFromRequest } from "@/lib/auth";
 import { productService } from "@/services/ProductService";
 import { ExportService } from "@/services/ExportService";
 import { AppError } from "@/lib/errors";
+import { AIContentService } from "@/services/AIContentService";
 
 vi.mock("@/lib/auth", async () => {
   const actual = await vi.importActual<typeof import("@/lib/auth")>("@/lib/auth");
@@ -33,6 +34,8 @@ describe("content workflow hardening", () => {
   });
 
   it("AI generate for own product succeeds", async () => {
+    vi.spyOn(AIContentService.prototype, "generate").mockResolvedValueOnce([{ platform: "facebook", headline: "", caption: "ok", hashtags: [], cta: "", affiliateDisclosure: "", warnings: [] }]);
+    vi.spyOn(AIContentService.prototype, "saveGenerationHistory").mockResolvedValueOnce(undefined);
     mockedAuth.mockReturnValueOnce({ userId: "owner", email: "o@o.com", exp: 1 });
     const res = await aiGeneratePost(new NextRequest("http://localhost/api/ai/generate", { method: "POST", body: JSON.stringify({ productId: "p1", platform: "facebook", tone: "friendly", language: "th", versions: 1 }) }));
     expect(res.status).toBe(200);
