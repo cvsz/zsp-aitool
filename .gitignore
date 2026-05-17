@@ -33,3 +33,4 @@ prisma/dev.db-journal
 /extension/node_modules
 /extension/dist
 /extension/.vite
+*.tsbuildinfo
