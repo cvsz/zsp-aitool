@@ -8,14 +8,12 @@ import { MockOCRProvider } from "@/services/ocr/MockOCRProvider";
 export class OCRService {
   constructor(private readonly provider: OCRProvider = new MockOCRProvider()) {}
 
-  async extractAndSave(input: ExtractOCRInput) {
-    const defaultEmail = process.env.DEFAULT_USER_EMAIL ?? "demo@zsp.local";
-    const user = await prisma.user.upsert({ where: { email: defaultEmail }, update: {}, create: { email: defaultEmail, name: "Demo User" } });
+  async extractAndSave(userId: string, input: ExtractOCRInput) {
     const pending = await prisma.oCRJob.create({
       data: {
         imageUrl: `data:${input.mimeType};base64,${input.imageBase64.slice(0, 64)}...`,
         status: JobStatus.PROCESSING,
-        userId: user.id,
+        userId,
       },
     });
 
@@ -47,8 +45,8 @@ export class OCRService {
     }
   }
 
-  async getJob(id: string): Promise<{ id: string; status: string; result?: OCRResult; errorMessage?: string | null }> {
-    const job = await prisma.oCRJob.findUnique({ where: { id } });
+  async getJob(userId: string, id: string): Promise<{ id: string; status: string; result?: OCRResult; errorMessage?: string | null }> {
+    const job = await prisma.oCRJob.findFirst({ where: { id, userId } });
     if (!job) {
       throw new Error("OCR job not found");
     }

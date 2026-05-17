@@ -1,22 +1,18 @@
 import { NextResponse } from "next/server";
 import { getOCRJobSchema } from "@/schemas/ocr.schema";
 import { OCRService } from "@/services/OCRService";
+import { withAuth } from "@/middleware/auth-middleware";
 
 const service = new OCRService();
 
-export async function GET(_: Request, context: { params: Promise<{ id: string }> }) {
-  const params = await context.params;
-  const parsed = getOCRJobSchema.safeParse(params);
-  if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid job id" }, { status: 400 });
-  }
-
+export const GET = withAuth(async (request, context: { params: Promise<{ id: string }> }) => {
+  const parsed = getOCRJobSchema.safeParse(await context.params);
+  if (!parsed.success) return NextResponse.json({ error: "Invalid job id" }, { status: 400 });
   try {
-    const job = await service.getJob(parsed.data.id);
+    const job = await service.getJob(request.auth.userId, parsed.data.id);
     return NextResponse.json(job);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unexpected error";
-    const status = message.includes("not found") ? 404 : 500;
-    return NextResponse.json({ error: message }, { status });
+    return NextResponse.json({ error: message }, { status: message.includes("not found") ? 404 : 500 });
   }
-}
+});

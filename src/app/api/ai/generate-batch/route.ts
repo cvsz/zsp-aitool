@@ -3,6 +3,7 @@ import { z } from "zod";
 import { MockAIProvider } from "@/services/ai/MockAIProvider";
 import { AIContentService } from "@/services/AIContentService";
 import { productService } from "@/services/ProductService";
+import { withAuth } from "@/middleware/auth-middleware";
 
 const bodySchema = z.object({
   productId: z.string().min(1),
@@ -12,11 +13,10 @@ const bodySchema = z.object({
   versions: z.number().int().min(1).max(5).default(1),
 });
 
-export async function POST(request: Request) {
+export const POST = withAuth(async (request) => {
   try {
     const payload = bodySchema.parse(await request.json());
-    const userId = process.env.DEFAULT_USER_ID ?? "demo-user";
-    const product = await productService.getById(userId, payload.productId);
+    const product = await productService.getById(request.auth.userId, payload.productId);
     const service = new AIContentService(new MockAIProvider());
 
     const results = await Promise.all(payload.platforms.map((platform) => service.generate({
@@ -33,4 +33,4 @@ export async function POST(request: Request) {
     if (error instanceof z.ZodError) return NextResponse.json({ ok: false, error: error.flatten() }, { status: 422 });
     return NextResponse.json({ ok: false, error: { code: "INTERNAL_ERROR", message: "Failed to batch generate content" } }, { status: 500 });
   }
-}
+});
