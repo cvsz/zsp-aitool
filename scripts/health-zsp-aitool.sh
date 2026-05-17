@@ -66,7 +66,7 @@ is_port_listening() {
 }
 
 # 1) package.json valid JSON
-if python -m json.tool package.json >/dev/null 2>&1; then
+if node -e "JSON.parse(require('fs').readFileSync('package.json','utf8'))" >/dev/null 2>&1; then
   ok "package.json is valid JSON"
 else
   fail "package.json is not valid JSON"
@@ -108,7 +108,7 @@ else
 fi
 
 # 4) branding check
-brand_hits="$(grep -RniE "ShopeeLeaz|Shopee Leaz|shopeeleaz|SHOPEELEAZ" src prisma scripts README.md package.json .env.example extension --exclude-dir=node_modules --exclude-dir=.next --exclude-dir=dist --exclude-dir=.git 2>/dev/null | grep -v "^scripts/health-zsp-aitool.sh:" || true)"
+brand_hits="$(grep -RniE "ShopeeLeaz|Shopee Leaz|shopeeleaz|SHOPEELEAZ" src prisma scripts README.md package.json .env.example extension --exclude-dir=node_modules --exclude-dir=.next --exclude-dir=dist --exclude-dir=.git --exclude='*.bak' --exclude='*.bak.*' 2>/dev/null | grep -v "^scripts/health-zsp-aitool.sh:" || true)"
 if [[ -n "$brand_hits" ]]; then
   fail "Old branding references found in app/runtime files"
   echo "$brand_hits"
@@ -152,7 +152,7 @@ fi
 if [[ -z "$DATABASE_URL_VALUE" ]]; then
   skip "DATABASE_URL not set; skipping Prisma migration status"
 else
-  db_host_port="$(DATABASE_URL_VALUE="$DATABASE_URL_VALUE" python - <<'PY'
+  db_host_port="$(DATABASE_URL_VALUE="$DATABASE_URL_VALUE" python3 - <<'PY'
 import os
 from urllib.parse import urlparse
 u=os.environ.get('DATABASE_URL_VALUE','')
