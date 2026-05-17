@@ -1,9 +1,9 @@
 import { Prisma } from "@prisma/client";
 
 import { AppError } from "@/lib/errors";
-import { parsePriceSafely, normalizeProductUrl, sanitizeOptionalText } from "@/lib/product-validation";
+import { parsePriceSafely, normalizeProductUrl, sanitizeOptionalText, ensureHttpUrl } from "@/lib/product-validation";
 import { prisma } from "@/lib/prisma";
-import { assertSafeImportUrl } from "@/lib/url-safety";
+import { fetchWithSafety } from "@/lib/url-safety";
 import type { CreateProductInput, UpdateProductInput } from "@/schemas/product.schema";
 
 const productInclude = {
@@ -26,7 +26,11 @@ export class ProductService {
       currency: input.currency?.trim() || "THB",
       shopName: sanitizeOptionalText(input.shopName, 200),
       category: sanitizeOptionalText(input.category, 200),
-      originalUrl: normalizeProductUrl(input.originalUrl),
+      originalUrl: normalizeProductUrl(input.originalUrl.trim()),
+      images: input.images.map((imageUrl) => ensureHttpUrl(imageUrl, "imageUrls")),
+      rating: input.rating,
+      soldCount: input.soldCount,
+      reviewCount: input.reviewCount,
     };
   }
 
@@ -46,23 +50,17 @@ export class ProductService {
   async softDelete(userId: string, id: string) { await this.getById(userId, id); await prisma.product.update({ where: { id }, data: { deletedAt: new Date() } }); }
 
   async importByUrl(userId: string, originalUrl: string) {
-    await assertSafeImportUrl(originalUrl);
     const normalizedUrl = normalizeProductUrl(originalUrl);
     const duplicate = await prisma.product.findFirst({ where: { userId, originalUrl: normalizedUrl, deletedAt: null }, include: productInclude });
     if (duplicate) return { duplicate: true, product: duplicate };
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
     let previewTitle: string | undefined;
     try {
-      const response = await fetch(normalizedUrl, { signal: controller.signal, headers: { "user-agent": "zsp-aitool/import-review" } });
-      if (response.ok) {
-        const body = await response.text();
-        if (body.length > 1024 * 1024) throw new AppError("VALIDATION_ERROR", "Response too large", 413);
-        previewTitle = body.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1]?.trim();
-      }
-    } finally {
-      clearTimeout(timeout);
+      const body = await fetchWithSafety(normalizedUrl);
+      previewTitle = body.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1]?.trim();
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      throw new AppError("VALIDATION_ERROR", "Unable to import URL", 400);
     }
 
     return { duplicate: false, draft: { title: previewTitle, originalUrl: normalizedUrl, rawOriginalUrl: originalUrl, note: "User must review imported product data before saving." } };
