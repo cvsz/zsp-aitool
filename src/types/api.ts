@@ -1,14 +1,18 @@
+export interface ApiErrorPayload {
+  code: string;
+  message: string;
+  details?: unknown;
+}
+
 export interface ApiSuccess<T> {
   ok: true;
   data: T;
+  meta?: Record<string, unknown>;
 }
 
 export interface ApiFailure {
   ok: false;
-  error: {
-    code: string;
-    message: string;
-  };
+  error: ApiErrorPayload;
 }
 
 export type ApiResponse<T> = ApiSuccess<T> | ApiFailure;

@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "ZSP AI Tool - Shopee Collector",
+  "description": "Collect visible Shopee product data and send it to zsp-aitool with user review and confirmation.",
+  "version": "0.1.0",
+  "permissions": ["storage", "activeTab", "scripting"],
+  "host_permissions": ["https://shopee.co.th/*", "https://*.shopee.co.th/*", "https://*/*"],
+  "background": {
+    "service_worker": "src/background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "ZSP Shopee Collector",
+    "default_popup": "src/popup.html"
+  },
+  "options_page": "src/options.html",
+  "content_scripts": [
+    {
+      "matches": ["https://shopee.co.th/*", "https://*.shopee.co.th/*"],
+      "js": ["src/content-script.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

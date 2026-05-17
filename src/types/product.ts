@@ -1,12 +1,24 @@
 export type ImportStatus = "pending" | "completed" | "failed" | "needs_review";
 
+export interface ProductImage {
+  id: string;
+  url: string;
+  alt?: string;
+  sortOrder?: number;
+}
+
 export interface ProductInput {
   title: string;
   price: number;
   currency: string;
   originalUrl: string;
+  affiliateUrl?: string;
+  shopName?: string;
+  rating?: number;
+  soldCount?: number;
   description?: string;
-  imageUrls?: string[];
+  category?: string;
+  images?: ProductImage[];
   rawMetadata?: Record<string, unknown>;
 }
 

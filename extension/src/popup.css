@@ -1,0 +1,9 @@
+body { font-family: Arial, sans-serif; min-width: 360px; margin: 0; }
+.container { padding: 12px; display: grid; gap: 8px; }
+label { display: grid; gap: 4px; font-size: 12px; }
+input, textarea, button { font-size: 12px; padding: 6px; }
+textarea { min-height: 56px; }
+.muted { color: #666; font-size: 11px; }
+.status { min-height: 16px; font-size: 12px; }
+.actions { display: flex; gap: 8px; }
+.social-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
