@@ -4,8 +4,9 @@ import { OCRService } from "@/services/OCRService";
 
 const service = new OCRService();
 
-export async function GET(_: Request, context: { params: { id: string } }) {
-  const parsed = getOCRJobSchema.safeParse(context.params);
+export async function GET(_: Request, context: { params: Promise<{ id: string }> }) {
+  const params = await context.params;
+  const parsed = getOCRJobSchema.safeParse(params);
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid job id" }, { status: 400 });
   }

@@ -2,8 +2,9 @@ import Link from "next/link";
 import { productService } from "@/services/ProductService";
 import { ProductGrid } from "@/components/products/ProductGrid";
 
-export default function ProductsPage() {
-  const products = productService.list();
+export default async function ProductsPage() {
+  const userId = process.env.DEFAULT_USER_ID ?? "demo-user";
+  const products = await productService.list(userId);
   return (
     <main className="p-6 space-y-4">
       <div className="flex gap-3">

@@ -1,67 +1,36 @@
 import { NextResponse } from "next/server";
-import { Language, Platform, Tone } from "@prisma/client";
 import { z } from "zod";
-import { success, failure } from "@/lib/api-response";
-import { ProductService } from "@/services/product-service";
-import { AIContentService } from "@/services/ai-content-service";
-import { env } from "@/lib/env";
-import { enforceUsageQuota } from "@/lib/usage-guard";
-import { prisma } from "@/lib/prisma";
+import { MockAIProvider } from "@/services/ai/MockAIProvider";
+import { AIContentService } from "@/services/AIContentService";
+import { productService } from "@/services/ProductService";
 
 const bodySchema = z.object({
   productId: z.string().min(1),
-  platforms: z.array(z.nativeEnum(Platform)).min(1),
-  tone: z.nativeEnum(Tone),
-  language: z.nativeEnum(Language),
-  versions: z.number().int().min(1).max(10),
-  customPrompt: z.string().optional(),
+  platforms: z.array(z.enum(["facebook", "instagram", "threads", "x", "blog", "seo_article", "comment", "short_caption"])).min(1),
+  tone: z.enum(["friendly", "professional", "casual", "energetic", "minimal"]),
+  language: z.enum(["th", "en"]),
+  versions: z.number().int().min(1).max(5).default(1),
 });
 
 export async function POST(request: Request) {
   try {
-    const quota = enforceUsageQuota({ request, namespace: "ai", maxRequestsPerMinute: env.AI_MAX_REQUESTS_PER_MINUTE });
-    if (!quota.allowed) {
-      return NextResponse.json(failure("RATE_LIMITED", "AI request quota exceeded. Please retry later."), { status: 429 });
-    }
-
     const payload = bodySchema.parse(await request.json());
-    const defaultEmail = process.env.DEFAULT_USER_EMAIL ?? "demo@zsp.local";
-    const user = await prisma.user.upsert({ where: { email: defaultEmail }, update: {}, create: { email: defaultEmail, name: "Demo User" } });
-    const product = await ProductService.getProductById(payload.productId);
-    if (!product) return NextResponse.json(failure("NOT_FOUND", "Product not found"), { status: 404 });
+    const userId = process.env.DEFAULT_USER_ID ?? "demo-user";
+    const product = await productService.getById(userId, payload.productId);
+    const service = new AIContentService(new MockAIProvider());
 
-    const results = await Promise.all(
-      payload.platforms.map(async (platform) => {
-        const generated = await AIContentService.generateContent({
-          product,
-          platform,
-          tone: payload.tone,
-          language: payload.language,
-          versions: payload.versions,
-          customPrompt: payload.customPrompt,
-        });
+    const results = await Promise.all(payload.platforms.map((platform) => service.generate({
+      platform,
+      tone: payload.tone,
+      language: payload.language,
+      versions: payload.versions,
+      contentLength: "medium",
+      product: { title: product.title },
+    })));
 
-        const history = await AIContentService.saveGenerationHistory({
-          userId: user.id,
-      productId: product.id,
-          platform,
-          tone: payload.tone,
-          language: payload.language,
-          prompt: payload.customPrompt ?? "",
-          output: generated.outputs,
-          tokenUsage: Math.round(generated.tokenUsage),
-        });
-
-        return { platform, historyId: history.id, ...generated };
-      }),
-    );
-
-    return NextResponse.json(success({ results }));
+    return NextResponse.json({ ok: true, data: results });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(failure("VALIDATION_ERROR", error.issues[0]?.message ?? "Invalid input"), { status: 400 });
-    }
-
-    return NextResponse.json(failure("INTERNAL_ERROR", "Failed to batch generate content"), { status: 500 });
+    if (error instanceof z.ZodError) return NextResponse.json({ ok: false, error: error.flatten() }, { status: 422 });
+    return NextResponse.json({ ok: false, error: { code: "INTERNAL_ERROR", message: "Failed to batch generate content" } }, { status: 500 });
   }
 }

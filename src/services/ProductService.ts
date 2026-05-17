@@ -11,6 +11,8 @@ const productInclude = {
   },
 } satisfies Prisma.ProductInclude;
 
+export type ProductRecord = Prisma.ProductGetPayload<{ include: typeof productInclude }>;
+
 export class ProductService {
   async list(userId: string) {
     return prisma.product.findMany({ where: { userId, deletedAt: null }, include: productInclude, orderBy: { createdAt: "desc" } });
@@ -29,6 +31,7 @@ export class ProductService {
         ...input,
         price: new Prisma.Decimal(input.price),
         rating: input.rating == null ? undefined : new Prisma.Decimal(input.rating),
+        rawMetadata: input.rawMetadata as Prisma.InputJsonValue | undefined,
         images: { create: input.images.map((url, sortOrder) => ({ url, sortOrder })) },
       }, include: productInclude,
     });
@@ -45,6 +48,7 @@ export class ProductService {
         ...input,
         price: input.price == null ? undefined : new Prisma.Decimal(input.price),
         rating: input.rating == null ? undefined : new Prisma.Decimal(input.rating),
+        rawMetadata: input.rawMetadata as Prisma.InputJsonValue | undefined,
         images: input.images ? { create: input.images.map((url, sortOrder) => ({ url, sortOrder })) } : undefined,
       }, include: productInclude,
     });

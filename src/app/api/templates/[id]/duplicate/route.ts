@@ -3,10 +3,10 @@ import { NextResponse } from "next/server";
 import { failure, success } from "@/lib/api-response";
 import { PromptTemplateService } from "@/services/PromptTemplateService";
 
-type Params = { params: { id: string } };
+type Params = { params: Promise<{ id: string }> };
 
-export async function POST(_: Request, { params }: Params) {
-  const duplicated = PromptTemplateService.duplicate(params.id);
+export async function POST(_: Request, context: Params) {
+  const duplicated = PromptTemplateService.duplicate((await context.params).id);
 
   if (!duplicated) {
     return NextResponse.json(failure("NOT_FOUND", "Template not found"), { status: 404 });

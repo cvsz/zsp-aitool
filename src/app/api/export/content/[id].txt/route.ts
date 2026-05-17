@@ -7,7 +7,7 @@ const exportService = new ExportService();
 
 export async function GET(
   request: NextRequest,
-  context: { params: Promise<{ id: string }> },
+  context: { params: Promise<any> },
 ): Promise<NextResponse> {
   const userId = request.headers.get("x-user-id");
 

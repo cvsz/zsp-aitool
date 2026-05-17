@@ -62,8 +62,8 @@ export function verifySessionToken(token: string): SessionPayload | null {
   return payload;
 }
 
-export function setSessionCookie(token: string): void {
-  cookies().set(SESSION_COOKIE_NAME, token, {
+export async function setSessionCookie(token: string): Promise<void> {
+  (await cookies()).set(SESSION_COOKIE_NAME, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
@@ -72,8 +72,8 @@ export function setSessionCookie(token: string): void {
   });
 }
 
-export function clearSessionCookie(): void {
-  cookies().set(SESSION_COOKIE_NAME, "", {
+export async function clearSessionCookie(): Promise<void> {
+  (await cookies()).set(SESSION_COOKIE_NAME, "", {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
