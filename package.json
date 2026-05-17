@@ -7,7 +7,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint . --ext .js,.jsx,.ts,.tsx --max-warnings=0",
     "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
     "prisma:migrate": "prisma migrate dev",
     "prisma:generate": "prisma generate",
