@@ -1,0 +1,3 @@
+"use client";
+import { useState } from "react";
+export function ConfirmDialog({ title, onConfirm }: { title: string; onConfirm: () => void }) { const [open, setOpen] = useState(false); return <>{!open ? <button className="rounded-lg border px-3 py-2" onClick={() => setOpen(true)}>ลบ</button> : <div className="rounded-lg border bg-white p-3"><p className="text-sm">{title}</p><div className="mt-2 flex gap-2"><button className="rounded bg-red-600 px-2 py-1 text-white" onClick={() => { onConfirm(); setOpen(false); }}>ยืนยัน</button><button className="rounded border px-2 py-1" onClick={() => setOpen(false)}>ยกเลิก</button></div></div>}</>; }

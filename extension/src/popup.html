@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ZSP Collector</title>
+    <link rel="stylesheet" href="./popup.css" />
+  </head>
+  <body>
+    <main class="container">
+      <h1>ZSP Shopee Collector</h1>
+      <button id="collectBtn">Collect Product</button>
+
+      <p id="urlInfo" class="muted"></p>
+
+      <label>Title <input id="title" /></label>
+      <label>Price <input id="price" /></label>
+      <label>Images (one URL per line) <textarea id="images"></textarea></label>
+      <label>Rating <input id="rating" /></label>
+      <label>Sold Count <input id="soldCount" /></label>
+      <label>Description <textarea id="description"></textarea></label>
+
+      <div class="actions">
+        <button id="sendBtn">Confirm & Send</button>
+      </div>
+
+      <div class="social-grid">
+        <button data-social="facebook">Generate Facebook</button>
+        <button data-social="instagram">Generate Instagram</button>
+        <button data-social="x">Generate X</button>
+        <button data-social="threads">Generate Threads</button>
+      </div>
+
+      <label>Quick Post Output <textarea id="postOutput" readonly></textarea></label>
+      <p id="status" class="status"></p>
+      <a href="./options.html" target="_blank">Settings</a>
+    </main>
+    <script type="module" src="./popup.ts"></script>
+  </body>
+</html>
