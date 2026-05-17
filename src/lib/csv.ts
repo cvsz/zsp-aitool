@@ -6,7 +6,8 @@ function escapeCsvValue(value: CsvValue): string {
   }
 
   const normalized = value instanceof Date ? value.toISOString() : String(value);
-  const escaped = normalized.replace(/"/g, '""');
+  const protectedValue = /^[=+\-@\t\r]/.test(normalized) ? `'${normalized}` : normalized;
+  const escaped = protectedValue.replace(/"/g, '""');
 
   if (/[",\n]/.test(escaped)) {
     return `"${escaped}"`;

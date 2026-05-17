@@ -5,6 +5,7 @@ import { AIContentService } from "@/services/AIContentService";
 import { productService } from "@/services/ProductService";
 import { withAuth } from "@/middleware/auth-middleware";
 import { AppError } from "@/lib/errors";
+import { PromptBuilder } from "@/services/ai/PromptBuilder";
 
 const bodySchema = z.object({
   productId: z.string().min(1),
@@ -33,6 +34,30 @@ export const POST = withAuth(async (request) => {
         category: product.category ?? undefined,
       },
     });
+    const prompt = PromptBuilder.build({
+      ...payload,
+      contentLength: "medium",
+      product: {
+        title: product.title,
+        description: product.description ?? undefined,
+        price: Number(product.price),
+        currency: product.currency,
+        shopName: product.shopName ?? undefined,
+        rating: product.rating == null ? undefined : Number(product.rating),
+        soldCount: product.soldCount ?? undefined,
+        category: product.category ?? undefined,
+      },
+    });
+
+    await Promise.all(outputs.map((item) => service.saveGenerationHistory({
+      userId: request.auth.userId,
+      productId: product.id,
+      platform: payload.platform,
+      tone: payload.tone,
+      language: payload.language,
+      prompt,
+      output: item,
+    })));
     return NextResponse.json({ ok: true, data: outputs });
   } catch (error) {
     if (error instanceof z.ZodError) return NextResponse.json({ ok: false, error: error.flatten() }, { status: 422 });
