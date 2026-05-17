@@ -8,6 +8,7 @@ const menus = [
   ["ประวัติคอนเทนต์", "/dashboard/content-history"],
   ["Prompt Templates", "/dashboard/templates"],
   ["OCR Tools", "/dashboard/ocr"],
+  ["HyperFrames", "/dashboard/hyperframes"],
   ["สินค้าที่คล้ายกัน", "/dashboard/similar"],
   ["ตั้งค่า", "/dashboard/settings"]
 ] as const;
