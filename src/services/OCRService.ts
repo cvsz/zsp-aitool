@@ -1,3 +1,5 @@
+import { JobStatus } from "@prisma/client";
+
 import { prisma } from "@/lib/prisma";
 import type { ExtractOCRInput } from "@/schemas/ocr.schema";
 import type { OCRProvider, OCRResult } from "@/services/ocr/OCRProvider";
@@ -7,10 +9,13 @@ export class OCRService {
   constructor(private readonly provider: OCRProvider = new MockOCRProvider()) {}
 
   async extractAndSave(input: ExtractOCRInput) {
+    const defaultEmail = process.env.DEFAULT_USER_EMAIL ?? "demo@zsp.local";
+    const user = await prisma.user.upsert({ where: { email: defaultEmail }, update: {}, create: { email: defaultEmail, name: "Demo User" } });
     const pending = await prisma.oCRJob.create({
       data: {
         imageUrl: `data:${input.mimeType};base64,${input.imageBase64.slice(0, 64)}...`,
-        status: "processing",
+        status: JobStatus.PROCESSING,
+        userId: user.id,
       },
     });
 
@@ -20,7 +25,7 @@ export class OCRService {
       const saved = await prisma.oCRJob.update({
         where: { id: pending.id },
         data: {
-          status: "completed",
+          status: JobStatus.COMPLETED,
           extractedText: JSON.stringify(result),
           confidence: result.confidence,
         },
@@ -33,7 +38,7 @@ export class OCRService {
       await prisma.oCRJob.update({
         where: { id: pending.id },
         data: {
-          status: "failed",
+          status: JobStatus.FAILED,
           errorMessage: message,
         },
       });

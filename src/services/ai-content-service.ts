@@ -1,11 +1,12 @@
-import { Platform, Tone } from "@prisma/client";
+import { JobStatus, Language, Platform, Prisma, Tone } from "@prisma/client";
+
 import { prisma } from "@/lib/prisma";
 
 type GenerateInput = {
   product: { id: string; title: string; description: string | null };
   platform: Platform;
   tone: Tone;
-  language: string;
+  language: Language;
   versions: number;
   customPrompt?: string;
 };
@@ -27,15 +28,20 @@ export class AIContentService {
   }
 
   static async saveGenerationHistory(params: {
+    userId: string;
     productId: string;
     platform: Platform;
     tone: Tone;
-    language: string;
-    customPrompt?: string;
-    versions: number;
-    outputJson: unknown;
+    language: Language;
+    prompt: string;
+    output: Prisma.InputJsonValue;
     tokenUsage?: number;
   }) {
-    return prisma.contentGeneration.create({ data: params });
+    return prisma.contentGeneration.create({
+      data: {
+        ...params,
+        status: JobStatus.COMPLETED,
+      },
+    });
   }
 }

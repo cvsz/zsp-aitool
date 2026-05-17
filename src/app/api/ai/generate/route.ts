@@ -1,17 +1,18 @@
 import { NextResponse } from "next/server";
-import { Platform, Tone } from "@prisma/client";
+import { Language, Platform, Tone } from "@prisma/client";
 import { z } from "zod";
 import { success, failure } from "@/lib/api-response";
 import { ProductService } from "@/services/product-service";
 import { AIContentService } from "@/services/ai-content-service";
 import { env } from "@/lib/env";
 import { enforceUsageQuota } from "@/lib/usage-guard";
+import { prisma } from "@/lib/prisma";
 
 const bodySchema = z.object({
   productId: z.string().min(1),
   platform: z.nativeEnum(Platform),
   tone: z.nativeEnum(Tone),
-  language: z.string().min(2),
+  language: z.nativeEnum(Language),
   versions: z.number().int().min(1).max(10),
   customPrompt: z.string().optional(),
 });
@@ -24,6 +25,8 @@ export async function POST(request: Request) {
     }
 
     const payload = bodySchema.parse(await request.json());
+    const defaultEmail = process.env.DEFAULT_USER_EMAIL ?? "demo@zsp.local";
+    const user = await prisma.user.upsert({ where: { email: defaultEmail }, update: {}, create: { email: defaultEmail, name: "Demo User" } });
     const product = await ProductService.getProductById(payload.productId);
 
     if (!product) {
@@ -40,13 +43,13 @@ export async function POST(request: Request) {
     });
 
     const history = await AIContentService.saveGenerationHistory({
+      userId: user.id,
       productId: product.id,
       platform: payload.platform,
       tone: payload.tone,
       language: payload.language,
-      customPrompt: payload.customPrompt,
-      versions: payload.versions,
-      outputJson: generated.outputs,
+      prompt: payload.customPrompt ?? "",
+      output: generated.outputs,
       tokenUsage: Math.round(generated.tokenUsage),
     });
 
