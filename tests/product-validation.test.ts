@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { normalizeProductUrl } from "@/lib/product-validation";
+import { validateAndNormalizeTags, validateImportFields, normalizeProductUrl } from "@/lib/product-validation";
+import { AppError } from "@/lib/errors";
 import { createProductSchema } from "@/schemas/product.schema";
 
 describe("product validation", () => {
@@ -17,5 +18,16 @@ describe("product validation", () => {
   it("rejects non-http image URL", () => {
     const result = createProductSchema.safeParse({ title: "A", price: 100, originalUrl: "https://example.com", images: ["ftp://example.com/a.jpg"] });
     expect(result.success).toBe(false);
+  });
+
+  it("validates required import fields", () => {
+    expect(() => validateImportFields({ title: "", originalUrl: "https://example.com", price: 10, imageUrls: [] })).toThrow(AppError);
+    expect(() => validateImportFields({ title: "A", originalUrl: "https://example.com", price: -1, imageUrls: [] })).toThrow(AppError);
+    expect(() => validateImportFields({ title: "A", originalUrl: "https://example.com", price: 10, imageUrls: [], rating: 6 })).toThrow(AppError);
+    expect(() => validateImportFields({ title: "A", originalUrl: "https://example.com", price: 10, imageUrls: [], reviewCount: -1 })).toThrow(AppError);
+  });
+
+  it("normalizes and de-duplicates tags", () => {
+    expect(validateAndNormalizeTags(["  ดีล ", "ดีล", "โปร"])).toEqual(["ดีล", "โปร"]);
   });
 });
