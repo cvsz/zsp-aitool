@@ -10,10 +10,10 @@ export type AuthenticatedRequest = NextRequest & {
   };
 };
 
-export function withAuth(
-  handler: (request: AuthenticatedRequest) => Promise<NextResponse>
-): (request: NextRequest) => Promise<NextResponse> {
-  return async (request: NextRequest) => {
+export function withAuth<TArgs extends unknown[]>(
+  handler: (request: AuthenticatedRequest, ...args: TArgs) => Promise<NextResponse>
+): (request: NextRequest, ...args: TArgs) => Promise<NextResponse> {
+  return async (request: NextRequest, ...args: TArgs) => {
     const session = getSessionFromRequest(request);
 
     if (!session) {
@@ -23,6 +23,6 @@ export function withAuth(
     const authenticatedRequest = request as AuthenticatedRequest;
     authenticatedRequest.auth = { userId: session.userId, email: session.email };
 
-    return handler(authenticatedRequest);
+    return handler(authenticatedRequest, ...args);
   };
 }
