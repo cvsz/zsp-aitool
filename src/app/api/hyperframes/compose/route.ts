@@ -3,6 +3,7 @@ import { z } from "zod";
 import { buildHyperFrameComposition } from "@/lib/hyperframes/build-composition";
 import { hyperFrameAspectRatios, hyperFramePlatforms } from "@/lib/hyperframes/types";
 import { withAuth } from "@/middleware/auth-middleware";
+import { AppError } from "@/lib/errors";
 import { productService } from "@/services/ProductService";
 
 const bodySchema = z.object({
@@ -21,7 +22,7 @@ export const POST = withAuth(async (request) => {
     return NextResponse.json({ ok: true, data: composition });
   } catch (error) {
     if (error instanceof z.ZodError) return NextResponse.json({ ok: false, error: error.flatten() }, { status: 422 });
-    const status = typeof error === "object" && error && "statusCode" in error ? Number((error as { statusCode: number }).statusCode) : 500;
+    const status = error instanceof AppError ? error.status : 500;
     return NextResponse.json({ ok: false, error: { code: "COMPOSE_FAILED", message: "ไม่สามารถสร้าง HyperFrames composition ได้" } }, { status });
   }
 });
