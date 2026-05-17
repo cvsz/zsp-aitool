@@ -1,20 +1,40 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("node:dns/promises", () => ({
+  default: {
+    lookup: vi.fn(),
+  },
+}));
+
+import dns from "node:dns/promises";
 import { AppError } from "@/lib/errors";
 import { assertSafeImportUrl } from "@/lib/url-safety";
 
+const mockedLookup = vi.mocked(dns.lookup);
+
 describe("assertSafeImportUrl", () => {
-  it("accepts public https URLs", () => {
-    expect(() => assertSafeImportUrl("https://shopee.co.th/product/123")).not.toThrow();
+  beforeEach(() => {
+    mockedLookup.mockReset();
+    mockedLookup.mockResolvedValue([{ address: "93.184.216.34", family: 4 }]);
   });
 
-  it("rejects non-http protocols", () => {
-    expect(() => assertSafeImportUrl("file:///etc/passwd")).toThrow(AppError);
+  it("accepts valid public URL", async () => {
+    await expect(assertSafeImportUrl("https://example.com/product/1")).resolves.toBeUndefined();
   });
 
-  it("rejects localhost/private hosts", () => {
-    expect(() => assertSafeImportUrl("http://localhost:3000/internal")).toThrow("Private or local network URLs are not allowed");
-    expect(() => assertSafeImportUrl("http://127.0.0.1/internal")).toThrow("Private or local network URLs are not allowed");
-    expect(() => assertSafeImportUrl("http://192.168.1.20/internal")).toThrow("Private or local network URLs are not allowed");
+  it("rejects invalid protocols", async () => {
+    await expect(assertSafeImportUrl("file:///etc/passwd")).rejects.toBeInstanceOf(AppError);
+  });
+
+  it("rejects localhost URL", async () => {
+    await expect(assertSafeImportUrl("http://localhost:3000/test")).rejects.toThrow("Private or local network URLs are not allowed");
+  });
+
+  it("rejects private IP URL", async () => {
+    await expect(assertSafeImportUrl("http://192.168.1.2/test")).rejects.toThrow("Private or local network URLs are not allowed");
+  });
+
+  it("rejects metadata IP", async () => {
+    await expect(assertSafeImportUrl("http://169.254.169.254/latest/meta-data")).rejects.toThrow("Private or local network URLs are not allowed");
   });
 });
