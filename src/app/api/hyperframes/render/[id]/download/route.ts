@@ -12,6 +12,7 @@ import {
   openArtifactStream,
   resolveRenderArtifactPath,
 } from "@/lib/hyperframes/artifact-access";
+import { getHyperFramesDownloadTokenConfig, verifyDownloadToken } from "@/lib/hyperframes/download-token";
 
 async function resolveDownload(request: AuthenticatedRequest, context: { params: Promise<{ id: string }> }, headOnly = false) {
   const { id } = await context.params;
@@ -19,6 +20,20 @@ async function resolveDownload(request: AuthenticatedRequest, context: { params:
   const scope = await resolveScope(request.auth.userId, orgId);
   if (!scope) return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Organization access denied" } }, { status: 403 });
   const job = await prisma.hyperFrameRenderJob.findFirst({ where: { id, deletedAt: null, ...(scope.orgId ? { orgId: scope.orgId } : { userId: request.auth.userId, orgId: null }) } });
+  const { searchParams } = new URL(request.url);
+  const signedDownloads = getHyperFramesDownloadTokenConfig();
+  const token = searchParams.get("token");
+
+  let userId = request.auth.userId;
+  if (signedDownloads.enabled && token) {
+    const payload = verifyDownloadToken(token, signedDownloads);
+    if (payload.jobId !== id || payload.userId !== request.auth.userId) {
+      return NextResponse.json({ ok: false, error: { code: "UNAUTHORIZED", message: "Invalid download token" } }, { status: 401 });
+    }
+    userId = payload.userId;
+  }
+
+  const job = await prisma.hyperFrameRenderJob.findFirst({ where: { id, userId, deletedAt: null } });
 
   if (!job) return NextResponse.json({ ok: false, error: { code: "NOT_FOUND", message: "Render job not found" } }, { status: 404 });
   if (job.status !== "COMPLETED") return NextResponse.json({ ok: false, error: { code: "RENDER_NOT_READY", message: "Render is not completed" } }, { status: 409 });
@@ -50,5 +65,26 @@ async function resolveDownload(request: AuthenticatedRequest, context: { params:
   return new NextResponse(Readable.toWeb(stream) as ReadableStream, { status: 200, headers });
 }
 
-export const GET = withAuth(async (request, context: { params: Promise<{ id: string }> }) => resolveDownload(request, context));
-export const HEAD = withAuth(async (request, context: { params: Promise<{ id: string }> }) => resolveDownload(request, context, true));
+export const GET = withAuth(async (request, context: { params: Promise<{ id: string }> }) => {
+  try {
+    return await resolveDownload(request, context);
+  } catch (error) {
+    const code = error instanceof Error ? error.message : "DOWNLOAD_TOKEN_INVALID";
+    if (code === "DOWNLOAD_TOKEN_INVALID" || code === "DOWNLOAD_TOKEN_EXPIRED") {
+      return NextResponse.json({ ok: false, error: { code: "UNAUTHORIZED", message: "Invalid or expired download token" } }, { status: 401 });
+    }
+    throw error;
+  }
+});
+
+export const HEAD = withAuth(async (request, context: { params: Promise<{ id: string }> }) => {
+  try {
+    return await resolveDownload(request, context, true);
+  } catch (error) {
+    const code = error instanceof Error ? error.message : "DOWNLOAD_TOKEN_INVALID";
+    if (code === "DOWNLOAD_TOKEN_INVALID" || code === "DOWNLOAD_TOKEN_EXPIRED") {
+      return NextResponse.json({ ok: false, error: { code: "UNAUTHORIZED", message: "Invalid or expired download token" } }, { status: 401 });
+    }
+    throw error;
+  }
+});
