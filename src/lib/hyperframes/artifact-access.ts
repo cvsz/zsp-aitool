@@ -5,6 +5,7 @@ import path from "node:path";
 const VIDEO_EXTENSIONS = new Set([".mp4", ".webm", ".mov"]);
 const IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp"]);
 const ALLOWED_EXTENSIONS = new Set([...VIDEO_EXTENSIONS, ...IMAGE_EXTENSIONS]);
+const ALLOWED_EXTENSIONS = new Set([".mp4", ".webm", ".mov", ".jpg", ".jpeg", ".png"]);
 
 export function assertArtifactInsideOutputDir(outputDir: string, artifactPath: string): void {
   const resolvedOutputDir = path.resolve(outputDir);
