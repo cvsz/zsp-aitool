@@ -46,11 +46,47 @@ HYPERFRAMES_RENDER_SMOKE_CONFIRM=YES \
 npm run hyperframes:render-smoke
 ```
 
-### Stage 3 (one-off DB worker job)
+### Stage 3 (one-off DB worker job lifecycle)
+
+Find a valid user id:
+
+```bash
+psql "$DATABASE_URL" -tAc 'select id,email from "User" limit 5;'
+```
+
+Enqueue one smoke job:
+
+```bash
+HYPERFRAMES_RENDER_ENABLED=true \
+HYPERFRAMES_RENDER_SMOKE_CONFIRM=YES \
+HYPERFRAMES_SMOKE_USER_ID=<user-id> \
+npm run hyperframes:enqueue-smoke-job
+```
+
+Process one job:
 
 ```bash
 HYPERFRAMES_RENDER_ENABLED=true \
 npm run hyperframes:worker:once
+```
+
+Inspect job status:
+
+```bash
+npm run hyperframes:render-job-status -- <job-id>
+```
+
+Inspect render output:
+
+```bash
+find /var/lib/zsp-aitool/hyperframes/renders -maxdepth 5 -type f \
+  \( -name "*.mp4" -o -name "*.webm" -o -name "*.mov" \) -print -ls
+```
+
+Verify app health:
+
+```bash
+npm run health
 ```
 
 ### Stage 4 (optional systemd worker)
