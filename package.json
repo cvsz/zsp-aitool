@@ -23,7 +23,8 @@
     "hyperframes:worker:once": "tsx scripts/hyperframes/render-worker.ts --once",
     "hyperframes:render-smoke": "tsx scripts/hyperframes/render-smoke.ts",
     "hyperframes:enqueue-smoke-job": "tsx scripts/hyperframes/enqueue-smoke-job.ts",
-    "hyperframes:render-job-status": "tsx scripts/hyperframes/render-job-status.ts"
+    "hyperframes:render-job-status": "tsx scripts/hyperframes/render-job-status.ts",
+    "hyperframes:test-render": "bash scripts/hyperframes/test-hyperframes-render.sh"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
