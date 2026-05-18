@@ -17,6 +17,11 @@ export async function enqueueSmokeJob(): Promise<{ jobId: string; status: Render
     throw new Error("HYPERFRAMES_SMOKE_USER_ID is required");
   }
 
+  const pendingCount = await prisma.hyperFrameRenderJob.count({ where: { status: RenderJobStatus.PENDING, deletedAt: null } });
+  if (pendingCount >= config.maxPendingJobs) {
+    throw new Error(`[SKIP] pending queue limit reached (${pendingCount}/${config.maxPendingJobs})`);
+  }
+
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
   if (!user) {
     throw new Error("HYPERFRAMES_SMOKE_USER_ID does not exist");

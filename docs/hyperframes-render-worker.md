@@ -161,3 +161,15 @@ sudo systemctl daemon-reload
 - API flow: create job -> worker claims `PENDING` job -> `RUNNING` -> `COMPLETED`/`FAILED`.
 
 Systemd unit template is in `deploy/systemd/zsp-hyperframes-worker.service` and is optional.
+
+## Production guardrails (Phase 2.5)
+
+- Queue limits: `HYPERFRAMES_MAX_PENDING_JOBS=25`, `HYPERFRAMES_MAX_RUNNING_JOBS=1`.
+- Retry controls: `HYPERFRAMES_MAX_ATTEMPTS=3`, `HYPERFRAMES_RETRY_BACKOFF_SECONDS=300`.
+- Stale recovery: `HYPERFRAMES_RUNNING_STALE_MINUTES=30`, run `npm run hyperframes:recover-stale-jobs` explicitly.
+- Disk guard: `HYPERFRAMES_MIN_FREE_MB=2048`, `HYPERFRAMES_MAX_OUTPUT_MB=512`.
+- Retention cleanup: `HYPERFRAMES_RETENTION_DAYS=14`, `HYPERFRAMES_CLEANUP_DRY_RUN=true` default.
+- Queue status command: `npm run hyperframes:queue-status` returns safe JSON only.
+- Cleanup command: `npm run hyperframes:cleanup-renders` prints `[OK]/[WARN]/[FAIL]/[SKIP]`; real deletion requires `HYPERFRAMES_CLEANUP_DRY_RUN=false`.
+- Systemd remains install-only by default; no auto-enable/auto-start in scripts.
+- Manual enable process and rollback remain operator-driven only.
