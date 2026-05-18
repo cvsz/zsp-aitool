@@ -234,3 +234,73 @@ Do not run when any of the following apply:
 - doctor preflight failure,
 - pending migration,
 - unhealthy web app status.
+
+
+## Phase 2.7: live queue trial with temporary render-enabled drop-in
+
+This phase runs exactly one real queued job through the systemd worker with a temporary runtime override, then rolls back automatically.
+
+### Safety constraints
+
+- No permanent `.env` edits.
+- No `systemctl enable` calls.
+- Service must remain disabled after trial.
+- Worker is stopped after trial (success or failure).
+
+### Get a user id safely
+
+Use read-only query output and pick an existing user id:
+
+```bash
+psql "$DATABASE_URL" -tAc 'select id,email from "User" order by "createdAt" desc limit 5;'
+```
+
+### Run the live queue trial
+
+```bash
+HYPERFRAMES_LIVE_TRIAL_CONFIRM=YES HYPERFRAMES_SMOKE_USER_ID=<user-id> HYPERFRAMES_LIVE_TRIAL_SECONDS=300 npm run hyperframes:worker:live-trial
+```
+
+Preflight gates refuse the run when:
+- confirmation flag is missing,
+- user id is missing,
+- service file is missing,
+- service is enabled,
+- running jobs > 0,
+- health check fails,
+- doctor check fails,
+- free disk is below `HYPERFRAMES_MIN_FREE_MB`.
+
+### What the script does
+
+1. Enqueues exactly one smoke render job.
+2. Creates temporary drop-in: `/etc/systemd/system/zsp-hyperframes-worker.service.d/trial.conf`.
+3. Sets runtime env via drop-in:
+   - `HYPERFRAMES_RENDER_ENABLED=true`
+   - `HYPERFRAMES_RENDER_SMOKE_CONFIRM=YES`
+   - `HYPERFRAMES_CLI_BIN=npx`
+   - `HYPERFRAMES_CLI_ARGS=-y hyperframes`
+4. Runs `systemctl daemon-reload` and `systemctl start`.
+5. Polls job status until `COMPLETED`/`FAILED` or timeout (default 300s).
+6. Stops service, removes drop-in, daemon-reloads.
+7. Verifies service is disabled + inactive.
+8. Runs `npm run health` and `npm run hyperframes:queue-status`.
+9. Prints output path when completed.
+
+### Expected output
+
+- `[OK] Queued job: <job-id>`
+- `[OK] Job <job-id> finished with status=COMPLETED`
+- `[OK] Render output: /var/lib/zsp-aitool/hyperframes/renders/...`
+
+### Rollback commands (manual emergency path)
+
+```bash
+sudo systemctl stop zsp-hyperframes-worker || true
+sudo rm -f /etc/systemd/system/zsp-hyperframes-worker.service.d/trial.conf
+sudo rmdir /etc/systemd/system/zsp-hyperframes-worker.service.d 2>/dev/null || true
+sudo systemctl daemon-reload
+npm run health
+```
+
+After trial completion, `systemctl is-enabled zsp-hyperframes-worker` must not report `enabled` and service should be inactive.
