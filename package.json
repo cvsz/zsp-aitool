@@ -33,7 +33,8 @@
     "hyperframes:cleanup-renders": "tsx scripts/hyperframes/cleanup-renders.ts",
     "hyperframes:recover-stale-jobs": "tsx scripts/hyperframes/recover-stale-jobs.ts",
     "hyperframes:worker:trial": "bash scripts/hyperframes/worker-trial.sh",
-    "hyperframes:worker:live-trial": "bash scripts/hyperframes/live-queue-trial.sh"
+    "hyperframes:worker:live-trial": "bash scripts/hyperframes/live-queue-trial.sh",
+    "hyperframes:worker:preflight": "bash scripts/hyperframes/persistent-worker-preflight.sh"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
