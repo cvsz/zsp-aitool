@@ -87,6 +87,8 @@ if [[ "$REAL_SMOKE" == true ]]; then
   ok "Running explicitly gated render smoke"
   HYPERFRAMES_RENDER_ENABLED=true \
   HYPERFRAMES_RENDER_SMOKE_CONFIRM=YES \
+  HYPERFRAMES_CLI_BIN="${HYPERFRAMES_CLI_BIN:-npx}" \
+  HYPERFRAMES_CLI_ARGS="${HYPERFRAMES_CLI_ARGS:--y hyperframes}" \
   npm run hyperframes:render-smoke
 
   ok "Listing rendered media after render-smoke"
@@ -175,7 +177,37 @@ if [[ "$JOB_SMOKE" == true ]]; then
 
   ok "Processing exactly one pending render job"
   HYPERFRAMES_RENDER_ENABLED=true \
+  HYPERFRAMES_CLI_BIN="${HYPERFRAMES_CLI_BIN:-npx}" \
+  HYPERFRAMES_CLI_ARGS="${HYPERFRAMES_CLI_ARGS:--y hyperframes}" \
   npm run hyperframes:worker:once
+
+  if npm run | grep -q 'hyperframes:render-job-status'; then
+    ok "Job status for latest smoke job"
+    HYPERFRAMES_RENDER_SMOKE_CONFIRM=YES \
+    HYPERFRAMES_SMOKE_USER_ID="$SMOKE_USER_ID" \
+    node - <<'NODE'
+const { PrismaClient } = require("@prisma/client");
+const prisma = new PrismaClient();
+(async () => {
+  const job = await prisma.hyperFrameRenderJob.findFirst({
+    where: { userId: process.env.HYPERFRAMES_SMOKE_USER_ID },
+    orderBy: { createdAt: "desc" },
+    select: { id: true, status: true, errorMessage: true },
+  });
+
+  if (!job) {
+    console.error("[FAIL] No smoke job found for user");
+    process.exit(1);
+  }
+
+  console.log(`[OK] smoke job ${job.id} status=${job.status}`);
+  if (job.status === "FAILED") {
+    console.error(`[FAIL] smoke job failed: ${job.errorMessage ?? "no error message"}`);
+    process.exit(1);
+  }
+})().finally(async () => prisma.$disconnect());
+NODE
+  fi
 
   ok "Listing rendered media after worker once"
   find "$OUTPUT_DIR" -maxdepth 5 -type f \

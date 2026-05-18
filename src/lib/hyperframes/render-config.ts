@@ -1,3 +1,5 @@
+import { loadEnvConfig } from "@next/env";
+
 export type HyperFramesRenderConfig = {
   enabled: boolean;
   workDir: string;
@@ -10,6 +12,14 @@ export type HyperFramesRenderConfig = {
   cliArgs: string[];
 };
 
+let envLoaded = false;
+
+function ensureEnvLoaded(): void {
+  if (envLoaded) return;
+  loadEnvConfig(process.cwd());
+  envLoaded = true;
+}
+
 function toInt(value: string | undefined, fallback: number): number {
   const parsed = Number.parseInt(value ?? "", 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
@@ -20,6 +30,7 @@ function toArgv(value: string | undefined): string[] {
 }
 
 export function getHyperFramesRenderConfig(): HyperFramesRenderConfig {
+  ensureEnvLoaded();
   return {
     enabled: process.env.HYPERFRAMES_RENDER_ENABLED === "true",
     workDir: process.env.HYPERFRAMES_WORKDIR ?? "/var/lib/zsp-aitool/hyperframes",
