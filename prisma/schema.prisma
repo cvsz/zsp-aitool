@@ -46,6 +46,7 @@ model User {
   email              String              @unique
   name               String?
   password           String?
+  planTier           PlanTier            @default(FREE)
   products           Product[]
   contentGenerations ContentGeneration[]
   affiliateLinks     AffiliateLink[]
@@ -54,11 +55,44 @@ model User {
   ocrJobs            OCRJob[]
   hyperFrameRenderJobs HyperFrameRenderJob[]
   hyperFrameScriptGenerations HyperFrameScriptGeneration[]
+  hyperFrameRenderShares HyperFrameRenderShare[]
+  hyperFrameRenderShares   HyperFrameRenderShare[]
   platformPosts      PlatformPost[]
   settings           UserSetting?
   apiUsageLogs       APIUsageLog[]
+  orgMemberships     OrgMembership[]
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
+}
+
+enum OrgRole {
+  VIEWER
+  EDITOR
+  ADMIN
+}
+
+model Organization {
+  id                   String               @id @default(cuid())
+  name                 String
+  memberships          OrgMembership[]
+  hyperFrameRenderJobs HyperFrameRenderJob[]
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+}
+
+model OrgMembership {
+  id        String       @id @default(cuid())
+  orgId     String
+  userId    String
+  role      OrgRole      @default(VIEWER)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, userId])
+  @@index([userId])
 }
 
 model Product {
@@ -264,12 +298,35 @@ model UserSetting {
   defaultHashtags     String[]
   ctaStyle            String?
   subscriptionPlan    SubscriptionPlan @default(FREE)
+  brandColors         String[]
+  fontPreference      String?
+  logoUrl             String?
+  watermarkText       String?
+  defaultAspectRatio  String?
+  defaultCTA          String?
   user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
   deletedAt           DateTime?
 
   @@index([deletedAt])
+}
+
+model HyperFrameRenderShare {
+  id          String   @id @default(cuid())
+  userId      String
+  renderJobId String
+  tokenHash   String   @unique
+  expiresAt   DateTime
+  revokedAt   DateTime?
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  renderJob   HyperFrameRenderJob @relation(fields: [renderJobId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([renderJobId])
+  @@index([expiresAt])
 }
 
 model APIUsageLog {
@@ -295,6 +352,13 @@ model APIUsageLog {
   @@index([deletedAt])
 }
 
+
+enum PlanTier {
+  FREE
+  PRO
+  TEAM
+  ENTERPRISE
+}
 
 enum RenderJobStatus {
   PENDING
@@ -332,6 +396,7 @@ model HyperFrameScriptGeneration {
 model HyperFrameRenderJob {
   id                  String   @id @default(cuid())
   userId              String
+  orgId               String?
   productId           String?
   contentGenerationId String?
   status              RenderJobStatus @default(PENDING)
@@ -339,6 +404,7 @@ model HyperFrameRenderJob {
   compositionMetadata Json?
   outputPath          String?
   outputUrl           String?
+  outputSizeBytes     BigInt?
   errorMessage        String?
   durationSeconds     Int?
   width               Int?
@@ -354,9 +420,30 @@ model HyperFrameRenderJob {
   updatedAt           DateTime @updatedAt
 
   user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization        Organization? @relation(fields: [orgId], references: [id], onDelete: SetNull)
   product             Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  shares              HyperFrameRenderShare[]
 
   @@index([userId, status])
   @@index([status, createdAt])
   @@index([deletedAt])
+  @@index([orgId, status, createdAt])
+}
+
+model HyperFrameRenderShare {
+  id          String   @id @default(cuid())
+  renderJobId String
+  ownerUserId String
+  tokenHash   String   @unique
+  expiresAt   DateTime
+  revokedAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  renderJob   HyperFrameRenderJob @relation(fields: [renderJobId], references: [id], onDelete: Cascade)
+  owner       User                @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+
+  @@index([renderJobId])
+  @@index([ownerUserId, createdAt])
+  @@index([expiresAt])
 }
