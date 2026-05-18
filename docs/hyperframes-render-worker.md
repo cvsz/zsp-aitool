@@ -420,3 +420,41 @@ Recovery remains operator-controlled and non-destructive by default.
 ```bash
 npm run hyperframes:worker:disable-real
 ```
+
+## Phase 2.11: secure artifact serving and downloads
+
+- Download API endpoint: `GET /api/hyperframes/render/:id/download` (also supports `HEAD`).
+- Authentication is mandatory; unauthenticated requests return `401`.
+- Access is user-scoped by `id + userId + deletedAt=null`; non-owned jobs return `404`.
+- Only `COMPLETED` jobs can be downloaded; non-completed jobs return `409`.
+- Output artifacts are never public static files; the output directory is not exposed directly.
+- API responses do not expose local filesystem paths to normal users.
+
+### Artifact validation rules
+
+- Resolve and validate artifact paths under `HYPERFRAMES_OUTPUT_DIR`.
+- Block traversal and symlink escape attempts using `resolve` + `realpath` checks.
+- Require regular files only.
+- Enforce allowed extensions only: `.mp4`, `.webm`, `.mov`.
+- Enforce output size cap via `HYPERFRAMES_MAX_OUTPUT_MB`.
+
+### Response behavior and headers
+
+- Missing artifact returns `404`.
+- Expired/deleted/unavailable artifact returns `410`.
+- Successful downloads set:
+  - `Content-Type` based on extension.
+  - `Content-Disposition: attachment` with sanitized filename.
+  - `X-Content-Type-Options: nosniff`.
+  - `Cache-Control: private, no-store`.
+
+### Render status API behavior
+
+- Render status endpoint includes `canDownload` and `downloadUrl` for completed jobs.
+- Normal user APIs do not include `outputPath`; operator tooling remains the path-aware surface.
+
+### Troubleshooting
+
+- `404` for completed job usually means cleanup retention removed the artifact file.
+- `410` indicates invalid/expired/unavailable artifact metadata or policy violation.
+- Verify retention and cleanup settings when historical downloads are no longer available.
