@@ -1,0 +1,11 @@
+[Unit]
+Description=zsp-aitool HyperFrames Cleanup Timer
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+RandomizedDelaySec=15m
+Unit=zsp-hyperframes-cleanup.service
+
+[Install]
+WantedBy=timers.target
