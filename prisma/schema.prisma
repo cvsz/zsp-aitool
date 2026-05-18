@@ -27,6 +27,13 @@ enum Language {
   EN
 }
 
+enum SubscriptionPlan {
+  FREE
+  PRO
+  TEAM
+  ENTERPRISE
+}
+
 enum JobStatus {
   PENDING
   PROCESSING
@@ -290,6 +297,7 @@ model UserSetting {
   affiliateDisclosure String?
   defaultHashtags     String[]
   ctaStyle            String?
+  subscriptionPlan    SubscriptionPlan @default(FREE)
   brandColors         String[]
   fontPreference      String?
   logoUrl             String?
