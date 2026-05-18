@@ -50,6 +50,7 @@ model User {
   platformPosts      PlatformPost[]
   settings           UserSetting?
   apiUsageLogs       APIUsageLog[]
+  hyperFrameSocialExportAuditEvents HyperFrameSocialExportAuditEvent[]
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
 }
@@ -351,4 +352,21 @@ model HyperFrameRenderJob {
   @@index([userId, status])
   @@index([status, createdAt])
   @@index([deletedAt])
+}
+
+
+model HyperFrameSocialExportAuditEvent {
+  id          String   @id @default(cuid())
+  userId      String
+  renderJobId String
+  provider    String
+  eventType   String
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([renderJobId])
+  @@index([provider, eventType])
 }
