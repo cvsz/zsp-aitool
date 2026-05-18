@@ -2,11 +2,21 @@
 
 Rendering is disabled by default for safety and optional dependency isolation.
 
-- Feature flag: `HYPERFRAMES_RENDER_ENABLED=true` to enable.
+- Keep `HYPERFRAMES_RENDER_ENABLED=false` unless actively testing.
+- Feature flag: `HYPERFRAMES_RENDER_ENABLED=true` to enable rendering for explicit runs.
 - Official CLI package/binary: `hyperframes`.
 - Runtime requirements: Node.js >= 22 and FFmpeg.
 - Dependencies checked by doctor: Node runtime, ffmpeg, HyperFrames CLI via configured bin/args.
 - Worker commands: `npm run hyperframes:worker` (continuous) or `npm run hyperframes:worker:once`.
+
+## Prerequisites
+
+- Linux host with systemd.
+- User `zeazdev` exists and can run npm in `/home/zeazdev/zsp-aitool`.
+- Repository present at `/home/zeazdev/zsp-aitool`.
+- `.env` file exists and keeps `HYPERFRAMES_RENDER_ENABLED=false` by default.
+- `npm ci`, `npm run prisma:generate`, `npm run typecheck`, and `npm run health` already pass.
+- `npm run hyperframes:doctor` reports CLI callable.
 
 ## CLI configuration
 
@@ -89,9 +99,48 @@ Verify app health:
 npm run health
 ```
 
-### Stage 4 (optional systemd worker)
+### Stage 4 (optional systemd worker, install service only)
 
-Only after multiple successful smoke runs, install optional systemd worker. Keep the service disabled until explicitly enabled.
+Install unit file only (no auto-enable, no auto-start):
+
+```bash
+npm run hyperframes:worker:install-service
+```
+
+Check status:
+
+```bash
+npm run hyperframes:worker:status
+```
+
+Manual enable/start (operator decision only):
+
+```bash
+sudo systemctl enable zsp-hyperframes-worker
+sudo systemctl start zsp-hyperframes-worker
+```
+
+Health verification:
+
+```bash
+npm run health
+npm run hyperframes:worker:status
+```
+
+Logs:
+
+```bash
+npm run hyperframes:worker:logs
+```
+
+Rollback:
+
+```bash
+sudo systemctl stop zsp-hyperframes-worker
+sudo systemctl disable zsp-hyperframes-worker
+sudo rm -f /etc/systemd/system/zsp-hyperframes-worker.service
+sudo systemctl daemon-reload
+```
 
 ## Doctor behavior
 
@@ -111,4 +160,4 @@ Only after multiple successful smoke runs, install optional systemd worker. Keep
 - Completed renders are marked `COMPLETED` with `outputPath` metadata.
 - API flow: create job -> worker claims `PENDING` job -> `RUNNING` -> `COMPLETED`/`FAILED`.
 
-Systemd example is in `deploy/systemd/zsp-hyperframes-worker.service` and is optional.
+Systemd unit template is in `deploy/systemd/zsp-hyperframes-worker.service` and is optional.
