@@ -31,7 +31,8 @@ describe("hyperframes worker trial script", () => {
   it("contains stop/cleanup trap", () => {
     const source = readFileSync(scriptPath, "utf8");
     expect(source).toContain("trap cleanup EXIT");
-    expect(source).toContain('systemctl stop "${SERVICE_NAME}"');
+    expect(source).toContain('if systemctl is-active "${SERVICE_NAME}"');
+    expect(source).toContain('systemctl stop "${SERVICE_NAME}" || warn');
   });
 
   it("checks queue status before service start", () => {
@@ -44,14 +45,32 @@ describe("hyperframes worker trial script", () => {
     expect(queueIndex).toBeLessThan(startIndex);
   });
 
-  it("runs health after service stop", () => {
+  it("runs queue status and health after disabled-mode lifecycle check", () => {
     const source = readFileSync(scriptPath, "utf8");
-    const stopIndex = source.indexOf('systemctl stop "${SERVICE_NAME}"');
-    const healthIndex = source.indexOf("npm run health");
+    const lifecycleIndex = source.indexOf("disabled-mode service lifecycle verified");
+    const queueIndex = source.indexOf("Queue status after trial");
+    const healthIndex = source.indexOf("Health check after trial");
 
-    expect(stopIndex).toBeGreaterThan(-1);
+    expect(lifecycleIndex).toBeGreaterThan(-1);
+    expect(queueIndex).toBeGreaterThan(-1);
     expect(healthIndex).toBeGreaterThan(-1);
-    expect(stopIndex).toBeLessThan(healthIndex);
+    expect(lifecycleIndex).toBeLessThan(queueIndex);
+    expect(queueIndex).toBeLessThan(healthIndex);
+  });
+
+  it("disabled mode does not fail on inactive service", () => {
+    const source = readFileSync(scriptPath, "utf8");
+    expect(source).toContain("running disabled-mode lifecycle check");
+    const disabledBranchStart = source.indexOf("if (( enabled_mode == 0 ))");
+    const disabledBranchEnd = source.indexOf("else", disabledBranchStart);
+    const disabledBranch = source.slice(disabledBranchStart, disabledBranchEnd);
+    expect(disabledBranch).not.toContain("Service became inactive during trial");
+  });
+
+  it("enabled mode still requires service to remain active", () => {
+    const source = readFileSync(scriptPath, "utf8");
+    expect(source).toContain('if ! systemctl is-active "${SERVICE_NAME}"');
+    expect(source).toContain("Service became inactive during trial");
   });
 
   it("is wired into package scripts", () => {

@@ -60,11 +60,18 @@ ok "Running doctor preflight"
 npm run hyperframes:doctor
 
 started=0
+enabled_mode=0
+if [[ "${HYPERFRAMES_RENDER_ENABLED:-false}" == "true" ]]; then
+  enabled_mode=1
+fi
+
 cleanup() {
   local exit_code=$?
   if (( started == 1 )); then
-    ok "Stopping trial service"
-    systemctl stop "${SERVICE_NAME}" || warn "Failed to stop ${SERVICE_NAME}"
+    if systemctl is-active "${SERVICE_NAME}" >/dev/null 2>&1; then
+      ok "Stopping trial service"
+      systemctl stop "${SERVICE_NAME}" || warn "Failed to stop ${SERVICE_NAME}"
+    fi
 
     ok "Service status after stop"
     systemctl status "${SERVICE_NAME}" --no-pager || warn "Unable to read service status"
@@ -91,11 +98,27 @@ ok "Starting worker service"
 systemctl start "${SERVICE_NAME}"
 started=1
 
-ok "Worker trial running for ${TRIAL_SECONDS} seconds"
-sleep "${TRIAL_SECONDS}"
-
-if ! systemctl is-active "${SERVICE_NAME}" >/dev/null 2>&1; then
-  fail "Service became inactive during trial"
+if (( enabled_mode == 0 )); then
+  warn "HYPERFRAMES_RENDER_ENABLED=false; running disabled-mode lifecycle check"
+  sleep 2
+  SERVICE_STATUS="$(systemctl show "${SERVICE_NAME}" --property=ActiveState,SubState,Result --value 2>/dev/null | tr '\n' ' ')"
+  LOG_SAMPLE="$(journalctl -u "${SERVICE_NAME}" -n 200 --no-pager 2>/dev/null || true)"
+  if [[ "${LOG_SAMPLE}" == *"render disabled"* ]] || [[ "${SERVICE_STATUS}" == *"inactive"* ]] || [[ "${SERVICE_STATUS}" == *"success"* ]]; then
+    ok "disabled-mode service lifecycle verified"
+  else
+    fail "Disabled-mode lifecycle check failed: expected clean deactivation or 'render disabled' log"
+  fi
+else
+  ok "Worker trial running for ${TRIAL_SECONDS} seconds"
+  sleep "${TRIAL_SECONDS}"
+  if ! systemctl is-active "${SERVICE_NAME}" >/dev/null 2>&1; then
+    fail "Service became inactive during trial"
+  fi
+  ok "Trial window completed"
 fi
 
-ok "Trial window completed"
+ok "Queue status after trial"
+npm run hyperframes:queue-status
+
+ok "Health check after trial"
+npm run health

@@ -203,15 +203,17 @@ HYPERFRAMES_WORKER_TRIAL_CONFIRM=YES HYPERFRAMES_WORKER_TRIAL_SECONDS=120 npm ru
 ```
 
 - Default trial duration is 120 seconds.
-- The script calls `systemctl start` only, sleeps for the trial window, then stops the service.
+- When `HYPERFRAMES_RENDER_ENABLED=true`, the script calls `systemctl start`, sleeps for the trial window, requires the service to remain active, then stops the service.
+- When `HYPERFRAMES_RENDER_ENABLED=false`, the script runs a disabled-mode lifecycle check only: it starts the service, allows immediate clean exit, verifies logs/status, then continues with queue status and health checks.
+- In disabled mode, immediate clean deactivation is expected behavior and is treated as success when lifecycle checks pass.
 - The script prints service status/logs, then runs queue status and health checks.
 - The script does not call `systemctl enable` and does not modify `.env`.
 
 ### Service/env behavior
 
-- If `HYPERFRAMES_RENDER_ENABLED=false`, the script warns that the service can start but the worker will not process jobs.
+- If `HYPERFRAMES_RENDER_ENABLED=false`, the worker exits cleanly with `render disabled`; trial success means lifecycle verified plus passing queue/health checks.
 - Trial mode does not automate permanent env changes.
-- For controlled testing only, use either:
+- For real render behavior testing only, use either:
   - a one-off systemd drop-in override, or
   - a temporary manual `.env` edit that you explicitly revert after testing.
 
