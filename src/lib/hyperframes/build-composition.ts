@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 
 import { escapeHtml, sanitizeText, validateHttpMediaUrl } from "@/lib/hyperframes/sanitize";
+import { validateSubtitles } from "@/lib/hyperframes/subtitles";
 import type { HyperFrameAspectRatio, HyperFrameCompositionProduct, HyperFrameCompositionRequest, HyperFrameCompositionResult } from "@/lib/hyperframes/types";
 import { alignVoiceoverDuration } from "@/lib/hyperframes/voiceover";
 import type { HyperFrameAspectRatio, HyperFrameBrandKit, HyperFrameCompositionProduct, HyperFrameCompositionRequest, HyperFrameCompositionResult } from "@/lib/hyperframes/types";
@@ -23,6 +24,7 @@ export function buildHyperFrameComposition(
     ? sanitizeText(`${input.product.price} ${input.product.currency}`)
     : null;
 
+  const subtitles = input.subtitles ? validateSubtitles(input.subtitles, input.durationSeconds) : [];
   const hasAffiliate = Boolean(input.product.affiliateUrl);
   const primaryColor = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(input.brandKit?.brandColors?.[0] ?? "") ? input.brandKit?.brandColors?.[0] : "#22c55e";
   const safeFont = sanitizeText(input.brandKit?.fontPreference ?? "").replace(/&quot;/g, "").replace(/&#39;/g, "");
@@ -65,6 +67,9 @@ export function buildHyperFrameComposition(
     .facts { position: absolute; left: 40px; right: 40px; bottom: 86px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
     .title { font-size: 30px; font-weight: 700; }
     .price { margin-top: 8px; font-size: 26px; opacity: 0.95; }
+    .cta { background: #22c55e; color: #052e16; border-radius: 999px; padding: 14px 22px; font-size: 24px; font-weight: 700; }
+     .disclosure { position: absolute; left: 40px; right: 40px; bottom: 18px; font-size: 19px; opacity: 0.9; }
+    .captions { position: absolute; left: 40px; right: 40px; bottom: 52px; text-align: center; font-size: 28px; font-weight: 600; text-shadow: 0 2px 8px rgba(0,0,0,.8); }
     .cta { background: ${primaryColor}; color: #052e16; border-radius: 999px; padding: 14px 22px; font-size: 24px; font-weight: 700; }
     .brand-logo { position: absolute; top: 20px; left: 20px; width: 88px; height: 88px; object-fit: contain; }
     .watermark { position: absolute; top: 26px; right: 24px; font-size: 18px; opacity: 0.85; }
@@ -86,6 +91,7 @@ export function buildHyperFrameComposition(
       </div>
       <div class="cta">${safeCta}</div>
     </div>
+        ${input.burnedInCaptions && subtitles.length ? `<div class="captions" aria-label="captions-preview">${subtitles.map((line) => `<span data-start="${line.start}" data-end="${line.end}" data-style="${line.style}" data-language="${line.language}">${line.text}</span>`).join("<br />")}</div>` : ""}
     ${disclosureText ? `<div class="disclosure">${disclosureText}</div>` : ""}
   </div>
 </body>
