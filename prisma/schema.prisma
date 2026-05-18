@@ -256,6 +256,12 @@ model UserSetting {
   affiliateDisclosure String?
   defaultHashtags     String[]
   ctaStyle            String?
+  brandColors         String[]
+  fontPreference      String?
+  logoUrl             String?
+  watermarkText       String?
+  defaultAspectRatio  String?
+  defaultCTA          String?
   user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
@@ -331,6 +337,7 @@ model HyperFrameRenderJob {
   compositionMetadata Json?
   outputPath          String?
   outputUrl           String?
+  outputSizeBytes     BigInt?
   errorMessage        String?
   durationSeconds     Int?
   width               Int?

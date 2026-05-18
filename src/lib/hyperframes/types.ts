@@ -1,4 +1,6 @@
 import type { HyperFrameSubtitle } from "@/lib/hyperframes/subtitles";
+import type { HyperframesVoiceoverMetadata } from "@/lib/hyperframes/voiceover";
+
 export const hyperFrameAspectRatios = ["16:9", "9:16", "1:1"] as const;
 export type HyperFrameAspectRatio = (typeof hyperFrameAspectRatios)[number];
 
@@ -18,6 +20,15 @@ export type HyperFrameCompositionRequest = {
   durationSeconds: number;
   caption?: string;
   script?: string;
+  voiceover?: HyperframesVoiceoverMetadata;
+};
+
+export type HyperFrameBrandKit = {
+  brandColors?: string[];
+  fontPreference?: string | null;
+  logoUrl?: string | null;
+  watermarkText?: string | null;
+  defaultCTA?: string | null;
 };
 
 export type HyperFrameCompositionProduct = {
@@ -40,5 +51,6 @@ export type HyperFrameCompositionResult = {
     width: number;
     height: number;
     hasAffiliateDisclosure: boolean;
+    voiceover: HyperFrameCompositionRequest["voiceover"] | null;
   };
 };
