@@ -27,6 +27,13 @@ enum Language {
   EN
 }
 
+enum SubscriptionPlan {
+  FREE
+  PRO
+  TEAM
+  ENTERPRISE
+}
+
 enum JobStatus {
   PENDING
   PROCESSING
@@ -256,6 +263,7 @@ model UserSetting {
   affiliateDisclosure String?
   defaultHashtags     String[]
   ctaStyle            String?
+  subscriptionPlan    SubscriptionPlan @default(FREE)
   user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
