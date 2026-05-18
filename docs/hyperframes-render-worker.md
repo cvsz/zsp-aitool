@@ -458,3 +458,30 @@ npm run hyperframes:worker:disable-real
 - `404` for completed job usually means cleanup retention removed the artifact file.
 - `410` indicates invalid/expired/unavailable artifact metadata or policy violation.
 - Verify retention and cleanup settings when historical downloads are no longer available.
+
+## Phase 2.12: user render history dashboard
+
+New user-facing route: `/dashboard/hyperframes/renders`.
+
+- Authenticated users can view only their own render jobs.
+- Render history API returns safe fields only (`id`, `status`, timestamps, attempts, dimensions, duration, safe metadata, and safe error message).
+- Completed jobs expose a secure `downloadUrl`; internal `outputPath` is never returned to UI.
+- Users can cancel only `PENDING` jobs from the dashboard.
+- Dashboard polling runs every 12 seconds only while jobs are `PENDING` or `RUNNING`.
+- Error text is truncated and local filesystem paths are redacted.
+
+Status interpretation:
+- `PENDING`: waiting in queue; user can cancel.
+- `RUNNING`: currently rendering; user cannot cancel in this phase.
+- `COMPLETED`: render finished; user can download artifact.
+- `FAILED`: render failed; safe error shown (no stack trace/path leak).
+- `CANCELLED`: cancelled before run.
+
+Failed job guidance:
+- Check prompt/script input and platform/aspect ratio metadata.
+- Retry is guarded by max-attempt policy (Phase 2.13 optional endpoint).
+- Contact operator if repeated failures persist.
+
+Retention/cleanup:
+- Artifact lifecycle still follows `HYPERFRAMES_RETENTION_DAYS` and cleanup policy.
+- Once cleaned up, download endpoint returns controlled not-available response.
