@@ -47,6 +47,7 @@ model User {
   ocrJobs            OCRJob[]
   hyperFrameRenderJobs HyperFrameRenderJob[]
   hyperFrameScriptGenerations HyperFrameScriptGeneration[]
+  hyperFrameRenderShares   HyperFrameRenderShare[]
   platformPosts      PlatformPost[]
   settings           UserSetting?
   apiUsageLogs       APIUsageLog[]
@@ -347,8 +348,27 @@ model HyperFrameRenderJob {
 
   user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   product             Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  shares              HyperFrameRenderShare[]
 
   @@index([userId, status])
   @@index([status, createdAt])
   @@index([deletedAt])
+}
+
+model HyperFrameRenderShare {
+  id          String   @id @default(cuid())
+  renderJobId String
+  ownerUserId String
+  tokenHash   String   @unique
+  expiresAt   DateTime
+  revokedAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  renderJob   HyperFrameRenderJob @relation(fields: [renderJobId], references: [id], onDelete: Cascade)
+  owner       User                @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+
+  @@index([renderJobId])
+  @@index([ownerUserId, createdAt])
+  @@index([expiresAt])
 }
