@@ -421,6 +421,49 @@ Recovery remains operator-controlled and non-destructive by default.
 npm run hyperframes:worker:disable-real
 ```
 
+
+## Phase 6.3: worker log rotation and journald policy
+
+Goal: control worker/system log growth and reduce log bloat risk without changing render safety behavior.
+
+- Added optional install command for a systemd drop-in: `npm run hyperframes:worker:install-log-policy`.
+- Script path: `scripts/hyperframes/install-worker-log-policy.sh`.
+- Drop-in target: `/etc/systemd/system/zsp-hyperframes-worker.service.d/log-policy.conf`.
+- Policy keys:
+  - `LogRateLimitIntervalSec`
+  - `LogRateLimitBurst`
+- Safe defaults (override via env at runtime):
+  - `HYPERFRAMES_LOG_RATE_LIMIT_INTERVAL_SEC=30s`
+  - `HYPERFRAMES_LOG_RATE_LIMIT_BURST=2000`
+
+### Safety behavior
+
+- Script is **operator-gated** and does nothing unless `HYPERFRAMES_LOG_POLICY_CONFIRM=YES` is set.
+- Script does **not** restart, enable, or start the worker service automatically.
+- Script writes only the drop-in and runs `systemctl daemon-reload`.
+
+### Install example
+
+```bash
+HYPERFRAMES_LOG_POLICY_CONFIRM=YES \
+HYPERFRAMES_LOG_RATE_LIMIT_INTERVAL_SEC=30s \
+HYPERFRAMES_LOG_RATE_LIMIT_BURST=2000 \
+npm run hyperframes:worker:install-log-policy
+```
+
+### Journal summary improvements
+
+`npm run hyperframes:worker:journal-summary` now supports:
+
+- `HYPERFRAMES_JOURNAL_SUMMARY_LINES` (default: `200`)
+- `HYPERFRAMES_JOURNAL_SUMMARY_SINCE` (default: `24h`)
+- marker counts for completed/failed/start/render-command events
+- a concise “notable lines” section before full output
+
+### Secret hygiene reminder
+
+Operational logs must not include API keys, tokens, secrets, or local filesystem-sensitive data in user-facing responses.
+
 ## Phase 2.11: secure artifact serving and downloads
 
 - Download API endpoint: `GET /api/hyperframes/render/:id/download` (also supports `HEAD`).
