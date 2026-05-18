@@ -45,6 +45,7 @@ model User {
   contentTemplates   ContentTemplate[]
   promptPresets      PromptPreset[]
   ocrJobs            OCRJob[]
+  hyperFrameRenderJobs HyperFrameRenderJob[]
   platformPosts      PlatformPost[]
   settings           UserSetting?
   apiUsageLogs       APIUsageLog[]
@@ -74,6 +75,7 @@ model Product {
   relatedSimilarTo   SimilarProduct[]    @relation("RelatedProduct")
   platformPosts      PlatformPost[]
   ocrJobs            OCRJob[]
+  hyperFrameRenderJobs HyperFrameRenderJob[]
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
   deletedAt          DateTime?
@@ -280,5 +282,46 @@ model APIUsageLog {
   @@index([userId, createdAt])
   @@index([provider, endpoint])
   @@index([status])
+  @@index([deletedAt])
+}
+
+
+enum RenderJobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+model HyperFrameRenderJob {
+  id                  String   @id @default(cuid())
+  userId              String
+  productId           String?
+  contentGenerationId String?
+  status              RenderJobStatus @default(PENDING)
+  compositionHtml     String
+  compositionMetadata Json?
+  outputPath          String?
+  outputUrl           String?
+  errorMessage        String?
+  durationSeconds     Int?
+  width               Int?
+  height              Int?
+  attempts            Int      @default(0)
+  lockedAt            DateTime?
+  lockedBy            String?
+  startedAt           DateTime?
+  completedAt         DateTime?
+  failedAt            DateTime?
+  deletedAt           DateTime?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product             Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([userId, status])
+  @@index([status, createdAt])
   @@index([deletedAt])
 }

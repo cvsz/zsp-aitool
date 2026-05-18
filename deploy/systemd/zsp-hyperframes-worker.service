@@ -1,0 +1,13 @@
+[Unit]
+Description=zsp-aitool HyperFrames Render Worker (optional)
+After=network.target
+
+[Service]
+User=zeazdev
+WorkingDirectory=/home/zeazdev/zsp-aitool
+EnvironmentFile=/home/zeazdev/zsp-aitool/.env
+ExecStart=/usr/bin/npm run hyperframes:worker
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
