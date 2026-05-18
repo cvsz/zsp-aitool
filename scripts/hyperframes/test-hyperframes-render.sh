@@ -47,6 +47,10 @@ warn() { echo "[WARN] $*"; }
 fail() { echo "[FAIL] $*"; exit 1; }
 skip() { echo "[SKIP] $*"; }
 
+resolve_cli_bin() { echo "${HYPERFRAMES_CLI_BIN:-npx}"; }
+resolve_cli_args() { echo "${HYPERFRAMES_CLI_ARGS:--y hyperframes}"; }
+
+
 cd "$APP_DIR"
 
 ok "Running in $APP_DIR"
@@ -85,10 +89,14 @@ ok "Worker disabled path verified"
 
 if [[ "$REAL_SMOKE" == true ]]; then
   ok "Running explicitly gated render smoke"
+  CLI_BIN="$(resolve_cli_bin)"
+  CLI_ARGS="$(resolve_cli_args)"
+  ok "Using render smoke CLI: $CLI_BIN $CLI_ARGS"
+
   HYPERFRAMES_RENDER_ENABLED=true \
   HYPERFRAMES_RENDER_SMOKE_CONFIRM=YES \
-  HYPERFRAMES_CLI_BIN="${HYPERFRAMES_CLI_BIN:-npx}" \
-  HYPERFRAMES_CLI_ARGS="${HYPERFRAMES_CLI_ARGS:--y hyperframes}" \
+  HYPERFRAMES_CLI_BIN="$CLI_BIN" \
+  HYPERFRAMES_CLI_ARGS="$CLI_ARGS" \
   npm run hyperframes:render-smoke
 
   ok "Listing rendered media after render-smoke"
@@ -176,9 +184,13 @@ if [[ "$JOB_SMOKE" == true ]]; then
   npm run hyperframes:enqueue-smoke-job
 
   ok "Processing exactly one pending render job"
+  CLI_BIN="$(resolve_cli_bin)"
+  CLI_ARGS="$(resolve_cli_args)"
+  ok "Using worker CLI: $CLI_BIN $CLI_ARGS"
+
   HYPERFRAMES_RENDER_ENABLED=true \
-  HYPERFRAMES_CLI_BIN="${HYPERFRAMES_CLI_BIN:-npx}" \
-  HYPERFRAMES_CLI_ARGS="${HYPERFRAMES_CLI_ARGS:--y hyperframes}" \
+  HYPERFRAMES_CLI_BIN="$CLI_BIN" \
+  HYPERFRAMES_CLI_ARGS="$CLI_ARGS" \
   npm run hyperframes:worker:once
 
   if npm run | grep -q 'hyperframes:render-job-status'; then
@@ -207,6 +219,8 @@ const prisma = new PrismaClient();
   }
 })().finally(async () => prisma.$disconnect());
 NODE
+  else
+    warn "hyperframes:render-job-status script not found; skipping status command"
   fi
 
   ok "Listing rendered media after worker once"
