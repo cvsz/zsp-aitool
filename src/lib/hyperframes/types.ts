@@ -17,6 +17,14 @@ export type HyperFrameCompositionRequest = {
   script?: string;
 };
 
+export type HyperFrameBrandKit = {
+  brandColors?: string[];
+  fontPreference?: string | null;
+  logoUrl?: string | null;
+  watermarkText?: string | null;
+  defaultCTA?: string | null;
+};
+
 export type HyperFrameCompositionProduct = {
   title: string;
   price?: string | null;
