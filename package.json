@@ -28,7 +28,10 @@
     "hyperframes:worker:install-service": "bash scripts/hyperframes/install-worker-service.sh",
     "hyperframes:worker:status": "bash scripts/hyperframes/worker-status.sh",
     "hyperframes:worker:logs": "bash scripts/hyperframes/worker-logs.sh",
-    "hyperframes:worker:disable-service": "bash scripts/hyperframes/disable-worker-service.sh"
+    "hyperframes:worker:disable-service": "bash scripts/hyperframes/disable-worker-service.sh",
+    "hyperframes:queue-status": "tsx scripts/hyperframes/render-queue-status.ts",
+    "hyperframes:cleanup-renders": "tsx scripts/hyperframes/cleanup-renders.ts",
+    "hyperframes:recover-stale-jobs": "tsx scripts/hyperframes/recover-stale-jobs.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

@@ -1,9 +1,10 @@
 import { execFile } from "node:child_process";
-import { mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 import { RenderJobStatus, type HyperFrameRenderJob } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { execSync } from "node:child_process";
 import { getHyperFramesRenderConfig } from "@/lib/hyperframes/render-config";
 import { ensureOutputWithinDir } from "@/lib/hyperframes/render-safety";
 import { buildHyperFramesCommand, renderCommandToDisplayString } from "@/lib/hyperframes/render-command";
@@ -18,8 +19,14 @@ type ProcessOnePendingJobOptions = {
   workerId?: string;
 };
 
-async function claim(workerId: string): Promise<HyperFrameRenderJob | null> {
-  const pending = await prisma.hyperFrameRenderJob.findFirst({ where: { status: RenderJobStatus.PENDING, deletedAt: null }, orderBy: { createdAt: "asc" } });
+async function claim(workerId: string, config: ReturnType<typeof getHyperFramesRenderConfig>): Promise<HyperFrameRenderJob | null> {
+  const runningCount = await prisma.hyperFrameRenderJob.count({ where: { status: RenderJobStatus.RUNNING, deletedAt: null } });
+  if (runningCount >= config.maxRunningJobs) return null;
+
+  const pending = await prisma.hyperFrameRenderJob.findFirst({
+    where: { status: RenderJobStatus.PENDING, deletedAt: null, attempts: { lt: config.maxAttempts } },
+    orderBy: { createdAt: "asc" }
+  });
   if (!pending) return null;
   const result = await prisma.hyperFrameRenderJob.updateMany({ where: { id: pending.id, status: RenderJobStatus.PENDING, lockedAt: null }, data: { lockedAt: new Date(), lockedBy: workerId, status: RenderJobStatus.RUNNING, startedAt: new Date(), attempts: { increment: 1 } } });
   if (result.count === 0) return null;
@@ -39,7 +46,7 @@ export async function processOnePendingJob(options: ProcessOnePendingJobOptions 
   const now = options.now ?? (() => new Date());
   const workerId = options.workerId ?? `worker-${process.pid}`;
   const config = getHyperFramesRenderConfig();
-  const job = await claim(workerId);
+  const job = await claim(workerId, config);
   if (!job) return false;
 
   const jobDir = path.join(config.workDir, job.id);
@@ -54,9 +61,14 @@ export async function processOnePendingJob(options: ProcessOnePendingJobOptions 
     await writeFile(metaPath, JSON.stringify({ title: `HyperFrames Job ${job.id}`, duration: config.maxDurationSeconds }), "utf8");
     await writeFile(projectConfigPath, JSON.stringify({}), "utf8");
     await mkdir(rendersDir, { recursive: true });
+    const freeMb = getFreeMb(config.outputDir);
+    if (freeMb < config.minFreeMb) throw new Error(`insufficient disk space: free=${freeMb}MB required=${config.minFreeMb}MB`);
     const renderCmd = buildHyperFramesCommand(["render", "--input", jobDir, "--output", outputPath, "--duration", String(config.maxDurationSeconds)], config);
     console.log(`[OK] running render command: ${renderCommandToDisplayString(renderCmd)}`);
     await runRenderCommand(renderCmd.bin, renderCmd.args);
+    const renderedStat = await stat(outputPath);
+    const maxBytes = config.maxOutputMb * 1024 * 1024;
+    if (renderedStat.size > maxBytes) throw new Error(`output exceeds max size: ${renderedStat.size} > ${maxBytes}`);
     await prisma.hyperFrameRenderJob.update({ where: { id: job.id }, data: { status: RenderJobStatus.COMPLETED, outputPath, outputUrl: null, completedAt: now(), lockedAt: null, lockedBy: null } });
   } catch (error) {
     await prisma.hyperFrameRenderJob.update({ where: { id: job.id }, data: { status: RenderJobStatus.FAILED, errorMessage: toControlledErrorMessage(error), failedAt: now(), lockedAt: null, lockedBy: null } });

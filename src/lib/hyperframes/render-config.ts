@@ -10,6 +10,15 @@ export type HyperFramesRenderConfig = {
   ffmpegBin: string;
   cliBin: string;
   cliArgs: string[];
+  maxPendingJobs: number;
+  maxRunningJobs: number;
+  maxAttempts: number;
+  retryBackoffSeconds: number;
+  runningStaleMinutes: number;
+  minFreeMb: number;
+  maxOutputMb: number;
+  retentionDays: number;
+  cleanupDryRun: boolean;
 };
 
 let envLoaded = false;
@@ -41,5 +50,14 @@ export function getHyperFramesRenderConfig(): HyperFramesRenderConfig {
     ffmpegBin: process.env.HYPERFRAMES_FFMPEG_BIN ?? "ffmpeg",
     cliBin: process.env.HYPERFRAMES_CLI_BIN ?? "hyperframes",
     cliArgs: toArgv(process.env.HYPERFRAMES_CLI_ARGS),
+    maxPendingJobs: toInt(process.env.HYPERFRAMES_MAX_PENDING_JOBS, 25),
+    maxRunningJobs: toInt(process.env.HYPERFRAMES_MAX_RUNNING_JOBS, 1),
+    maxAttempts: toInt(process.env.HYPERFRAMES_MAX_ATTEMPTS, 3),
+    retryBackoffSeconds: toInt(process.env.HYPERFRAMES_RETRY_BACKOFF_SECONDS, 300),
+    runningStaleMinutes: toInt(process.env.HYPERFRAMES_RUNNING_STALE_MINUTES, 30),
+    minFreeMb: toInt(process.env.HYPERFRAMES_MIN_FREE_MB, 2048),
+    maxOutputMb: toInt(process.env.HYPERFRAMES_MAX_OUTPUT_MB, 512),
+    retentionDays: toInt(process.env.HYPERFRAMES_RETENTION_DAYS, 14),
+    cleanupDryRun: process.env.HYPERFRAMES_CLEANUP_DRY_RUN !== "false",
   };
 }

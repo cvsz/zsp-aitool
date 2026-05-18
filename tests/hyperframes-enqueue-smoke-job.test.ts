@@ -4,6 +4,7 @@ import { RenderJobStatus } from "@prisma/client";
 const state = {
   userExists: true,
   createdJobs: [] as Array<Record<string, unknown>>,
+  pendingCount: 0,
 };
 
 vi.mock("@/lib/prisma", () => ({
@@ -12,6 +13,7 @@ vi.mock("@/lib/prisma", () => ({
       findUnique: vi.fn().mockImplementation(async () => (state.userExists ? { id: "u1" } : null)),
     },
     hyperFrameRenderJob: {
+      count: vi.fn().mockImplementation(async () => state.pendingCount),
       create: vi.fn().mockImplementation(async ({ data }: { data: Record<string, unknown> }) => {
         state.createdJobs.push(data);
         return { id: "job-smoke-1", status: RenderJobStatus.PENDING };
@@ -91,4 +93,18 @@ describe("enqueue smoke job", () => {
     expect(job.compositionMetadata.height).toBe(720);
     expect(job.compositionMetadata.durationSeconds).toBeTypeOf("number");
   });
+});
+
+
+it("refuses when pending queue exceeds limit", async () => {
+  vi.resetModules();
+  state.pendingCount = 25;
+  process.env.HYPERFRAMES_RENDER_ENABLED = "true";
+  process.env.HYPERFRAMES_RENDER_SMOKE_CONFIRM = "YES";
+  process.env.HYPERFRAMES_SMOKE_USER_ID = "u1";
+  process.env.HYPERFRAMES_MAX_PENDING_JOBS = "25";
+
+  const { enqueueSmokeJob } = await import("../scripts/hyperframes/enqueue-smoke-job");
+  await expect(enqueueSmokeJob()).rejects.toThrow("[SKIP] pending queue limit reached");
+  state.pendingCount = 0;
 });

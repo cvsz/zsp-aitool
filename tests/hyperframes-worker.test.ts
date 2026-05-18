@@ -1,4 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
+
+vi.mock("node:child_process", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:child_process")>();
+  return { ...actual, execSync: vi.fn().mockReturnValue("99999\n") };
+});
 import { RenderJobStatus } from "@prisma/client";
 
 const mkdirMock = vi.fn().mockResolvedValue(undefined);
@@ -9,7 +14,8 @@ vi.mock("node:fs/promises", async (importOriginal) => {
     ...actual,
     mkdir: mkdirMock,
     rm: vi.fn().mockResolvedValue(undefined),
-    writeFile: vi.fn().mockResolvedValue(undefined)
+    writeFile: vi.fn().mockResolvedValue(undefined),
+    stat: vi.fn().mockResolvedValue({ size: 1024 })
   };
 });
 
@@ -23,11 +29,13 @@ const state = {
   },
   updates: [] as Array<{ where: unknown; data: Record<string, unknown> }>,
   claimCount: 1,
+  runningCount: 0,
 };
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     hyperFrameRenderJob: {
+      count: vi.fn().mockImplementation(async () => state.runningCount),
       findFirst: vi.fn().mockImplementation(() => (state.claimCount-- > 0 ? state.job : null)),
       updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       findUnique: vi.fn().mockResolvedValue({ id: "j1", compositionHtml: "<html></html>" }),
@@ -142,4 +150,26 @@ describe("worker", () => {
     expect(args).toEqual(expect.arrayContaining(["--input", "/tmp/hf-w/j1"]));
     expect(args).not.toEqual(expect.arrayContaining([expect.stringMatching(/composition\.html$/)]));
   });
+});
+
+
+it("does not claim when running count exceeds max", async () => {
+  vi.resetModules();
+  state.runningCount = 2;
+  state.claimCount = 1;
+  process.env.HYPERFRAMES_RENDER_ENABLED = "true";
+  process.env.HYPERFRAMES_MAX_RUNNING_JOBS = "1";
+  const { processOnePendingJob } = await import("../scripts/hyperframes/render-worker");
+  const processed = await processOnePendingJob({ runRenderCommand: async () => {} });
+  expect(processed).toBe(false);
+  state.runningCount = 0;
+});
+
+it("does not claim attempts >= max", async () => {
+  vi.resetModules();
+  state.claimCount = 0;
+  process.env.HYPERFRAMES_RENDER_ENABLED = "true";
+  const { processOnePendingJob } = await import("../scripts/hyperframes/render-worker");
+  const processed = await processOnePendingJob({ runRenderCommand: async () => {} });
+  expect(processed).toBe(false);
 });
