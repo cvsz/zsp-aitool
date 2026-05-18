@@ -1,5 +1,16 @@
 import { describe, expect, it, vi } from "vitest";
 
+const mkdirMock = vi.fn().mockResolvedValue(undefined);
+
+vi.mock("node:fs/promises", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:fs/promises")>();
+  return {
+    ...actual,
+    mkdir: mkdirMock,
+    writeFile: vi.fn().mockResolvedValue(undefined),
+  };
+});
+
 const execFileMock = vi.fn();
 
 vi.mock("node:child_process", async (importOriginal) => {
@@ -53,5 +64,11 @@ describe("render smoke gates", () => {
     expect(args.slice(0, 3)).toEqual(["-y", "hyperframes", "render"]);
     expect(log).toHaveBeenCalledWith(expect.stringContaining("[OK] running: npx -y hyperframes render"));
     expect(log).not.toHaveBeenCalledWith(expect.stringContaining("[OK] running: hyperframes render"));
+    expect(args[args.indexOf("--input") + 1]).not.toMatch(/\.html$/);
+    expect(args[args.indexOf("--input") + 1]).toMatch(/^\/tmp\/hf-w\/smoke-/);
+    expect(args[args.indexOf("--output") + 1]).toBe("/tmp/hf-o/smoke/render-smoke.mp4");
+    const inputDir = args[args.indexOf("--input") + 1];
+    expect(inputDir).toContain("/smoke-");
+    expect(inputDir).not.toContain("composition.html");
   });
 });

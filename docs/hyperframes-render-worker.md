@@ -105,7 +105,7 @@ Only after multiple successful smoke runs, install optional systemd worker. Keep
 - Worker exits cleanly when rendering is disabled.
 - Worker only executes CLI commands when rendering is enabled.
 - In `--once` mode, worker processes at most one `PENDING` job.
-- Per-job workdir is isolated under `HYPERFRAMES_WORKDIR/<job-id>`.
+- Per-job workdir is isolated under `HYPERFRAMES_WORKDIR/<job-id>` and rendered with `--input` pointing to that directory (project root containing `index.html`).
 - Final outputs are constrained to `HYPERFRAMES_OUTPUT_DIR` using path-safety checks.
 - Failed renders are marked `FAILED` with controlled error messages.
 - Completed renders are marked `COMPLETED` with `outputPath` metadata.

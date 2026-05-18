@@ -1,5 +1,6 @@
 import { execFile } from "node:child_process";
 import { mkdir, rm, writeFile } from "node:fs/promises";
+import path from "node:path";
 import { promisify } from "node:util";
 import { RenderJobStatus, type HyperFrameRenderJob } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -41,13 +42,19 @@ export async function processOnePendingJob(options: ProcessOnePendingJobOptions 
   const job = await claim(workerId);
   if (!job) return false;
 
-  const jobDir = `${config.workDir}/${job.id}`;
+  const jobDir = path.join(config.workDir, job.id);
   try {
     await mkdir(jobDir, { recursive: true });
-    const htmlPath = `${jobDir}/composition.html`;
+    const htmlPath = path.join(jobDir, "index.html");
+    const metaPath = path.join(jobDir, "meta.json");
+    const projectConfigPath = path.join(jobDir, "hyperframes.json");
+    const rendersDir = path.join(jobDir, "renders");
     const outputPath = ensureOutputWithinDir(config.outputDir, `${job.id}.mp4`);
     await writeFile(htmlPath, job.compositionHtml, "utf8");
-    const renderCmd = buildHyperFramesCommand(["render", "--input", htmlPath, "--output", outputPath, "--duration", String(config.maxDurationSeconds)], config);
+    await writeFile(metaPath, JSON.stringify({ title: `HyperFrames Job ${job.id}`, duration: config.maxDurationSeconds }), "utf8");
+    await writeFile(projectConfigPath, JSON.stringify({}), "utf8");
+    await mkdir(rendersDir, { recursive: true });
+    const renderCmd = buildHyperFramesCommand(["render", "--input", jobDir, "--output", outputPath, "--duration", String(config.maxDurationSeconds)], config);
     console.log(`[OK] running render command: ${renderCommandToDisplayString(renderCmd)}`);
     await runRenderCommand(renderCmd.bin, renderCmd.args);
     await prisma.hyperFrameRenderJob.update({ where: { id: job.id }, data: { status: RenderJobStatus.COMPLETED, outputPath, outputUrl: null, completedAt: now(), lockedAt: null, lockedBy: null } });
