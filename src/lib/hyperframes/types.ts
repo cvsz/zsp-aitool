@@ -15,6 +15,23 @@ export type HyperFrameCompositionRequest = {
   durationSeconds: number;
   caption?: string;
   script?: string;
+  watermark?: HyperFrameWatermarkInput;
+};
+
+export const hyperFrameWatermarkPositions = [
+  "top-left",
+  "top-right",
+  "bottom-left",
+  "bottom-right",
+  "center",
+] as const;
+
+export type HyperFrameWatermarkPosition = (typeof hyperFrameWatermarkPositions)[number];
+
+export type HyperFrameWatermarkInput = {
+  text?: string;
+  logoUrl?: string;
+  position?: HyperFrameWatermarkPosition;
 };
 
 export type HyperFrameCompositionProduct = {
@@ -37,5 +54,7 @@ export type HyperFrameCompositionResult = {
     width: number;
     height: number;
     hasAffiliateDisclosure: boolean;
+    watermarkEnabled: boolean;
+    watermarkPosition: HyperFrameWatermarkPosition | null;
   };
 };

@@ -1,7 +1,21 @@
 import { createHash } from "node:crypto";
 
 import { escapeHtml, sanitizeText, validateHttpMediaUrl } from "@/lib/hyperframes/sanitize";
-import type { HyperFrameAspectRatio, HyperFrameCompositionProduct, HyperFrameCompositionRequest, HyperFrameCompositionResult } from "@/lib/hyperframes/types";
+import type {
+  HyperFrameAspectRatio,
+  HyperFrameCompositionProduct,
+  HyperFrameCompositionRequest,
+  HyperFrameCompositionResult,
+  HyperFrameWatermarkPosition,
+} from "@/lib/hyperframes/types";
+
+const watermarkPositionClasses: Record<HyperFrameWatermarkPosition, string> = {
+  "top-left": "top: 26px; left: 26px;",
+  "top-right": "top: 26px; right: 26px;",
+  "bottom-left": "bottom: 26px; left: 26px;",
+  "bottom-right": "bottom: 26px; right: 26px;",
+  center: "top: 50%; left: 50%; transform: translate(-50%, -50%);",
+};
 
 const aspectRatioMap: Record<HyperFrameAspectRatio, { width: number; height: number }> = {
   "16:9": { width: 1280, height: 720 },
@@ -22,6 +36,10 @@ export function buildHyperFrameComposition(
     : null;
 
   const hasAffiliate = Boolean(input.product.affiliateUrl);
+  const watermarkPosition = input.watermark?.position ?? "bottom-right";
+  const watermarkText = sanitizeText(input.watermark?.text ?? "");
+  const safeWatermarkLogo = input.watermark?.logoUrl ? validateHttpMediaUrl(input.watermark.logoUrl) : null;
+  const hasWatermark = Boolean(watermarkText || safeWatermarkLogo);
   const disclosureText = hasAffiliate
     ? sanitizeText("โพสต์นี้มีลิงก์แอฟฟิลิเอต ผู้เขียนอาจได้รับค่าคอมมิชชัน")
     : "";
@@ -37,6 +55,8 @@ export function buildHyperFrameComposition(
       safeImage,
       safePrice,
       hasAffiliate,
+      watermarkPosition,
+      hasWatermark,
     }))
     .digest("hex")
     .slice(0, 16);
@@ -57,6 +77,9 @@ export function buildHyperFrameComposition(
     .price { margin-top: 8px; font-size: 26px; opacity: 0.95; }
     .cta { background: #22c55e; color: #052e16; border-radius: 999px; padding: 14px 22px; font-size: 24px; font-weight: 700; }
     .disclosure { position: absolute; left: 40px; right: 40px; bottom: 18px; font-size: 19px; opacity: 0.9; }
+    .watermark { position: absolute; z-index: 5; max-width: 32%; display: inline-flex; gap: 10px; align-items: center; border-radius: 14px; background: rgba(2, 6, 23, .55); border: 1px solid rgba(148, 163, 184, .35); padding: 8px 12px; backdrop-filter: blur(2px); }
+    .watermark-text { font-size: 17px; font-weight: 600; opacity: 0.95; }
+    .watermark-logo { width: 44px; height: 44px; border-radius: 8px; object-fit: contain; }
     @keyframes fadeUp { from { transform: translateY(18px); opacity: 0; } to { transform: none; opacity: 1; } }
   </style>
 </head>
@@ -72,6 +95,7 @@ export function buildHyperFrameComposition(
       </div>
       <div class="cta">ซื้อผ่านลิงก์แนะนำ</div>
     </div>
+    ${hasWatermark ? `<div class="watermark" style="${watermarkPositionClasses[watermarkPosition]}">${safeWatermarkLogo ? `<img class="watermark-logo" src="${escapeHtml(safeWatermarkLogo)}" alt="watermark logo" />` : ""}${watermarkText ? `<span class="watermark-text">${watermarkText}</span>` : ""}</div>` : ""}
     ${disclosureText ? `<div class="disclosure">${disclosureText}</div>` : ""}
   </div>
 </body>
@@ -89,6 +113,8 @@ export function buildHyperFrameComposition(
       width,
       height,
       hasAffiliateDisclosure: hasAffiliate,
+      watermarkEnabled: hasWatermark,
+      watermarkPosition: hasWatermark ? watermarkPosition : null,
     },
   };
 }
