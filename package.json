@@ -45,6 +45,8 @@
     "hyperframes:worker:disable-real": "bash scripts/hyperframes/disable-real-worker-daemon.sh",
     "hyperframes:worker:watchdog": "tsx scripts/hyperframes/worker-watchdog.ts",
     "hyperframes:worker:journal-summary": "bash scripts/hyperframes/worker-journal-summary.sh",
+    "hyperframes:ci:mock": "bash scripts/hyperframes/ci-mock.sh",
+    "hyperframes:ci:real": "bash scripts/hyperframes/ci-real.sh"
     "hyperframes:render-inventory": "tsx scripts/hyperframes/render-inventory.ts"
     "hyperframes:worker:alerts": "tsx scripts/hyperframes/worker-alerts.ts",
     "hyperframes:worker:install-alert-timer": "bash scripts/hyperframes/install-worker-alert-timer.sh"
