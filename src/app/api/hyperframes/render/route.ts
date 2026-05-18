@@ -11,6 +11,9 @@ import { enforceRenderLimits } from "@/lib/hyperframes/subscription-limits";
 import { hyperFramesQualityProfiles, resolveRenderQuality } from "@/lib/hyperframes/render-quality";
 import { productService } from "@/services/ProductService";
 import { prisma } from "@/lib/prisma";
+import { evaluateHyperFramesBillingAccess, getHyperFramesBillingState } from "@/lib/hyperframes/billing";
+
+const bodySchema = z.object({ productId: z.string().min(1), platform: z.enum(hyperFramePlatforms), aspectRatio: z.enum(hyperFrameAspectRatios), durationSeconds: z.number().int().min(3).max(60), quality: z.enum(["standard", "high"]).default("standard"), batchSize: z.number().int().min(1).max(10).default(1), removeWatermark: z.boolean().default(false), caption: z.string().max(1200).optional(), script: z.string().max(1200).optional(), compositionHtml: z.string().optional() });
 import { hyperframesVoiceoverSchema, isTtsEnabled } from "@/lib/hyperframes/voiceover";
 
 const bodySchema = z.object({ productId: z.string().min(1), platform: z.enum(hyperFramePlatforms), aspectRatio: z.enum(hyperFrameAspectRatios), durationSeconds: z.number().int().min(3).max(300), caption: z.string().max(1200).optional(), script: z.string().max(1200).optional(), compositionHtml: z.string().optional() });
@@ -47,6 +50,9 @@ export const POST = withAuth(async (request) => {
   const quota = await HyperFramesQuotaService.enforceBeforeEnqueue(request.auth.userId);
   if (!quota.allowed) return NextResponse.json({ ok: false, error: { code: quota.code, message: quota.message }, data: { remainingMonthlyRenders: quota.summary.remainingMonthlyRenders, storageUsedMb: quota.summary.storageUsedMb, storageQuotaMb: quota.summary.storageQuotaMb, retentionDays: quota.summary.retentionDays } }, { status: 429 });
   const payload = bodySchema.parse(await request.json());
+  const billingState = await getHyperFramesBillingState(request.auth.userId);
+  const billing = evaluateHyperFramesBillingAccess(billingState, { quality: payload.quality, batchSize: payload.batchSize, durationSeconds: payload.durationSeconds, removeWatermark: payload.removeWatermark });
+  if (!billing.allowed) return NextResponse.json({ ok: false, error: { code: "UPGRADE_REQUIRED", message: "Upgrade required for this HyperFrames render option", details: { reason: billing.reason, plan: billingState.plan, monthlyUsage: billingState.monthlyUsage, monthlyQuota: billingState.monthlyQuota } } }, { status: 402 });
   const limitCheck = await enforceRenderLimits({ userId: request.auth.userId, durationSeconds: payload.durationSeconds });
   if (!limitCheck.allowed) {
     return NextResponse.json({ ok: false, error: { code: limitCheck.code, message: limitCheck.message }, data: { plan: limitCheck.plan, limits: limitCheck.limits, usage: limitCheck.usage } }, { status: limitCheck.status });
