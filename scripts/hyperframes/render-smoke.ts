@@ -22,11 +22,11 @@ export async function runRenderSmoke(): Promise<SmokeResult> {
     return { ok: false, skipped: true };
   }
 
-  const root = await mkdtemp(path.join(config.workDir, "smoke-"));
+  const smokeProjectDir = await mkdtemp(path.join(config.workDir, "smoke-"));
   const smokeOutDir = path.join(config.outputDir, "smoke");
 
   try {
-    await mkdir(root, { recursive: true });
+    await mkdir(smokeProjectDir, { recursive: true });
     await mkdir(smokeOutDir, { recursive: true });
 
     const composition = buildHyperFrameComposition({
@@ -44,14 +44,20 @@ export async function runRenderSmoke(): Promise<SmokeResult> {
       }
     });
 
-    const htmlPath = path.join(root, "composition.html");
+    const htmlPath = path.join(smokeProjectDir, "index.html");
+    const metaPath = path.join(smokeProjectDir, "meta.json");
+    const projectConfigPath = path.join(smokeProjectDir, "hyperframes.json");
+    const rendersDir = path.join(smokeProjectDir, "renders");
     await writeFile(htmlPath, composition.compositionHtml, "utf8");
+    await writeFile(metaPath, JSON.stringify({ title: "HyperFrames Smoke Render", duration: Math.min(config.maxDurationSeconds, 6) }), "utf8");
+    await writeFile(projectConfigPath, JSON.stringify({}), "utf8");
+    await mkdir(rendersDir, { recursive: true });
 
     const outputPath = ensureOutputWithinDir(smokeOutDir, "render-smoke.mp4");
-    const cmd = buildHyperFramesCommand(["render", "--input", htmlPath, "--output", outputPath, "--duration", String(Math.min(config.maxDurationSeconds, 6))], config);
+    const cmd = buildHyperFramesCommand(["render", "--input", smokeProjectDir, "--output", outputPath, "--duration", String(Math.min(config.maxDurationSeconds, 6))], config);
 
     console.log(`[OK] running: ${renderCommandToDisplayString(cmd)}`);
-    await execFileAsync(cmd.bin, cmd.args, { cwd: root, env: process.env });
+    await execFileAsync(cmd.bin, cmd.args, { cwd: smokeProjectDir, env: process.env });
     console.log(`[OK] smoke render complete: ${outputPath}`);
     return { ok: true, skipped: false };
   } catch (error) {
@@ -59,7 +65,7 @@ export async function runRenderSmoke(): Promise<SmokeResult> {
     console.log(`[FAIL] smoke render failed: ${message}`);
     return { ok: false, skipped: false };
   } finally {
-    await rm(root, { recursive: true, force: true });
+    await rm(smokeProjectDir, { recursive: true, force: true });
   }
 }
 

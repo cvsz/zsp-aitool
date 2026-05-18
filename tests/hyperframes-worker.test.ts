@@ -1,11 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import { RenderJobStatus } from "@prisma/client";
 
+const mkdirMock = vi.fn().mockResolvedValue(undefined);
+
 vi.mock("node:fs/promises", async (importOriginal) => {
   const actual = await importOriginal<typeof import("node:fs/promises")>();
   return {
     ...actual,
-    mkdir: vi.fn().mockResolvedValue(undefined),
+    mkdir: mkdirMock,
     rm: vi.fn().mockResolvedValue(undefined),
     writeFile: vi.fn().mockResolvedValue(undefined)
   };
@@ -133,5 +135,11 @@ describe("worker", () => {
       "npx",
       expect.arrayContaining(["-y", "hyperframes", "render"]),
     );
+    const args = runRenderCommand.mock.calls[0]?.[1] as string[];
+    expect(args[args.indexOf("--input") + 1]).toBe("/tmp/hf-w/j1");
+    expect(args[args.indexOf("--input") + 1]).not.toMatch(/\.html$/);
+    expect(args[args.indexOf("--output") + 1]).toBe("/tmp/hf-o/j1.mp4");
+    expect(args).toEqual(expect.arrayContaining(["--input", "/tmp/hf-w/j1"]));
+    expect(args).not.toEqual(expect.arrayContaining([expect.stringMatching(/composition\.html$/)]));
   });
 });
