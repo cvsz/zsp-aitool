@@ -8,6 +8,10 @@ WorkingDirectory=/home/zeazdev/zsp-aitool
 EnvironmentFile=/home/zeazdev/zsp-aitool/.env
 ExecStart=/usr/bin/npm run hyperframes:worker
 Restart=on-failure
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ReadWritePaths=/var/lib/zsp-aitool/hyperframes
 
 [Install]
 WantedBy=multi-user.target
