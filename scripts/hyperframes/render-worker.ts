@@ -1,3 +1,5 @@
+import { execFile } from "node:child_process";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import { execFile, execSync } from "node:child_process";
 import { mkdir, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -7,6 +9,7 @@ import { prisma } from "@/lib/prisma";
 import { getHyperFramesRenderConfig } from "@/lib/hyperframes/render-config";
 import { ensureOutputWithinDir } from "@/lib/hyperframes/render-safety";
 import { buildHyperFramesCommand, renderCommandToDisplayString } from "@/lib/hyperframes/render-command";
+import { validateRenderArtifact } from "@/lib/hyperframes/render-validation";
 import { fetchAndCacheHyperframesAsset } from "@/lib/hyperframes/asset-fetch";
 import { resolveRenderQuality, type HyperFramesQualityProfile } from "@/lib/hyperframes/render-quality";
 
@@ -126,6 +129,8 @@ export async function processOnePendingJob(options: ProcessOnePendingJobOptions 
     const thumbnailPath = ensureOutputWithinDir(config.outputDir, thumbnailName);
     console.log(`[OK] running render command: ${renderCommandToDisplayString(renderCmd)}`);
     await runRenderCommand(renderCmd.bin, renderCmd.args);
+    await validateRenderArtifact(outputPath, { minBytes: 1024, maxOutputMb: config.maxOutputMb, maxDurationSeconds: config.maxDurationSeconds, ffprobeBin: process.env.HYPERFRAMES_FFPROBE_BIN ?? "ffprobe" });
+    await prisma.hyperFrameRenderJob.update({ where: { id: job.id }, data: { status: RenderJobStatus.COMPLETED, outputPath, outputUrl: null, completedAt: now(), errorMessage: null, failedAt: null, lockedAt: null, lockedBy: null } });
     const renderedStat = await stat(outputPath);
     const thumbnailCreated = await maybeExtractThumbnail({ ffmpegBin: config.ffmpegBin, outputPath, thumbnailPath });
     const maxBytes = config.maxOutputMb * 1024 * 1024;
