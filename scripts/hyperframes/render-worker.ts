@@ -55,6 +55,25 @@ async function claim(workerId: string, config: ReturnType<typeof getHyperFramesR
 
 
 
+async function extractThumbnail(options: { ffmpegBin: string; outputVideoPath: string; thumbnailPath: string }): Promise<boolean> {
+  try {
+    await execFileAsync(options.ffmpegBin, [
+      "-hide_banner",
+      "-loglevel",
+      "error",
+      "-y",
+      "-ss",
+      "00:00:00.500",
+      "-i",
+      options.outputVideoPath,
+      "-frames:v",
+      "1",
+      options.thumbnailPath,
+    ]);
+    return true;
+  } catch {
+    return false;
+  }
 async function maybeExtractThumbnailFromVideo({ ffmpegBin, outputPath, thumbnailPath }: { ffmpegBin: string; outputPath: string; thumbnailPath: string }): Promise<boolean> {
   try {
     await execFileAsync(ffmpegBin, ["-y", "-ss", "00:00:01", "-i", outputPath, "-frames:v", "1", "-q:v", "3", thumbnailPath]);
@@ -140,6 +159,11 @@ export async function processOnePendingJob(options: ProcessOnePendingJobOptions 
     await validateRenderArtifact(outputPath, { minBytes: 1024, maxOutputMb: config.maxOutputMb, maxDurationSeconds: config.maxDurationSeconds, ffprobeBin: process.env.HYPERFRAMES_FFPROBE_BIN ?? "ffprobe" });
     await prisma.hyperFrameRenderJob.update({ where: { id: job.id }, data: { status: RenderJobStatus.COMPLETED, outputPath, outputUrl: null, completedAt: now(), errorMessage: null, failedAt: null, lockedAt: null, lockedBy: null } });
     const renderedStat = await stat(outputPath);
+    const thumbnailPath = ensureOutputWithinDir(config.outputDir, `${job.id}.jpg`);
+    const thumbnailCreated = await extractThumbnail({ ffmpegBin: config.ffmpegBin, outputVideoPath: outputPath, thumbnailPath });
+    if (!thumbnailCreated) {
+      console.log(JSON.stringify({ level: "warn", event: "thumbnail.skipped", jobId: job.id }));
+    }
     const thumbnailCreated = await maybeExtractThumbnail({ ffmpegBin: config.ffmpegBin, outputPath, thumbnailPath });
     const maxBytes = config.maxOutputMb * 1024 * 1024;
     if (renderedStat.size > maxBytes) throw new Error(`output exceeds max size: ${renderedStat.size} > ${maxBytes}`);
