@@ -1,6 +1,16 @@
 import { describe, expect, it, vi } from "vitest";
 import { RenderJobStatus } from "@prisma/client";
 
+vi.mock("node:fs/promises", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:fs/promises")>();
+  return {
+    ...actual,
+    mkdir: vi.fn().mockResolvedValue(undefined),
+    rm: vi.fn().mockResolvedValue(undefined),
+    writeFile: vi.fn().mockResolvedValue(undefined)
+  };
+});
+
 const state = {
   job: {
     id: "j1",
@@ -91,6 +101,13 @@ describe("worker", () => {
 
     expect(processed).toBe(true);
     const failUpdate = state.updates.at(-1);
+    expect(failUpdate).toBeDefined();
+    expect((failUpdate?.data as { status: string }).status).toBe(RenderJobStatus.FAILED);
+    const errorMessage = (failUpdate?.data as { errorMessage: string }).errorMessage;
+    expect(errorMessage).toContain("HyperFrames render failed:");
+    expect(errorMessage).not.toContain("Error: simulated render failure");
+    expect(errorMessage).not.toContain("at ");
+    expect((failUpdate?.data as { failedAt: Date }).failedAt).toEqual(new Date("2026-01-01T00:00:00.000Z"));
     expect(failUpdate?.data.status).toBe(RenderJobStatus.FAILED);
     expect(String(failUpdate?.data.errorMessage)).toContain("HyperFrames render failed:");
     expect(String(failUpdate?.data.errorMessage)).not.toContain("\n");
