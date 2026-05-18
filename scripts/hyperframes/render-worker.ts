@@ -90,7 +90,8 @@ export async function runWorker(argv: string[]): Promise<void> {
 
 if (require.main === module) {
   runWorker(process.argv.slice(2)).catch((error) => {
-    console.error(error);
+    const message = toControlledErrorMessage(error);
+    console.error(`[FAIL] ${message}`);
     process.exit(1);
   });
 }
