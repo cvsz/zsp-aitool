@@ -1,4 +1,4 @@
-# zsp-aitool
+# ZSP-AITool
 
 zsp-aitool is a Thai-first full-stack SaaS foundation for Shopee Affiliate workflows. This initial baseline sets up the core project structure so future tasks can safely add features module by module.
 
