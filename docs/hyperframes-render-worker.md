@@ -176,60 +176,59 @@ Systemd unit template is in `deploy/systemd/zsp-hyperframes-worker.service` and 
 
 ## Phase 2.6: controlled persistent worker trial
 
-This phase adds an operator-gated **short-window** trial for the systemd worker without changing default production safety.
+This phase adds an operator-gated short-window trial for the systemd worker without changing default production safety.
 
-### Safety guarantees
+### Preconditions
 
-- Persistent rendering stays disabled by default unless you explicitly set `HYPERFRAMES_RENDER_ENABLED=true` in your active shell/session.
-- The trial script refuses to run unless `HYPERFRAMES_WORKER_TRIAL_CONFIRM=YES` is set.
-- The trial script refuses to run when:
-  - systemd service is not installed,
-  - queue has running jobs,
-  - pending jobs exceed `HYPERFRAMES_MAX_PENDING_JOBS`.
-- The script runs doctor first, starts the worker only for a short trial window, then always stops it.
-- The script never calls `systemctl enable` and never edits `.env`.
-
-### Exact command
+Run these before trialing:
 
 ```bash
-HYPERFRAMES_WORKER_TRIAL_CONFIRM=YES npm run hyperframes:worker:trial
-```
-
-Optional duration override (default 120 seconds):
-
-```bash
-HYPERFRAMES_WORKER_TRIAL_CONFIRM=YES \
-HYPERFRAMES_WORKER_TRIAL_SECONDS=120 \
-npm run hyperframes:worker:trial
-```
-
-### Rollback commands
-
-If the trial behaves unexpectedly, run:
-
-```bash
-sudo systemctl stop zsp-hyperframes-worker.service
-npm run hyperframes:worker:status
+npm run hyperframes:worker:install-service
 npm run hyperframes:queue-status
-npm run health
-npm run hyperframes:worker:logs
+npm run hyperframes:doctor
 ```
 
-### When to avoid running a trial
+The trial refuses to run if:
+- `HYPERFRAMES_WORKER_TRIAL_CONFIRM=YES` is not provided,
+- `/etc/systemd/system/zsp-hyperframes-worker.service` is missing,
+- `systemctl is-enabled zsp-hyperframes-worker` is `enabled`,
+- queue status reports `running > 0`.
 
-Avoid trial execution when:
-- queue already has active/running render jobs,
-- pending queue is above allowed limit,
-- host is under CPU/disk pressure,
-- maintenance windows are not active,
-- on-call/operator is unavailable for immediate rollback.
+The trial warns if `pending = 0`.
 
-### Inspecting queue/output/logs during validation
+### Trial command
 
 ```bash
-npm run hyperframes:worker:status
-npm run hyperframes:queue-status
-npm run hyperframes:render-job-status -- <job-id>
-find /var/lib/zsp-aitool/hyperframes/renders -maxdepth 5 -type f -print
-npm run hyperframes:worker:logs
+HYPERFRAMES_WORKER_TRIAL_CONFIRM=YES HYPERFRAMES_WORKER_TRIAL_SECONDS=120 npm run hyperframes:worker:trial
 ```
+
+- Default trial duration is 120 seconds.
+- The script calls `systemctl start` only, sleeps for the trial window, then stops the service.
+- The script prints service status/logs, then runs queue status and health checks.
+- The script does not call `systemctl enable` and does not modify `.env`.
+
+### Service/env behavior
+
+- If `HYPERFRAMES_RENDER_ENABLED=false`, the script warns that the service can start but the worker will not process jobs.
+- Trial mode does not automate permanent env changes.
+- For controlled testing only, use either:
+  - a one-off systemd drop-in override, or
+  - a temporary manual `.env` edit that you explicitly revert after testing.
+
+### Trial rollback
+
+```bash
+sudo systemctl stop zsp-hyperframes-worker
+sudo systemctl disable zsp-hyperframes-worker
+sudo rm -f /etc/systemd/system/zsp-hyperframes-worker.service
+sudo systemctl daemon-reload
+```
+
+### When not to run the trial
+
+Do not run when any of the following apply:
+- active production queue,
+- low disk capacity,
+- doctor preflight failure,
+- pending migration,
+- unhealthy web app status.
