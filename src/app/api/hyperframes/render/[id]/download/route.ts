@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 import { withAuth, type AuthenticatedRequest } from "@/middleware/auth-middleware";
 import { prisma } from "@/lib/prisma";
 import { getHyperFramesRenderConfig } from "@/lib/hyperframes/render-config";
+import { canManage, resolveScope } from "@/lib/hyperframes/org-access";
 import {
   buildSafeArtifactFilename,
   getArtifactContentType,
@@ -14,7 +15,10 @@ import {
 
 async function resolveDownload(request: AuthenticatedRequest, context: { params: Promise<{ id: string }> }, headOnly = false) {
   const { id } = await context.params;
-  const job = await prisma.hyperFrameRenderJob.findFirst({ where: { id, userId: request.auth.userId, deletedAt: null } });
+  const orgId = new URL(request.url).searchParams.get("orgId");
+  const scope = await resolveScope(request.auth.userId, orgId);
+  if (!scope) return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Organization access denied" } }, { status: 403 });
+  const job = await prisma.hyperFrameRenderJob.findFirst({ where: { id, deletedAt: null, ...(scope.orgId ? { orgId: scope.orgId } : { userId: request.auth.userId, orgId: null }) } });
 
   if (!job) return NextResponse.json({ ok: false, error: { code: "NOT_FOUND", message: "Render job not found" } }, { status: 404 });
   if (job.status !== "COMPLETED") return NextResponse.json({ ok: false, error: { code: "RENDER_NOT_READY", message: "Render is not completed" } }, { status: 409 });
