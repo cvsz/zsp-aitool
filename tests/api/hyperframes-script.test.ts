@@ -36,9 +36,25 @@ describe("hyperframes script api", () => {
 
   it("composition metadata safe + no render", async () => {
     vi.mocked(getSessionFromRequest).mockReturnValueOnce({ userId: "u1", email: "u@x.com", exp: 1_999_999_999 });
-    const res = await postToComposition(new NextRequest("http://localhost/api/hyperframes/script-to-composition", { method: "POST", body: JSON.stringify({ aspectRatio: "9:16", durationSeconds: 15, beats: [{ atSecond: 0, text: "<script>x</script>safe" }] }) }) as never);
+    vi.mocked(productService.getById).mockResolvedValueOnce({ id: "p1" } as never);
+    const res = await postToComposition(new NextRequest("http://localhost/api/hyperframes/script-to-composition", { method: "POST", body: JSON.stringify({ productId: "p1", aspectRatio: "9:16", durationSeconds: 15, beats: [{ atSecond: 0, text: "<script>x</script>safe" }, { atSecond: 6, text: "b" }, { atSecond: 6, text: "a" }] }) }) as never);
     const body = await res.json();
     expect(body.data.renderTriggered).toBe(false);
     expect(body.data.scenes[0].text).not.toContain("<script>");
+    expect(body.data.scenes.map((x: { text: string }) => x.text)).toEqual(["safe", "a", "b"]);
+  });
+
+  it("invalid beat rejected", async () => {
+    vi.mocked(getSessionFromRequest).mockReturnValueOnce({ userId: "u1", email: "u@x.com", exp: 1_999_999_999 });
+    vi.mocked(productService.getById).mockResolvedValueOnce({ id: "p1" } as never);
+    const res = await postToComposition(new NextRequest("http://localhost/api/hyperframes/script-to-composition", { method: "POST", body: JSON.stringify({ productId: "p1", aspectRatio: "9:16", durationSeconds: 15, beats: [{ atSecond: 0, text: "<script>alert(1)</script>" }] }) }) as never);
+    expect(res.status).toBe(422);
+  });
+
+  it("composition cross-user blocked", async () => {
+    vi.mocked(getSessionFromRequest).mockReturnValueOnce({ userId: "u1", email: "u@x.com", exp: 1_999_999_999 });
+    vi.mocked(productService.getById).mockRejectedValueOnce(new Error("Product not found"));
+    const res = await postToComposition(new NextRequest("http://localhost/api/hyperframes/script-to-composition", { method: "POST", body: JSON.stringify({ productId: "p2", aspectRatio: "9:16", durationSeconds: 15, beats: [{ atSecond: 0, text: "safe" }] }) }) as never);
+    expect(res.status).toBe(400);
   });
 });
