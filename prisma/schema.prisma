@@ -337,6 +337,7 @@ model HyperFrameRenderJob {
   compositionMetadata Json?
   outputPath          String?
   outputUrl           String?
+  outputSizeBytes     BigInt?
   errorMessage        String?
   durationSeconds     Int?
   width               Int?
