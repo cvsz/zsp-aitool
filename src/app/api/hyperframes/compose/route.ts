@@ -7,6 +7,7 @@ import { withAuth } from "@/middleware/auth-middleware";
 import { AppError } from "@/lib/errors";
 import { productService } from "@/services/ProductService";
 import { hyperframesVoiceoverSchema, isTtsEnabled } from "@/lib/hyperframes/voiceover";
+import { getHyperframesBrandKit } from "@/services/hyperframes-brand-kit-service";
 
 const bodySchema = z
   .object({
@@ -31,6 +32,7 @@ export const POST = withAuth(async (request) => {
     }
     const product = await productService.getById(request.auth.userId, payload.productId);
 
+    const brandKit = await getHyperframesBrandKit(request.auth.userId);
     const composition = buildHyperFrameComposition({
       ...payload,
       durationSeconds: payload.durationSeconds,
@@ -41,6 +43,7 @@ export const POST = withAuth(async (request) => {
         imageUrl: product.images[0]?.url,
         affiliateUrl: product.affiliateUrl,
       },
+      brandKit,
     });
 
     return NextResponse.json({ ok: true, data: composition });
