@@ -485,3 +485,42 @@ Failed job guidance:
 Retention/cleanup:
 - Artifact lifecycle still follows `HYPERFRAMES_RETENTION_DAYS` and cleanup policy.
 - Once cleaned up, download endpoint returns controlled not-available response.
+
+## Cleanup timer (Phase 2.14)
+
+- Retention is controlled by `HYPERFRAMES_RETENTION_DAYS` (default 14).
+- Cleanup is dry-run by default because `HYPERFRAMES_CLEANUP_DRY_RUN=true` unless explicitly set to `false`.
+- Install cleanup units (install only, no auto-enable by default):
+
+```bash
+npm run hyperframes:cleanup:install-timer
+```
+
+- Explicitly enable/start timer only when confirmed:
+
+```bash
+HYPERFRAMES_CLEANUP_TIMER_CONFIRM=YES npm run hyperframes:cleanup:install-timer
+```
+
+- Check status:
+
+```bash
+npm run hyperframes:cleanup:status
+```
+
+- Disable and remove timer/service:
+
+```bash
+npm run hyperframes:cleanup:disable-timer
+```
+
+- Emergency rollback:
+  1. `npm run hyperframes:cleanup:disable-timer`
+  2. Keep `HYPERFRAMES_CLEANUP_DRY_RUN=true`.
+  3. Re-run `npm run hyperframes:cleanup:status` and `npm run hyperframes:worker:watchdog`.
+
+Safety guarantees remain:
+- Cleanup scope is constrained to `HYPERFRAMES_OUTPUT_DIR`.
+- Path escape attempts are blocked.
+- Active `RUNNING` job outputs are skipped.
+- Symlink escapes are blocked via `realpath` root-prefix checks.
