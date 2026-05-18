@@ -96,7 +96,7 @@ export async function processOnePendingJob(options: ProcessOnePendingJobOptions 
     const renderedStat = await stat(outputPath);
     const maxBytes = Math.min(config.maxOutputMb, quality.spec.maxOutputMb) * 1024 * 1024;
     if (renderedStat.size > maxBytes) throw new Error(`output exceeds max size: ${renderedStat.size} > ${maxBytes}`);
-    await prisma.hyperFrameRenderJob.update({ where: { id: job.id }, data: { status: RenderJobStatus.COMPLETED, outputPath, outputUrl: null, completedAt: now(), errorMessage: null, failedAt: null, lockedAt: null, lockedBy: null } });
+    await prisma.hyperFrameRenderJob.update({ where: { id: job.id }, data: { status: RenderJobStatus.COMPLETED, outputPath, outputUrl: null, outputSizeBytes: BigInt(renderedStat.size), completedAt: now(), errorMessage: null, failedAt: null, lockedAt: null, lockedBy: null } });
   } catch (error) {
     await prisma.hyperFrameRenderJob.update({ where: { id: job.id }, data: { status: RenderJobStatus.FAILED, errorMessage: toControlledErrorMessage(error), failedAt: now(), lockedAt: null, lockedBy: null } });
   } finally {
