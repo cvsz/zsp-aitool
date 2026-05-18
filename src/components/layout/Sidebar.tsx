@@ -12,7 +12,9 @@ const menus: MenuItem[] = [
   { label: "OCR Tools", href: "/dashboard/ocr" },
   { label: "HyperFrames", subtitle: "วิดีโอโปรโมต AI", href: "/dashboard/hyperframes" },
   { label: "HyperFrames Ops", subtitle: "สถานะคิว operator", href: "/dashboard/hyperframes/ops" },
+  { label: "Operator Queue", subtitle: "ควบคุมคิวแบบปลอดภัย", href: "/dashboard/hyperframes/ops/queue" },
   { label: "ประวัติเรนเดอร์", subtitle: "ดาวน์โหลดและยกเลิกงาน", href: "/dashboard/hyperframes/renders" },
+  { label: "Batch Render", subtitle: "ส่งเรนเดอร์หลายงานพร้อมกัน", href: "/dashboard/hyperframes/batch" },
   { label: "สินค้าที่คล้ายกัน", href: "/dashboard/similar" },
   { label: "ตั้งค่า", href: "/dashboard/settings" },
 ] as const;
