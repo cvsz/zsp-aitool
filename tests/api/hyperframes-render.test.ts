@@ -11,6 +11,8 @@ const quotaMocks = vi.hoisted(() => ({ enforceBeforeEnqueue: vi.fn().mockResolve
 vi.mock("@/services/HyperFramesQuotaService", () => ({ HyperFramesQuotaService: { enforceBeforeEnqueue: quotaMocks.enforceBeforeEnqueue } }));
 
 const state = { pendingCount: 0 };
+vi.mock("@/lib/prisma", () => ({ prisma: { hyperFrameRenderJob: { count: vi.fn().mockImplementation(async () => state.pendingCount), create: vi.fn().mockResolvedValue({ id: "j1", status: "PENDING" }), findFirst: vi.fn().mockResolvedValue(null), update: vi.fn().mockResolvedValue({ id: "j1", status: "CANCELLED" }) }, userSetting: { findUnique: vi.fn().mockResolvedValue({ ctaStyle: "pro" }) } } }));
+vi.mock("@/services/ProductService", () => ({ productService: { getById: vi.fn().mockResolvedValue({ id: "p1", title: "Lamp", price: 100, currency: "THB", affiliateUrl: "https://example.com/aff", images: [{ url: "https://example.com/item.png" }] }) } }));
 const { createMock } = vi.hoisted(() => ({
   createMock: vi.fn().mockResolvedValue({ id: "j1", status: "PENDING" }),
 }));
@@ -84,4 +86,14 @@ it("persists safe voiceover metadata", async () => {
   expect(createMock).toHaveBeenCalled();
   const metadata = createMock.mock.calls.at(-1)?.[0]?.data?.compositionMetadata as { voiceover?: { url?: string } };
   expect(metadata.voiceover?.url).toBe("/api/hyperframes/audio/cache-1.mp3");
+});
+
+it("validates watermark position enum", async () => {
+  vi.spyOn(auth, "getSessionFromRequest").mockReturnValue({ userId: "u1", email: "a@a.com" });
+  process.env.HYPERFRAMES_RENDER_ENABLED = "true";
+  await expect(() => createJob(new Request("http://localhost/api/hyperframes/render", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ productId: "p1", platform: "facebook", aspectRatio: "16:9", durationSeconds: 10, watermark: { text: "My Brand", position: "top-middle" } }),
+  }) as never)).rejects.toThrowError(/Invalid enum value/);
 });

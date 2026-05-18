@@ -1,6 +1,21 @@
 import { createHash } from "node:crypto";
 
 import { escapeHtml, sanitizeText, validateHttpMediaUrl } from "@/lib/hyperframes/sanitize";
+import type {
+  HyperFrameAspectRatio,
+  HyperFrameCompositionProduct,
+  HyperFrameCompositionRequest,
+  HyperFrameCompositionResult,
+  HyperFrameWatermarkPosition,
+} from "@/lib/hyperframes/types";
+
+const watermarkPositionClasses: Record<HyperFrameWatermarkPosition, string> = {
+  "top-left": "top: 26px; left: 26px;",
+  "top-right": "top: 26px; right: 26px;",
+  "bottom-left": "bottom: 26px; left: 26px;",
+  "bottom-right": "bottom: 26px; right: 26px;",
+  center: "top: 50%; left: 50%; transform: translate(-50%, -50%);",
+};
 import { validateSubtitles } from "@/lib/hyperframes/subtitles";
 import type { HyperFrameAspectRatio, HyperFrameCompositionProduct, HyperFrameCompositionRequest, HyperFrameCompositionResult } from "@/lib/hyperframes/types";
 import { alignVoiceoverDuration } from "@/lib/hyperframes/voiceover";
@@ -26,6 +41,10 @@ export function buildHyperFrameComposition(
 
   const subtitles = input.subtitles ? validateSubtitles(input.subtitles, input.durationSeconds) : [];
   const hasAffiliate = Boolean(input.product.affiliateUrl);
+  const watermarkPosition = input.watermark?.position ?? "bottom-right";
+  const watermarkText = sanitizeText(input.watermark?.text ?? "");
+  const safeWatermarkLogo = input.watermark?.logoUrl ? validateHttpMediaUrl(input.watermark.logoUrl) : null;
+  const hasWatermark = Boolean(watermarkText || safeWatermarkLogo);
   const primaryColor = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(input.brandKit?.brandColors?.[0] ?? "") ? input.brandKit?.brandColors?.[0] : "#22c55e";
   const safeFont = sanitizeText(input.brandKit?.fontPreference ?? "").replace(/&quot;/g, "").replace(/&#39;/g, "");
   const safeWatermark = sanitizeText(input.brandKit?.watermarkText ?? "");
@@ -48,6 +67,8 @@ export function buildHyperFrameComposition(
       safeImage,
       safePrice,
       hasAffiliate,
+      watermarkPosition,
+      hasWatermark,
       voiceover: input.voiceover,
     }))
     .digest("hex")
@@ -74,6 +95,9 @@ export function buildHyperFrameComposition(
     .brand-logo { position: absolute; top: 20px; left: 20px; width: 88px; height: 88px; object-fit: contain; }
     .watermark { position: absolute; top: 26px; right: 24px; font-size: 18px; opacity: 0.85; }
     .disclosure { position: absolute; left: 40px; right: 40px; bottom: 18px; font-size: 19px; opacity: 0.9; }
+    .watermark { position: absolute; z-index: 5; max-width: 32%; display: inline-flex; gap: 10px; align-items: center; border-radius: 14px; background: rgba(2, 6, 23, .55); border: 1px solid rgba(148, 163, 184, .35); padding: 8px 12px; backdrop-filter: blur(2px); }
+    .watermark-text { font-size: 17px; font-weight: 600; opacity: 0.95; }
+    .watermark-logo { width: 44px; height: 44px; border-radius: 8px; object-fit: contain; }
     @keyframes fadeUp { from { transform: translateY(18px); opacity: 0; } to { transform: none; opacity: 1; } }
   </style>
 </head>
@@ -91,6 +115,7 @@ export function buildHyperFrameComposition(
       </div>
       <div class="cta">${safeCta}</div>
     </div>
+    ${hasWatermark ? `<div class="watermark" style="${watermarkPositionClasses[watermarkPosition]}">${safeWatermarkLogo ? `<img class="watermark-logo" src="${escapeHtml(safeWatermarkLogo)}" alt="watermark logo" />` : ""}${watermarkText ? `<span class="watermark-text">${watermarkText}</span>` : ""}</div>` : ""}
         ${input.burnedInCaptions && subtitles.length ? `<div class="captions" aria-label="captions-preview">${subtitles.map((line) => `<span data-start="${line.start}" data-end="${line.end}" data-style="${line.style}" data-language="${line.language}">${line.text}</span>`).join("<br />")}</div>` : ""}
     ${disclosureText ? `<div class="disclosure">${disclosureText}</div>` : ""}
   </div>
@@ -109,6 +134,8 @@ export function buildHyperFrameComposition(
       width,
       height,
       hasAffiliateDisclosure: hasAffiliate,
+      watermarkEnabled: hasWatermark,
+      watermarkPosition: hasWatermark ? watermarkPosition : null,
       voiceover: input.voiceover ?? null,
     },
   };

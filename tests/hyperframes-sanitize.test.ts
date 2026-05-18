@@ -84,6 +84,38 @@ describe("hyperframes composition output hardening", () => {
       }),
     ).toThrowError(/invalid media URL/);
   });
+
+  it("blocks unsafe watermark logo URL", () => {
+    expect(() =>
+      buildHyperFrameComposition({
+        productId: "p1",
+        platform: "facebook",
+        aspectRatio: "9:16",
+        durationSeconds: 12,
+        caption: "ok",
+        watermark: { text: "Brand", logoUrl: "javascript:alert(1)", position: "top-right" },
+        product: { title: "safe", price: "199", currency: "THB", imageUrl: "https://example.com/image.jpg", affiliateUrl: null },
+      }),
+    ).toThrowError(/invalid media URL/);
+  });
+
+  it("includes safe watermark overlay and escapes text", () => {
+    const result = buildHyperFrameComposition({
+      productId: "p1",
+      platform: "facebook",
+      aspectRatio: "9:16",
+      durationSeconds: 12,
+      caption: "ok",
+      watermark: { text: "<img src=x onerror=1>", logoUrl: "https://example.com/logo.png", position: "top-left" },
+      product: { title: "safe", price: "199", currency: "THB", imageUrl: "https://example.com/image.jpg", affiliateUrl: null },
+    });
+
+    expect(result.compositionHtml).toContain("class=\"watermark\"");
+    expect(result.compositionHtml).toContain("https://example.com/logo.png");
+    expect(result.compositionHtml).toContain("&lt;img src=x onerror=1&gt;");
+    expect(result.compositionHtml).toContain("&lt;img src=x onerror=1&gt;");
+    expect(result.compositionHtml).not.toContain("<img src=x onerror=1>");
+  });
 });
 
 it("applies brand kit safely in composition", () => {
