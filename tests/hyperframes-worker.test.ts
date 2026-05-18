@@ -113,4 +113,25 @@ describe("worker", () => {
     expect(String(failUpdate?.data.errorMessage)).not.toContain("\n");
     expect(failUpdate?.data.failedAt).toEqual(new Date("2026-01-01T00:00:00.000Z"));
   });
+
+  it("uses npx command vector in enabled worker path", async () => {
+    vi.resetModules();
+    state.claimCount = 1;
+    state.updates.length = 0;
+    process.env.HYPERFRAMES_RENDER_ENABLED = "true";
+    process.env.HYPERFRAMES_WORKDIR = "/tmp/hf-w";
+    process.env.HYPERFRAMES_OUTPUT_DIR = "/tmp/hf-o";
+    process.env.HYPERFRAMES_CLI_BIN = "npx";
+    process.env.HYPERFRAMES_CLI_ARGS = "-y hyperframes";
+
+    const runRenderCommand = vi.fn().mockResolvedValue(undefined);
+    const { processOnePendingJob } = await import("../scripts/hyperframes/render-worker");
+    await processOnePendingJob({ runRenderCommand });
+
+    expect(runRenderCommand).toHaveBeenCalledTimes(1);
+    expect(runRenderCommand).toHaveBeenCalledWith(
+      "npx",
+      expect.arrayContaining(["-y", "hyperframes", "render"]),
+    );
+  });
 });
