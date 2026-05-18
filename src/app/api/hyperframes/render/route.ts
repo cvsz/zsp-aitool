@@ -8,6 +8,7 @@ import { buildHyperFrameComposition } from "@/lib/hyperframes/build-composition"
 import { hyperFrameAspectRatios, hyperFramePlatforms } from "@/lib/hyperframes/types";
 import { productService } from "@/services/ProductService";
 import { prisma } from "@/lib/prisma";
+import { getHyperframesBrandKit } from "@/services/hyperframes-brand-kit-service";
 import { HyperFramesQuotaService } from "@/services/HyperFramesQuotaService";
 
 const bodySchema = z.object({ productId: z.string().min(1), platform: z.enum(hyperFramePlatforms), aspectRatio: z.enum(hyperFrameAspectRatios), durationSeconds: z.number().int().min(3).max(60), caption: z.string().max(1200).optional(), script: z.string().max(1200).optional() }).strict();
@@ -30,6 +31,8 @@ export const POST = withAuth(async (request) => {
   }
 
   const product = await productService.getById(request.auth.userId, payload.productId);
+  const brandKit = await getHyperframesBrandKit(request.auth.userId);
+  const composition = payload.compositionHtml ? { compositionHtml: payload.compositionHtml, metadata: { ...payload, productTitle: product.title, width: 0, height: 0, hasAffiliateDisclosure: false } } : buildHyperFrameComposition({ ...payload, product: { title: product.title, price: String(product.price), currency: product.currency, imageUrl: product.images[0]?.url, affiliateUrl: product.affiliateUrl }, brandKit });
   const composition = buildHyperFrameComposition({ ...payload, product: { title: product.title, price: String(product.price), currency: product.currency, imageUrl: product.images[0]?.url, affiliateUrl: product.affiliateUrl } });
   const job = await prisma.hyperFrameRenderJob.create({ data: { userId: request.auth.userId, productId: product.id, status: RenderJobStatus.PENDING, compositionHtml: composition.compositionHtml, compositionMetadata: composition.metadata as object } });
   return NextResponse.json({ ok: true, data: { jobId: job.id, status: job.status, remainingMonthlyRenders: Math.max(0, quota.summary.remainingMonthlyRenders - 1), storageUsedMb: quota.summary.storageUsedMb, storageQuotaMb: quota.summary.storageQuotaMb, retentionDays: quota.summary.retentionDays } });
