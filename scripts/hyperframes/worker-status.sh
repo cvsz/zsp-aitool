@@ -28,3 +28,11 @@ if sudo systemctl is-enabled "${SERVICE_NAME}" >/dev/null 2>&1; then
 else
   ok "Service is not enabled"
 fi
+
+
+ok "systemctl is-active ${SERVICE_NAME}"
+if sudo systemctl is-active "${SERVICE_NAME}" >/dev/null 2>&1; then
+  ok "Service is active"
+else
+  warn "Service is not active"
+fi
