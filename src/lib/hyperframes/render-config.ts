@@ -19,6 +19,12 @@ export type HyperFramesRenderConfig = {
   maxOutputMb: number;
   retentionDays: number;
   cleanupDryRun: boolean;
+  watchdogStaleRunningMinutes: number;
+  watchdogMaxFailedLast24h: number;
+  watchdogMaxPendingJobs: number;
+  watchdogMinFreeMb: number;
+  watchdogRequireServiceActive: boolean;
+  watchdogRecoverStale: boolean;
 };
 
 let envLoaded = false;
@@ -59,5 +65,11 @@ export function getHyperFramesRenderConfig(): HyperFramesRenderConfig {
     maxOutputMb: toInt(process.env.HYPERFRAMES_MAX_OUTPUT_MB, 512),
     retentionDays: toInt(process.env.HYPERFRAMES_RETENTION_DAYS, 14),
     cleanupDryRun: process.env.HYPERFRAMES_CLEANUP_DRY_RUN !== "false",
+    watchdogStaleRunningMinutes: toInt(process.env.HYPERFRAMES_WATCHDOG_STALE_RUNNING_MINUTES, 30),
+    watchdogMaxFailedLast24h: toInt(process.env.HYPERFRAMES_WATCHDOG_MAX_FAILED_LAST_24H, 5),
+    watchdogMaxPendingJobs: toInt(process.env.HYPERFRAMES_WATCHDOG_MAX_PENDING_JOBS, 25),
+    watchdogMinFreeMb: toInt(process.env.HYPERFRAMES_WATCHDOG_MIN_FREE_MB, 2048),
+    watchdogRequireServiceActive: process.env.HYPERFRAMES_WATCHDOG_REQUIRE_SERVICE_ACTIVE !== "false",
+    watchdogRecoverStale: process.env.HYPERFRAMES_WATCHDOG_RECOVER_STALE === "true",
   };
 }

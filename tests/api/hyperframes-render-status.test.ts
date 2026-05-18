@@ -46,6 +46,7 @@ describe("hyperframes render status api", () => {
     expect(body.data.pending).toBe(2);
     expect(body.data.running).toBe(1);
     expect(body.data.renderEnabled).toBe(false);
+    expect(body.data).toHaveProperty("staleRunning");
     expect(body.data).not.toHaveProperty("DATABASE_URL");
     expect(JSON.stringify(body)).not.toContain("postgresql://");
     expect(body.data).not.toHaveProperty("outputDir");

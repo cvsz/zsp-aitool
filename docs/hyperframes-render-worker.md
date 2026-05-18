@@ -377,3 +377,46 @@ Enable persistent worker only when all are true:
 2. Queue backlog needs sustained processing.
 3. Disk guard and retention policy are active.
 4. On-call operator can monitor logs and rollback immediately.
+
+## Phase 2.10: watchdog, observability, and stuck-job detection
+
+- Added watchdog config envs:
+  - `HYPERFRAMES_WATCHDOG_STALE_RUNNING_MINUTES=30`
+  - `HYPERFRAMES_WATCHDOG_MAX_FAILED_LAST_24H=5`
+  - `HYPERFRAMES_WATCHDOG_MAX_PENDING_JOBS=25`
+  - `HYPERFRAMES_WATCHDOG_MIN_FREE_MB=2048`
+  - `HYPERFRAMES_WATCHDOG_REQUIRE_SERVICE_ACTIVE=true`
+  - `HYPERFRAMES_WATCHDOG_RECOVER_STALE=false` (default non-destructive)
+- New command: `npm run hyperframes:worker:watchdog` prints `[OK]/[WARN]/[FAIL]/[SKIP]` and a safe JSON summary.
+- New command: `npm run hyperframes:worker:journal-summary` summarizes recent worker logs and last 100 lines.
+- Queue observability now includes: `oldestRunningStartedAt`, `staleRunning`, `serviceActive`, `serviceEnabled`, `freeDiskMb`.
+- Worker startup now logs a structured start event and uses stable `workerId` (`HYPERFRAMES_WORKER_ID` or `hostname-pid`).
+
+### Detect stuck jobs quickly
+
+```bash
+npm run hyperframes:queue-status
+npm run hyperframes:worker:watchdog
+sudo journalctl -u zsp-hyperframes-worker -f --no-pager
+```
+
+### Safe stale-recovery (explicit opt-in)
+
+```bash
+HYPERFRAMES_WATCHDOG_RECOVER_STALE=true \
+HYPERFRAMES_WATCHDOG_CONFIRM=YES \
+npm run hyperframes:worker:watchdog
+```
+
+Recovery remains operator-controlled and non-destructive by default.
+
+### Expected service states
+
+- Render enabled in production: service should be `enabled` and `active`.
+- Render disabled: watchdog reports `[SKIP]` for render checks and warns if service is still active/enabled.
+
+### Rollback
+
+```bash
+npm run hyperframes:worker:disable-real
+```
