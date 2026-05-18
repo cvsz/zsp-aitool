@@ -58,7 +58,7 @@ function toControlledErrorMessage(error: unknown): string {
 export async function processOnePendingJob(options: ProcessOnePendingJobOptions = {}): Promise<boolean> {
   const runRenderCommand = options.runRenderCommand ?? ((bin, args) => execFileAsync(bin, args).then(() => undefined));
   const now = options.now ?? (() => new Date());
-  const workerId = options.workerId ?? `worker-${process.pid}`;
+  const workerId = options.workerId ?? process.env.HYPERFRAMES_WORKER_ID ?? `${process.env.HOSTNAME ?? "host"}-${process.pid}`;
   const config = getHyperFramesRenderConfig();
   const job = await claim(workerId, config);
   if (!job) return false;
@@ -96,7 +96,9 @@ export async function processOnePendingJob(options: ProcessOnePendingJobOptions 
 
 export async function runWorker(argv: string[]): Promise<void> {
   const once = argv.includes("--once");
+  const workerId = process.env.HYPERFRAMES_WORKER_ID ?? `${process.env.HOSTNAME ?? "host"}-${process.pid}`;
   const config = getHyperFramesRenderConfig();
+  console.log(JSON.stringify({ level: "info", event: "worker.start", workerId, once }));
   if (!config.enabled) {
     console.log(JSON.stringify({ level: "info", message: "render disabled" }));
     return;
@@ -110,12 +112,12 @@ export async function runWorker(argv: string[]): Promise<void> {
   await execFileAsync(helpCmd.bin, helpCmd.args);
 
   if (once) {
-    await processOnePendingJob();
+    await processOnePendingJob({ workerId });
     return;
   }
 
   while (true) {
-    const processed = await processOnePendingJob();
+    const processed = await processOnePendingJob({ workerId });
     if (!processed) {
       await new Promise((resolve) => setTimeout(resolve, 1500));
     }

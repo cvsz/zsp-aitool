@@ -1,18 +1,20 @@
-import { RenderJobStatus } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
-import { getHyperFramesRenderConfig } from "@/lib/hyperframes/render-config";
+import { getHyperFramesOperatorStatus } from "@/lib/hyperframes/operator-status";
 
 async function main(): Promise<void> {
-  const config = getHyperFramesRenderConfig();
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
-  const [pending, running, completedLast24h, failedLast24h, oldestPending] = await Promise.all([
-    prisma.hyperFrameRenderJob.count({ where: { status: RenderJobStatus.PENDING, deletedAt: null } }),
-    prisma.hyperFrameRenderJob.count({ where: { status: RenderJobStatus.RUNNING, deletedAt: null } }),
-    prisma.hyperFrameRenderJob.count({ where: { status: RenderJobStatus.COMPLETED, completedAt: { gte: since }, deletedAt: null } }),
-    prisma.hyperFrameRenderJob.count({ where: { status: RenderJobStatus.FAILED, failedAt: { gte: since }, deletedAt: null } }),
-    prisma.hyperFrameRenderJob.findFirst({ where: { status: RenderJobStatus.PENDING, deletedAt: null }, orderBy: { createdAt: "asc" }, select: { createdAt: true } }),
-  ]);
-  console.log(JSON.stringify({ pending, running, completedLast24h, failedLast24h, oldestPendingCreatedAt: oldestPending?.createdAt?.toISOString() ?? null, outputDir: config.outputDir, renderEnabled: config.enabled }, null, 2));
+  const s = await getHyperFramesOperatorStatus();
+  console.log(JSON.stringify({
+    pending: s.pending,
+    running: s.running,
+    completedLast24h: s.completedLast24h,
+    failedLast24h: s.failedLast24h,
+    oldestPendingCreatedAt: s.oldestPendingCreatedAt,
+    oldestRunningStartedAt: s.oldestRunningStartedAt,
+    staleRunning: s.staleRunning,
+    renderEnabled: s.renderEnabled,
+    serviceActive: s.serviceActive,
+    serviceEnabled: s.serviceEnabled,
+    freeDiskMb: s.diskFreeMb,
+  }, null, 2));
 }
 
 main().catch((error: unknown) => {
