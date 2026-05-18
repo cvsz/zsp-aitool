@@ -26,6 +26,7 @@ describe("hyperframes render history", () => {
     expect(body.data.items).toHaveLength(2);
     expect(JSON.stringify(body)).not.toContain("outputPath");
     expect(body.data.items[0].downloadUrl).toContain("/download");
+    expect(body.data.items[0].thumbnailUrl).toContain("/thumbnail");
   });
 
   it("cancel cross-user returns 404", async () => {
