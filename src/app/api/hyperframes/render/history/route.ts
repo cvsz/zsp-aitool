@@ -4,6 +4,7 @@ import { z } from "zod";
 import { withAuth } from "@/middleware/auth-middleware";
 import { prisma } from "@/lib/prisma";
 import { getHyperFramesRenderConfig } from "@/lib/hyperframes/render-config";
+import { isRetryableStatus } from "@/lib/hyperframes/retry";
 
 const querySchema = z.object({ status: z.enum(["PENDING", "RUNNING", "COMPLETED", "FAILED", "CANCELLED"]).optional(), limit: z.coerce.number().int().min(1).max(100).default(20), cursor: z.string().min(1).optional() });
 const safeError = (message?: string | null) => message ? message.replace(/\/var\/lib\/[\w\-/.]+/g, "[redacted-path]").replace(/\s+/g, " ").trim().slice(0, 220) : null;
@@ -24,4 +25,5 @@ export const GET = withAuth(async (request) => {
   const items = jobs.slice(0, parsed.limit);
 
   return NextResponse.json({ ok: true, data: { items: items.map((job) => { const canDownload = job.status === "COMPLETED" && Boolean(job.outputPath); const canCancel = job.status === "PENDING"; const canRetry = (job.status === "FAILED" || job.status === "CANCELLED") && job.attempts < config.maxAttempts; return { id: job.id, status: job.status, attempts: job.attempts, durationSeconds: job.durationSeconds, width: job.width, height: job.height, createdAt: job.createdAt, startedAt: job.startedAt, completedAt: job.completedAt, failedAt: job.failedAt, errorMessage: safeError(job.errorMessage), canDownload, downloadUrl: canDownload ? `/api/hyperframes/render/${job.id}/download` : null, canCancel, canRetry, thumbnailUrl: safeThumbnailUrl(job), metadata: safeMetadata(job.compositionMetadata) }; }), pageInfo: { hasMore, nextCursor: hasMore ? items[items.length - 1]?.id ?? null : null } } });
+  return NextResponse.json({ ok: true, data: { items: items.map((job) => { const canDownload = job.status === "COMPLETED" && Boolean(job.outputPath); const canCancel = job.status === "PENDING"; const canRetry = isRetryableStatus(job.status) && job.attempts < config.maxAttempts; return { id: job.id, status: job.status, attempts: job.attempts, durationSeconds: job.durationSeconds, width: job.width, height: job.height, createdAt: job.createdAt, startedAt: job.startedAt, completedAt: job.completedAt, failedAt: job.failedAt, errorMessage: safeError(job.errorMessage), canDownload, downloadUrl: canDownload ? `/api/hyperframes/render/${job.id}/download` : null, canCancel, canRetry, metadata: safeMetadata(job.compositionMetadata) }; }), pageInfo: { hasMore, nextCursor: hasMore ? items[items.length - 1]?.id ?? null : null } } });
 });
