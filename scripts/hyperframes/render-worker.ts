@@ -8,6 +8,7 @@ import { execSync } from "node:child_process";
 import { getHyperFramesRenderConfig } from "@/lib/hyperframes/render-config";
 import { ensureOutputWithinDir } from "@/lib/hyperframes/render-safety";
 import { buildHyperFramesCommand, renderCommandToDisplayString } from "@/lib/hyperframes/render-command";
+import { fetchAndCacheHyperframesAsset } from "@/lib/hyperframes/asset-fetch";
 
 const execFileAsync = promisify(execFile);
 
@@ -47,6 +48,22 @@ async function claim(workerId: string, config: ReturnType<typeof getHyperFramesR
   return prisma.hyperFrameRenderJob.findUnique({ where: { id: pending.id } });
 }
 
+
+
+async function cacheCompositionAssets(compositionHtml: string, cacheDir: string, jobDir: string): Promise<string> {
+  const srcRegex = /(<(?:img|source|video)\b[^>]*\bsrc=")([^"]+)("[^>]*>)/gi;
+  const matches = Array.from(compositionHtml.matchAll(srcRegex));
+  let output = compositionHtml;
+  for (const match of matches) {
+    const raw = match[2] ?? "";
+    if (!raw.startsWith("http://") && !raw.startsWith("https://")) continue;
+    const localPath = await fetchAndCacheHyperframesAsset(raw, cacheDir, 25 * 1024 * 1024);
+    const rel = path.relative(jobDir, localPath).replaceAll(path.sep, "/");
+    output = output.replace(raw, rel);
+  }
+  return output;
+}
+
 function toControlledErrorMessage(error: unknown): string {
   if (error instanceof Error) {
     const safe = error.message.replace(/[\r\n\t]+/g, " ").replace(/\s+/g, " ").trim();
@@ -71,7 +88,9 @@ export async function processOnePendingJob(options: ProcessOnePendingJobOptions 
     const projectConfigPath = path.join(jobDir, "hyperframes.json");
     const rendersDir = path.join(jobDir, "renders");
     const outputPath = ensureOutputWithinDir(config.outputDir, `${job.id}.mp4`);
-    await writeFile(htmlPath, job.compositionHtml, "utf8");
+    const assetCacheDir = path.join(jobDir, ".asset-cache");
+    const hydratedHtml = await cacheCompositionAssets(job.compositionHtml, assetCacheDir, jobDir);
+    await writeFile(htmlPath, hydratedHtml, "utf8");
     await writeFile(metaPath, JSON.stringify({ title: `HyperFrames Job ${job.id}`, duration: config.maxDurationSeconds }), "utf8");
     await writeFile(projectConfigPath, JSON.stringify({}), "utf8");
     await mkdir(rendersDir, { recursive: true });
