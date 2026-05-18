@@ -1,0 +1,11 @@
+[Unit]
+Description=Run zsp-aitool HyperFrames worker alerts every 5 minutes (optional)
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+Unit=zsp-hyperframes-alerts.service
+Persistent=true
+
+[Install]
+WantedBy=timers.target
