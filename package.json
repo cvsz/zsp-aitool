@@ -48,6 +48,8 @@
     "hyperframes:worker:disable-real": "bash scripts/hyperframes/disable-real-worker-daemon.sh",
     "hyperframes:worker:watchdog": "tsx scripts/hyperframes/worker-watchdog.ts",
     "hyperframes:worker:journal-summary": "bash scripts/hyperframes/worker-journal-summary.sh",
+    "hyperframes:ci:mock": "bash scripts/hyperframes/ci-mock.sh",
+    "hyperframes:ci:real": "bash scripts/hyperframes/ci-real.sh"
     "test:security": "vitest run tests/security/hyperframes-security.test.ts"
     "hyperframes:worker:install-log-policy": "bash scripts/hyperframes/install-worker-log-policy.sh"
     "hyperframes:diag": "bash scripts/hyperframes/diag.sh",
