@@ -129,6 +129,14 @@ export async function processOnePendingJob(options: ProcessOnePendingJobOptions 
     const thumbnailPath = ensureOutputWithinDir(config.outputDir, thumbnailName);
     console.log(`[OK] running render command: ${renderCommandToDisplayString(renderCmd)}`);
     await runRenderCommand(renderCmd.bin, renderCmd.args);
+    await validateRenderArtifact({
+      outputPath,
+      minBytes: 1,
+      maxOutputMb: config.maxOutputMb,
+      expectedDurationSeconds: config.maxDurationSeconds,
+      ffprobeBin: "ffprobe",
+    });
+    await prisma.hyperFrameRenderJob.update({ where: { id: job.id }, data: { status: RenderJobStatus.COMPLETED, outputPath, outputUrl: null, completedAt: now(), errorMessage: null, failedAt: null, lockedAt: null, lockedBy: null } });
     await validateRenderArtifact(outputPath, { minBytes: 1024, maxOutputMb: config.maxOutputMb, maxDurationSeconds: config.maxDurationSeconds, ffprobeBin: process.env.HYPERFRAMES_FFPROBE_BIN ?? "ffprobe" });
     await prisma.hyperFrameRenderJob.update({ where: { id: job.id }, data: { status: RenderJobStatus.COMPLETED, outputPath, outputUrl: null, completedAt: now(), errorMessage: null, failedAt: null, lockedAt: null, lockedBy: null } });
     const renderedStat = await stat(outputPath);
