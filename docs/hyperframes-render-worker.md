@@ -173,3 +173,63 @@ Systemd unit template is in `deploy/systemd/zsp-hyperframes-worker.service` and 
 - Cleanup command: `npm run hyperframes:cleanup-renders` prints `[OK]/[WARN]/[FAIL]/[SKIP]`; real deletion requires `HYPERFRAMES_CLEANUP_DRY_RUN=false`.
 - Systemd remains install-only by default; no auto-enable/auto-start in scripts.
 - Manual enable process and rollback remain operator-driven only.
+
+## Phase 2.6: controlled persistent worker trial
+
+This phase adds an operator-gated **short-window** trial for the systemd worker without changing default production safety.
+
+### Safety guarantees
+
+- Persistent rendering stays disabled by default unless you explicitly set `HYPERFRAMES_RENDER_ENABLED=true` in your active shell/session.
+- The trial script refuses to run unless `HYPERFRAMES_WORKER_TRIAL_CONFIRM=YES` is set.
+- The trial script refuses to run when:
+  - systemd service is not installed,
+  - queue has running jobs,
+  - pending jobs exceed `HYPERFRAMES_MAX_PENDING_JOBS`.
+- The script runs doctor first, starts the worker only for a short trial window, then always stops it.
+- The script never calls `systemctl enable` and never edits `.env`.
+
+### Exact command
+
+```bash
+HYPERFRAMES_WORKER_TRIAL_CONFIRM=YES npm run hyperframes:worker:trial
+```
+
+Optional duration override (default 120 seconds):
+
+```bash
+HYPERFRAMES_WORKER_TRIAL_CONFIRM=YES \
+HYPERFRAMES_WORKER_TRIAL_SECONDS=120 \
+npm run hyperframes:worker:trial
+```
+
+### Rollback commands
+
+If the trial behaves unexpectedly, run:
+
+```bash
+sudo systemctl stop zsp-hyperframes-worker.service
+npm run hyperframes:worker:status
+npm run hyperframes:queue-status
+npm run health
+npm run hyperframes:worker:logs
+```
+
+### When to avoid running a trial
+
+Avoid trial execution when:
+- queue already has active/running render jobs,
+- pending queue is above allowed limit,
+- host is under CPU/disk pressure,
+- maintenance windows are not active,
+- on-call/operator is unavailable for immediate rollback.
+
+### Inspecting queue/output/logs during validation
+
+```bash
+npm run hyperframes:worker:status
+npm run hyperframes:queue-status
+npm run hyperframes:render-job-status -- <job-id>
+find /var/lib/zsp-aitool/hyperframes/renders -maxdepth 5 -type f -print
+npm run hyperframes:worker:logs
+```
