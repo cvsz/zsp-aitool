@@ -9,6 +9,9 @@ import { hyperFrameAspectRatios, hyperFramePlatforms } from "@/lib/hyperframes/t
 import { hyperFramesQualityProfiles, resolveRenderQuality } from "@/lib/hyperframes/render-quality";
 import { productService } from "@/services/ProductService";
 import { prisma } from "@/lib/prisma";
+import { hyperframesVoiceoverSchema, isTtsEnabled } from "@/lib/hyperframes/voiceover";
+
+const bodySchema = z.object({ productId: z.string().min(1), platform: z.enum(hyperFramePlatforms), aspectRatio: z.enum(hyperFrameAspectRatios), durationSeconds: z.number().int().min(3).max(60), caption: z.string().max(1200).optional(), script: z.string().max(1200).optional(), compositionHtml: z.string().optional(), voiceover: hyperframesVoiceoverSchema.optional() });
 import { getHyperframesBrandKit } from "@/services/hyperframes-brand-kit-service";
 import { HyperFramesQuotaService } from "@/services/HyperFramesQuotaService";
 
@@ -23,6 +26,7 @@ export const POST = withAuth(async (request) => {
   const quota = await HyperFramesQuotaService.enforceBeforeEnqueue(request.auth.userId);
   if (!quota.allowed) return NextResponse.json({ ok: false, error: { code: quota.code, message: quota.message }, data: { remainingMonthlyRenders: quota.summary.remainingMonthlyRenders, storageUsedMb: quota.summary.storageUsedMb, storageQuotaMb: quota.summary.storageQuotaMb, retentionDays: quota.summary.retentionDays } }, { status: 429 });
   const payload = bodySchema.parse(await request.json());
+  if (!isTtsEnabled() && payload.voiceover?.source === "upload") return NextResponse.json({ ok: false, error: { code: "TTS_DISABLED", message: "voiceover provider disabled" } }, { status: 403 });
   let qualityProfile: "preview" | "standard" | "high" = "standard";
   try {
     qualityProfile = resolveRenderQuality(payload.qualityProfile, { allowedRaw: config.allowedQualityProfiles, highQualityEnabled: config.highQualityEnabled }).profile;

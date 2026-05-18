@@ -1,3 +1,5 @@
+import type { HyperframesVoiceoverMetadata } from "@/lib/hyperframes/voiceover";
+
 export const hyperFrameAspectRatios = ["16:9", "9:16", "1:1"] as const;
 export type HyperFrameAspectRatio = (typeof hyperFrameAspectRatios)[number];
 
@@ -15,6 +17,7 @@ export type HyperFrameCompositionRequest = {
   durationSeconds: number;
   caption?: string;
   script?: string;
+  voiceover?: HyperframesVoiceoverMetadata;
 };
 
 export type HyperFrameBrandKit = {
@@ -45,5 +48,6 @@ export type HyperFrameCompositionResult = {
     width: number;
     height: number;
     hasAffiliateDisclosure: boolean;
+    voiceover: HyperFrameCompositionRequest["voiceover"] | null;
   };
 };
