@@ -32,6 +32,10 @@ export default function HyperFramesRenderHistoryPage() {
     await fetch(`/api/hyperframes/render/${id}/cancel`, { method: "POST" });
     await load();
   }
+  async function retry(id: string) {
+    await fetch(`/api/hyperframes/render/${id}/retry`, { method: "POST" });
+    await load();
+  }
 
   useEffect(() => {
     load();
@@ -46,4 +50,5 @@ export default function HyperFramesRenderHistoryPage() {
   }, [shouldPoll]);
 
   return <main className="space-y-4 p-6"><h1 className="text-2xl font-bold">ประวัติเรนเดอร์ HyperFrames</h1><p className="text-sm text-slate-600">แสดงเฉพาะงานของบัญชีคุณ พร้อมปุ่มดาวน์โหลด/ยกเลิกที่ปลอดภัย</p>{quota ? <section className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-700"><div>โควต้ารายเดือนคงเหลือ: <span className="font-semibold">{quota.remainingMonthlyRenders}</span></div><div>พื้นที่ใช้งาน: <span className="font-semibold">{quota.storageUsedMb}</span> / {quota.storageQuotaMb} MB</div><div>ลบไฟล์อัตโนมัติหลัง: <span className="font-semibold">{quota.retentionDays}</span> วัน</div></section> : null}{loading ? <p className="text-sm text-slate-500">กำลังโหลด...</p> : <RenderHistoryTable items={items} onCancel={cancel} />}</main>;
+  return <main className="space-y-4 p-6"><h1 className="text-2xl font-bold">ประวัติเรนเดอร์ HyperFrames</h1><p className="text-sm text-slate-600">แสดงเฉพาะงานของบัญชีคุณ พร้อมปุ่มดาวน์โหลด/ยกเลิกที่ปลอดภัย</p>{loading ? <p className="text-sm text-slate-500">กำลังโหลด...</p> : <RenderHistoryTable items={items} onCancel={cancel} onRetry={retry} />}</main>;
 }
