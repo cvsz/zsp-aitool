@@ -5,7 +5,7 @@ import { RenderJobStatus, type HyperFrameRenderJob } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getHyperFramesRenderConfig } from "@/lib/hyperframes/render-config";
 import { ensureOutputWithinDir } from "@/lib/hyperframes/render-safety";
-import { buildHyperFramesCommand } from "@/lib/hyperframes/render-command";
+import { buildHyperFramesCommand, renderCommandToDisplayString } from "@/lib/hyperframes/render-command";
 
 const execFileAsync = promisify(execFile);
 
@@ -48,7 +48,7 @@ export async function processOnePendingJob(options: ProcessOnePendingJobOptions 
     const outputPath = ensureOutputWithinDir(config.outputDir, `${job.id}.mp4`);
     await writeFile(htmlPath, job.compositionHtml, "utf8");
     const renderCmd = buildHyperFramesCommand(["render", "--input", htmlPath, "--output", outputPath, "--duration", String(config.maxDurationSeconds)], config);
-    console.log(`[OK] running render command: ${renderCmd.bin} ${renderCmd.args.join(" ")}`);
+    console.log(`[OK] running render command: ${renderCommandToDisplayString(renderCmd)}`);
     await runRenderCommand(renderCmd.bin, renderCmd.args);
     await prisma.hyperFrameRenderJob.update({ where: { id: job.id }, data: { status: RenderJobStatus.COMPLETED, outputPath, outputUrl: null, completedAt: now(), lockedAt: null, lockedBy: null } });
   } catch (error) {
