@@ -34,7 +34,9 @@
     "hyperframes:recover-stale-jobs": "tsx scripts/hyperframes/recover-stale-jobs.ts",
     "hyperframes:worker:trial": "bash scripts/hyperframes/worker-trial.sh",
     "hyperframes:worker:live-trial": "bash scripts/hyperframes/live-queue-trial.sh",
-    "hyperframes:worker:preflight": "bash scripts/hyperframes/persistent-worker-preflight.sh"
+    "hyperframes:worker:preflight": "bash scripts/hyperframes/persistent-worker-preflight.sh",
+    "hyperframes:worker:enable-real": "bash scripts/hyperframes/enable-real-worker-daemon.sh",
+    "hyperframes:worker:disable-real": "bash scripts/hyperframes/disable-real-worker-daemon.sh"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
