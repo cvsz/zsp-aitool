@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
+import { TemplateSelector } from "@/components/hyperframes/TemplateSelector";
+import { buildHyperFrameTemplateMetadata, hyperFrameTemplates } from "@/lib/hyperframes/templates";
+
 type Product = { id: string; title: string };
 type Beat = { atSecond: number; text: string };
 type QueueStatus = { renderEnabled: boolean; serviceActive: boolean; serviceEnabled: boolean };
@@ -19,8 +22,10 @@ export default function HyperFramesPage() {
   const [tone, setTone] = useState("friendly");
   const [language, setLanguage] = useState("th");
   const [script, setScript] = useState("");
+  const [templateId, setTemplateId] = useState(hyperFrameTemplates[0]?.id ?? "");
   const [beats, setBeats] = useState<Beat[]>([]);
   const [composition, setComposition] = useState("");
+  const templateMetadata = useMemo(() => buildHyperFrameTemplateMetadata(templateId), [templateId]);
   const [visualStyle, setVisualStyle] = useState("clean-minimal");
   const [cta, setCta] = useState("กดดูรายละเอียดสินค้าจากลิงก์แนะนำได้เลย");
   const [errorMessage, setErrorMessage] = useState("");
@@ -80,7 +85,8 @@ export default function HyperFramesPage() {
     const res = await fetch("/api/hyperframes/script-to-composition", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productId, beats, durationSeconds, aspectRatio, visualStyle, cta }) });
     const data = await res.json();
     if (!data.ok) return setErrorMessage(data?.error?.message ?? "สร้าง metadata ไม่สำเร็จ");
-    setComposition(JSON.stringify(data.data, null, 2));
+    const merged = { ...data.data, templateMetadata };
+    setComposition(JSON.stringify(merged, null, 2));
   }
 
   async function enqueueRender() {
@@ -106,6 +112,7 @@ export default function HyperFramesPage() {
 
   return <main className="space-y-4 p-6"><h1 className="text-2xl font-bold">HyperFrames</h1><p className="text-slate-600">AI script generation และ enqueue เรนเดอร์แบบปลอดภัย</p>
     <div className="grid gap-3 md:grid-cols-3"><select className="rounded border p-2" value={productId} onChange={(e) => setProductId(e.target.value)}><option value="">เลือกสินค้า</option>{products.map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}</select><select className="rounded border p-2" value={platform} onChange={(e) => setPlatform(e.target.value as never)}>{SCRIPT_PLATFORMS.map((p) => <option key={p}>{p}</option>)}</select><input className="rounded border p-2" value={tone} onChange={(e) => setTone(e.target.value)} placeholder="tone" /></div>
+    <TemplateSelector templates={hyperFrameTemplates} selectedTemplateId={templateId} onSelectTemplate={setTemplateId} />
     <div className="grid gap-3 md:grid-cols-3"><input className="rounded border p-2" value={language} onChange={(e) => setLanguage(e.target.value)} placeholder="language" /><select className="rounded border p-2" value={aspectRatio} onChange={(e) => setAspectRatio(e.target.value as never)}>{ASPECT_RATIO_OPTIONS.map((a) => <option key={a}>{a}</option>)}</select><input className="rounded border p-2" type="number" min={3} max={60} value={durationSeconds} onChange={(e) => setDurationSeconds(Number(e.target.value))} /></div>
     <div className="flex flex-wrap gap-2"><button className="rounded bg-slate-900 px-4 py-2 text-white disabled:opacity-50" disabled={!canGenerate} onClick={generateScript}>Generate script</button><button className="rounded border px-4 py-2" disabled={!beats.length} onClick={createComposition}>Create composition</button><button className="rounded border px-4 py-2" disabled={!composition} onClick={() => { const b = new Blob([composition], { type: "application/json" }); const u = URL.createObjectURL(b); const a = document.createElement("a"); a.href = u; a.download = "hyperframes-composition-metadata.json"; a.click(); URL.revokeObjectURL(u); }}>Export metadata</button><button className="rounded border border-emerald-700 bg-emerald-700 px-4 py-2 text-white disabled:cursor-not-allowed disabled:opacity-50" disabled={Boolean(renderDisabledReason) || isRendering} onClick={enqueueRender}>Render now</button><Link className="rounded border px-4 py-2" href="/dashboard/hyperframes/renders">ดูประวัติเรนเดอร์</Link></div>
     {renderDisabledReason ? <p className="text-sm text-amber-700">{renderDisabledReason}</p> : null}
