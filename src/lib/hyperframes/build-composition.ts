@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 
 import { escapeHtml, sanitizeText, validateHttpMediaUrl } from "@/lib/hyperframes/sanitize";
 import type { HyperFrameAspectRatio, HyperFrameCompositionProduct, HyperFrameCompositionRequest, HyperFrameCompositionResult } from "@/lib/hyperframes/types";
+import { alignVoiceoverDuration } from "@/lib/hyperframes/voiceover";
 
 const aspectRatioMap: Record<HyperFrameAspectRatio, { width: number; height: number }> = {
   "16:9": { width: 1280, height: 720 },
@@ -26,6 +27,8 @@ export function buildHyperFrameComposition(
     ? sanitizeText("โพสต์นี้มีลิงก์แอฟฟิลิเอต ผู้เขียนอาจได้รับค่าคอมมิชชัน")
     : "";
 
+  const alignedDurationSeconds = alignVoiceoverDuration(input.durationSeconds, input.voiceover);
+
   const compositionId = createHash("sha256")
     .update(JSON.stringify({
       productId: input.productId,
@@ -37,6 +40,7 @@ export function buildHyperFrameComposition(
       safeImage,
       safePrice,
       hasAffiliate,
+      voiceover: input.voiceover,
     }))
     .digest("hex")
     .slice(0, 16);
@@ -61,7 +65,7 @@ export function buildHyperFrameComposition(
   </style>
 </head>
 <body>
-  <div class="stage" data-composition-id="${compositionId}" data-start="0" data-width="${width}" data-height="${height}" data-duration="${input.durationSeconds}">
+  <div class="stage" data-composition-id="${compositionId}" data-start="0" data-width="${width}" data-height="${height}" data-duration="${alignedDurationSeconds}">
     ${safeImage ? `<img class="media" src="${escapeHtml(safeImage)}" alt="${safeTitle}" />` : ""}
     <div class="overlay"></div>
     <div class="content">${contentText || safeTitle}</div>
@@ -85,10 +89,11 @@ export function buildHyperFrameComposition(
       productTitle: input.product.title,
       platform: input.platform,
       aspectRatio: input.aspectRatio,
-      durationSeconds: input.durationSeconds,
+      durationSeconds: alignedDurationSeconds,
       width,
       height,
       hasAffiliateDisclosure: hasAffiliate,
+      voiceover: input.voiceover ?? null,
     },
   };
 }
