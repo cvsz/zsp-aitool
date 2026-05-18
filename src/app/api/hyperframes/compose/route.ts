@@ -6,6 +6,8 @@ import { HYPERFRAME_MAX_DURATION_SECONDS, HYPERFRAME_MAX_TEXT_LENGTH, HYPERFRAME
 import { withAuth } from "@/middleware/auth-middleware";
 import { AppError } from "@/lib/errors";
 import { productService } from "@/services/ProductService";
+import { hyperframesVoiceoverSchema, isTtsEnabled } from "@/lib/hyperframes/voiceover";
+import { getHyperframesBrandKit } from "@/services/hyperframes-brand-kit-service";
 
 const bodySchema = z
   .object({
@@ -15,6 +17,7 @@ const bodySchema = z
     durationSeconds: z.number().int().min(HYPERFRAME_MIN_DURATION_SECONDS).max(HYPERFRAME_MAX_DURATION_SECONDS),
     caption: z.string().max(HYPERFRAME_MAX_TEXT_LENGTH).optional(),
     script: z.string().max(HYPERFRAME_MAX_TEXT_LENGTH).optional(),
+    voiceover: hyperframesVoiceoverSchema.optional(),
   })
   .refine((data) => Boolean(data.caption?.trim() || data.script?.trim()), {
     message: "caption_or_script_required",
@@ -24,8 +27,12 @@ const bodySchema = z
 export const POST = withAuth(async (request) => {
   try {
     const payload = bodySchema.parse(await request.json());
+    if (!isTtsEnabled() && payload.voiceover?.source === "upload") {
+      return NextResponse.json({ ok: false, error: { code: "TTS_DISABLED", message: "voiceover provider disabled" } }, { status: 403 });
+    }
     const product = await productService.getById(request.auth.userId, payload.productId);
 
+    const brandKit = await getHyperframesBrandKit(request.auth.userId);
     const composition = buildHyperFrameComposition({
       ...payload,
       durationSeconds: payload.durationSeconds,
@@ -36,6 +43,7 @@ export const POST = withAuth(async (request) => {
         imageUrl: product.images[0]?.url,
         affiliateUrl: product.affiliateUrl,
       },
+      brandKit,
     });
 
     return NextResponse.json({ ok: true, data: composition });
