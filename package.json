@@ -38,7 +38,8 @@
     "hyperframes:worker:enable-real": "bash scripts/hyperframes/enable-real-worker-daemon.sh",
     "hyperframes:worker:disable-real": "bash scripts/hyperframes/disable-real-worker-daemon.sh",
     "hyperframes:worker:watchdog": "tsx scripts/hyperframes/worker-watchdog.ts",
-    "hyperframes:worker:journal-summary": "bash scripts/hyperframes/worker-journal-summary.sh"
+    "hyperframes:worker:journal-summary": "bash scripts/hyperframes/worker-journal-summary.sh",
+    "hyperframes:worker:install-log-policy": "bash scripts/hyperframes/install-worker-log-policy.sh"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
