@@ -1,10 +1,9 @@
-import { execFile } from "node:child_process";
+import { execFile, execSync } from "node:child_process";
 import { mkdir, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
-import { RenderJobStatus, type HyperFrameRenderJob } from "@prisma/client";
+import { Prisma, RenderJobStatus, type HyperFrameRenderJob } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { execSync } from "node:child_process";
 import { getHyperFramesRenderConfig } from "@/lib/hyperframes/render-config";
 import { ensureOutputWithinDir } from "@/lib/hyperframes/render-safety";
 import { buildHyperFramesCommand, renderCommandToDisplayString } from "@/lib/hyperframes/render-command";
@@ -12,9 +11,11 @@ import { buildHyperFramesCommand, renderCommandToDisplayString } from "@/lib/hyp
 const execFileAsync = promisify(execFile);
 
 type RenderCommandRunner = (bin: string, args: string[]) => Promise<void>;
+type MaybeExtractThumbnail = (opts: { ffmpegBin: string; outputPath: string; thumbnailPath: string }) => Promise<boolean>;
 
 type ProcessOnePendingJobOptions = {
   runRenderCommand?: RenderCommandRunner;
+  maybeExtractThumbnail?: MaybeExtractThumbnail;
   now?: () => Date;
   workerId?: string;
 };
@@ -47,6 +48,18 @@ async function claim(workerId: string, config: ReturnType<typeof getHyperFramesR
   return prisma.hyperFrameRenderJob.findUnique({ where: { id: pending.id } });
 }
 
+
+
+async function maybeExtractThumbnailFromVideo({ ffmpegBin, outputPath, thumbnailPath }: { ffmpegBin: string; outputPath: string; thumbnailPath: string }): Promise<boolean> {
+  try {
+    await execFileAsync(ffmpegBin, ["-y", "-ss", "00:00:01", "-i", outputPath, "-frames:v", "1", "-q:v", "3", thumbnailPath]);
+    const thumbStat = await stat(thumbnailPath);
+    return thumbStat.size > 0;
+  } catch {
+    return false;
+  }
+}
+
 function toControlledErrorMessage(error: unknown): string {
   if (error instanceof Error) {
     const safe = error.message.replace(/[\r\n\t]+/g, " ").replace(/\s+/g, " ").trim();
@@ -58,6 +71,7 @@ function toControlledErrorMessage(error: unknown): string {
 export async function processOnePendingJob(options: ProcessOnePendingJobOptions = {}): Promise<boolean> {
   const runRenderCommand = options.runRenderCommand ?? ((bin, args) => execFileAsync(bin, args).then(() => undefined));
   const now = options.now ?? (() => new Date());
+  const maybeExtractThumbnail = options.maybeExtractThumbnail ?? maybeExtractThumbnailFromVideo;
   const workerId = options.workerId ?? process.env.HYPERFRAMES_WORKER_ID ?? `${process.env.HOSTNAME ?? "host"}-${process.pid}`;
   const config = getHyperFramesRenderConfig();
   const job = await claim(workerId, config);
@@ -79,12 +93,17 @@ export async function processOnePendingJob(options: ProcessOnePendingJobOptions 
     const freeMb = getFreeMb(config.outputDir);
     if (freeMb < config.minFreeMb) throw new Error(`insufficient disk space: free=${freeMb}MB required=${config.minFreeMb}MB`);
     const renderCmd = buildHyperFramesCommand(["render", "--input", jobDir, "--output", outputPath, "--duration", String(config.maxDurationSeconds)], config);
+    const thumbnailName = `${job.id}.jpg`;
+    const thumbnailPath = ensureOutputWithinDir(config.outputDir, thumbnailName);
     console.log(`[OK] running render command: ${renderCommandToDisplayString(renderCmd)}`);
     await runRenderCommand(renderCmd.bin, renderCmd.args);
     const renderedStat = await stat(outputPath);
+    const thumbnailCreated = await maybeExtractThumbnail({ ffmpegBin: config.ffmpegBin, outputPath, thumbnailPath });
     const maxBytes = config.maxOutputMb * 1024 * 1024;
     if (renderedStat.size > maxBytes) throw new Error(`output exceeds max size: ${renderedStat.size} > ${maxBytes}`);
-    await prisma.hyperFrameRenderJob.update({ where: { id: job.id }, data: { status: RenderJobStatus.COMPLETED, outputPath, outputUrl: null, completedAt: now(), errorMessage: null, failedAt: null, lockedAt: null, lockedBy: null } });
+    const currentMetadata = job.compositionMetadata && typeof job.compositionMetadata === "object" && !Array.isArray(job.compositionMetadata) ? (job.compositionMetadata as Record<string, unknown>) : {};
+    const compositionMetadata: Prisma.InputJsonValue = (thumbnailCreated ? { ...currentMetadata, thumbnailName } : currentMetadata) as Prisma.InputJsonValue;
+    await prisma.hyperFrameRenderJob.update({ where: { id: job.id }, data: { status: RenderJobStatus.COMPLETED, outputPath, outputUrl: null, compositionMetadata, completedAt: now(), errorMessage: null, failedAt: null, lockedAt: null, lockedBy: null } });
   } catch (error) {
     await prisma.hyperFrameRenderJob.update({ where: { id: job.id }, data: { status: RenderJobStatus.FAILED, errorMessage: toControlledErrorMessage(error), failedAt: now(), lockedAt: null, lockedBy: null } });
   } finally {

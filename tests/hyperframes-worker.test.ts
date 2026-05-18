@@ -90,6 +90,7 @@ describe("worker", () => {
     const { processOnePendingJob } = await import("../scripts/hyperframes/render-worker");
     await processOnePendingJob({
       now: () => new Date("2026-01-01T00:00:00.000Z"),
+      maybeExtractThumbnail: async () => true,
       runRenderCommand: async (_bin, args) => {
         const outputPath = args[args.indexOf("--output") + 1];
         mkdirSync("/tmp/hf-o", { recursive: true });
@@ -101,6 +102,7 @@ describe("worker", () => {
     expect(doneUpdate?.data.status).toBe(RenderJobStatus.COMPLETED);
     expect(String(doneUpdate?.data.outputPath)).toMatch(/^\/tmp\/hf-o\//);
     expect(doneUpdate?.data.completedAt).toEqual(new Date("2026-01-01T00:00:00.000Z"));
+    expect((doneUpdate?.data.compositionMetadata as Record<string, unknown>).thumbnailName).toBe("j1.jpg");
   });
 
   it("marks failed job with controlled error", async () => {
