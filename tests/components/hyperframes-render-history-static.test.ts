@@ -12,5 +12,6 @@ describe("render history static safety", () => {
     expect(card).not.toContain("outputPath");
     expect(card).toContain("downloadUrl");
     expect(sidebar).toContain("/dashboard/hyperframes/renders");
+    expect(page).toContain("อัปเกรดแพ็กเกจ");
   });
 });

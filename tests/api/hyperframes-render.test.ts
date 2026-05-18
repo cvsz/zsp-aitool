@@ -44,3 +44,20 @@ it("returns 429 when pending queue limit reached", async () => {
   expect(res.status).toBe(429);
   state.pendingCount = 0;
 });
+
+
+it("blocks paid features for unpaid plan", async () => {
+  vi.spyOn(auth, "getSessionFromRequest").mockReturnValue({ userId: "u1", email: "a@a.com" });
+  process.env.HYPERFRAMES_RENDER_ENABLED = "true";
+  state.pendingCount = 0;
+  const res = await createJob(new Request("http://localhost/api/hyperframes/render", { method: "POST", headers: { "content-type": "application/json", "x-plan": "free", "x-hf-quota-remaining": "5" }, body: JSON.stringify({ productId: "p1", platform: "facebook", aspectRatio: "16:9", durationSeconds: 20, caption: "ok", highQuality: true }) }) as never);
+  expect(res.status).toBe(402);
+});
+
+it("blocks when paid quota exceeded", async () => {
+  vi.spyOn(auth, "getSessionFromRequest").mockReturnValue({ userId: "u1", email: "a@a.com" });
+  process.env.HYPERFRAMES_RENDER_ENABLED = "true";
+  state.pendingCount = 0;
+  const res = await createJob(new Request("http://localhost/api/hyperframes/render", { method: "POST", headers: { "content-type": "application/json", "x-plan": "pro", "x-hf-quota-remaining": "0" }, body: JSON.stringify({ productId: "p1", platform: "facebook", aspectRatio: "16:9", durationSeconds: 20, caption: "ok", removeWatermark: true }) }) as never);
+  expect(res.status).toBe(429);
+});
