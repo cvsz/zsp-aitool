@@ -7,11 +7,13 @@ import { getHyperFramesRenderConfig } from "@/lib/hyperframes/render-config";
 import { buildHyperFrameComposition } from "@/lib/hyperframes/build-composition";
 import { hyperFrameAspectRatios, hyperFramePlatforms, hyperFrameWatermarkPositions } from "@/lib/hyperframes/types";
 import { hyperFrameAspectRatios, hyperFramePlatforms } from "@/lib/hyperframes/types";
+import { enforceRenderLimits } from "@/lib/hyperframes/subscription-limits";
 import { hyperFramesQualityProfiles, resolveRenderQuality } from "@/lib/hyperframes/render-quality";
 import { productService } from "@/services/ProductService";
 import { prisma } from "@/lib/prisma";
 import { hyperframesVoiceoverSchema, isTtsEnabled } from "@/lib/hyperframes/voiceover";
 
+const bodySchema = z.object({ productId: z.string().min(1), platform: z.enum(hyperFramePlatforms), aspectRatio: z.enum(hyperFrameAspectRatios), durationSeconds: z.number().int().min(3).max(300), caption: z.string().max(1200).optional(), script: z.string().max(1200).optional(), compositionHtml: z.string().optional() });
 const bodySchema = z.object({
   productId: z.string().min(1),
   platform: z.enum(hyperFramePlatforms),
@@ -45,6 +47,9 @@ export const POST = withAuth(async (request) => {
   const quota = await HyperFramesQuotaService.enforceBeforeEnqueue(request.auth.userId);
   if (!quota.allowed) return NextResponse.json({ ok: false, error: { code: quota.code, message: quota.message }, data: { remainingMonthlyRenders: quota.summary.remainingMonthlyRenders, storageUsedMb: quota.summary.storageUsedMb, storageQuotaMb: quota.summary.storageQuotaMb, retentionDays: quota.summary.retentionDays } }, { status: 429 });
   const payload = bodySchema.parse(await request.json());
+  const limitCheck = await enforceRenderLimits({ userId: request.auth.userId, durationSeconds: payload.durationSeconds });
+  if (!limitCheck.allowed) {
+    return NextResponse.json({ ok: false, error: { code: limitCheck.code, message: limitCheck.message }, data: { plan: limitCheck.plan, limits: limitCheck.limits, usage: limitCheck.usage } }, { status: limitCheck.status });
   if (!isTtsEnabled() && payload.voiceover?.source === "upload") return NextResponse.json({ ok: false, error: { code: "TTS_DISABLED", message: "voiceover provider disabled" } }, { status: 403 });
   let qualityProfile: "preview" | "standard" | "high" = "standard";
   try {
@@ -59,6 +64,7 @@ export const POST = withAuth(async (request) => {
     : undefined;
   const composition = payload.compositionHtml ? { compositionHtml: payload.compositionHtml, metadata: { ...payload, productTitle: product.title, width: 0, height: 0, hasAffiliateDisclosure: false, watermarkEnabled: false, watermarkPosition: null } } : buildHyperFrameComposition({ ...payload, watermark: watermarkInput, product: { title: product.title, price: String(product.price), currency: product.currency, imageUrl: product.images[0]?.url, affiliateUrl: product.affiliateUrl } });
   const job = await prisma.hyperFrameRenderJob.create({ data: { userId: request.auth.userId, productId: product.id, status: RenderJobStatus.PENDING, compositionHtml: composition.compositionHtml, compositionMetadata: composition.metadata as object } });
+  return NextResponse.json({ ok: true, data: { jobId: job.id, status: job.status, plan: limitCheck.plan, limits: limitCheck.limits, usage: limitCheck.usage } });
   const composition = payload.compositionHtml ? { compositionHtml: payload.compositionHtml, metadata: { ...payload, qualityProfile, productTitle: product.title, width: 0, height: 0, hasAffiliateDisclosure: false } } : buildHyperFrameComposition({ ...payload, product: { title: product.title, price: String(product.price), currency: product.currency, imageUrl: product.images[0]?.url, affiliateUrl: product.affiliateUrl } });
   const job = await prisma.hyperFrameRenderJob.create({ data: { userId: request.auth.userId, productId: product.id, status: RenderJobStatus.PENDING, compositionHtml: composition.compositionHtml, compositionMetadata: { ...(composition.metadata as object), qualityProfile } } });
   return NextResponse.json({ ok: true, data: { jobId: job.id, status: job.status } });
