@@ -4,7 +4,7 @@ import path from "node:path";
 import { promisify } from "node:util";
 import { buildHyperFrameComposition } from "@/lib/hyperframes/build-composition";
 import { getHyperFramesRenderConfig } from "@/lib/hyperframes/render-config";
-import { buildHyperFramesCommand } from "@/lib/hyperframes/render-command";
+import { buildHyperFramesCommand, renderCommandToDisplayString } from "@/lib/hyperframes/render-command";
 import { ensureOutputWithinDir } from "@/lib/hyperframes/render-safety";
 
 const execFileAsync = promisify(execFile);
@@ -50,7 +50,7 @@ export async function runRenderSmoke(): Promise<SmokeResult> {
     const outputPath = ensureOutputWithinDir(smokeOutDir, "render-smoke.mp4");
     const cmd = buildHyperFramesCommand(["render", "--input", htmlPath, "--output", outputPath, "--duration", String(Math.min(config.maxDurationSeconds, 6))], config);
 
-    console.log(`[OK] running: ${cmd.bin} ${cmd.args.join(" ")}`);
+    console.log(`[OK] running: ${renderCommandToDisplayString(cmd)}`);
     await execFileAsync(cmd.bin, cmd.args, { cwd: root, env: process.env });
     console.log(`[OK] smoke render complete: ${outputPath}`);
     return { ok: true, skipped: false };
