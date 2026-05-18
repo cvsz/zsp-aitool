@@ -25,6 +25,8 @@ export type HyperFramesRenderConfig = {
   watchdogMinFreeMb: number;
   watchdogRequireServiceActive: boolean;
   watchdogRecoverStale: boolean;
+  allowedQualityProfiles: string;
+  highQualityEnabled: boolean;
 };
 
 let envLoaded = false;
@@ -71,5 +73,7 @@ export function getHyperFramesRenderConfig(): HyperFramesRenderConfig {
     watchdogMinFreeMb: toInt(process.env.HYPERFRAMES_WATCHDOG_MIN_FREE_MB, 2048),
     watchdogRequireServiceActive: process.env.HYPERFRAMES_WATCHDOG_REQUIRE_SERVICE_ACTIVE !== "false",
     watchdogRecoverStale: process.env.HYPERFRAMES_WATCHDOG_RECOVER_STALE === "true",
+    allowedQualityProfiles: process.env.HYPERFRAMES_ALLOWED_QUALITY_PROFILES ?? "preview,standard,high",
+    highQualityEnabled: process.env.HYPERFRAMES_HIGH_QUALITY_ENABLED === "true",
   };
 }
