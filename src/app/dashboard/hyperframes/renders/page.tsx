@@ -19,10 +19,14 @@ export default function HyperFramesRenderHistoryPage() {
     await fetch(`/api/hyperframes/render/${id}/cancel`, { method: "POST" });
     await load();
   }
+  async function retry(id: string) {
+    await fetch(`/api/hyperframes/render/${id}/retry`, { method: "POST" });
+    await load();
+  }
 
   useEffect(() => { load(); }, []);
   const shouldPoll = useMemo(() => items.some((x) => x.status === "PENDING" || x.status === "RUNNING"), [items]);
   useEffect(() => { if (!shouldPoll) return; const t = setInterval(() => { void load(); }, 12000); return () => clearInterval(t); }, [shouldPoll]);
 
-  return <main className="space-y-4 p-6"><h1 className="text-2xl font-bold">ประวัติเรนเดอร์ HyperFrames</h1><p className="text-sm text-slate-600">แสดงเฉพาะงานของบัญชีคุณ พร้อมปุ่มดาวน์โหลด/ยกเลิกที่ปลอดภัย</p>{loading ? <p className="text-sm text-slate-500">กำลังโหลด...</p> : <RenderHistoryTable items={items} onCancel={cancel} />}</main>;
+  return <main className="space-y-4 p-6"><h1 className="text-2xl font-bold">ประวัติเรนเดอร์ HyperFrames</h1><p className="text-sm text-slate-600">แสดงเฉพาะงานของบัญชีคุณ พร้อมปุ่มดาวน์โหลด/ยกเลิกที่ปลอดภัย</p>{loading ? <p className="text-sm text-slate-500">กำลังโหลด...</p> : <RenderHistoryTable items={items} onCancel={cancel} onRetry={retry} />}</main>;
 }
