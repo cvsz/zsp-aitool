@@ -2,7 +2,9 @@ import { createReadStream } from "node:fs";
 import { lstat, realpath, stat } from "node:fs/promises";
 import path from "node:path";
 
-const ALLOWED_EXTENSIONS = new Set([".mp4", ".webm", ".mov"]);
+const VIDEO_EXTENSIONS = new Set([".mp4", ".webm", ".mov"]);
+const IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp"]);
+const ALLOWED_EXTENSIONS = new Set([...VIDEO_EXTENSIONS, ...IMAGE_EXTENSIONS]);
 
 export function assertArtifactInsideOutputDir(outputDir: string, artifactPath: string): void {
   const resolvedOutputDir = path.resolve(outputDir);
@@ -45,6 +47,9 @@ export function getArtifactContentType(filePath: string): string {
   if (ext === ".mp4") return "video/mp4";
   if (ext === ".webm") return "video/webm";
   if (ext === ".mov") return "video/quicktime";
+  if (ext === ".jpg" || ext === ".jpeg") return "image/jpeg";
+  if (ext === ".png") return "image/png";
+  if (ext === ".webp") return "image/webp";
   throw new Error("ARTIFACT_INVALID_EXTENSION");
 }
 

@@ -47,6 +47,29 @@ async function claim(workerId: string, config: ReturnType<typeof getHyperFramesR
   return prisma.hyperFrameRenderJob.findUnique({ where: { id: pending.id } });
 }
 
+
+
+async function extractThumbnail(options: { ffmpegBin: string; outputVideoPath: string; thumbnailPath: string }): Promise<boolean> {
+  try {
+    await execFileAsync(options.ffmpegBin, [
+      "-hide_banner",
+      "-loglevel",
+      "error",
+      "-y",
+      "-ss",
+      "00:00:00.500",
+      "-i",
+      options.outputVideoPath,
+      "-frames:v",
+      "1",
+      options.thumbnailPath,
+    ]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function toControlledErrorMessage(error: unknown): string {
   if (error instanceof Error) {
     const safe = error.message.replace(/[\r\n\t]+/g, " ").replace(/\s+/g, " ").trim();
@@ -82,6 +105,11 @@ export async function processOnePendingJob(options: ProcessOnePendingJobOptions 
     console.log(`[OK] running render command: ${renderCommandToDisplayString(renderCmd)}`);
     await runRenderCommand(renderCmd.bin, renderCmd.args);
     const renderedStat = await stat(outputPath);
+    const thumbnailPath = ensureOutputWithinDir(config.outputDir, `${job.id}.jpg`);
+    const thumbnailCreated = await extractThumbnail({ ffmpegBin: config.ffmpegBin, outputVideoPath: outputPath, thumbnailPath });
+    if (!thumbnailCreated) {
+      console.log(JSON.stringify({ level: "warn", event: "thumbnail.skipped", jobId: job.id }));
+    }
     const maxBytes = config.maxOutputMb * 1024 * 1024;
     if (renderedStat.size > maxBytes) throw new Error(`output exceeds max size: ${renderedStat.size} > ${maxBytes}`);
     await prisma.hyperFrameRenderJob.update({ where: { id: job.id }, data: { status: RenderJobStatus.COMPLETED, outputPath, outputUrl: null, completedAt: now(), errorMessage: null, failedAt: null, lockedAt: null, lockedBy: null } });
