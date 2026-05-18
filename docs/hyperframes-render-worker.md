@@ -421,6 +421,47 @@ Recovery remains operator-controlled and non-destructive by default.
 npm run hyperframes:worker:disable-real
 ```
 
+
+## Phase 6.3: log rotation and journal policy
+
+Goal: prevent worker log bloat while keeping operator visibility.
+
+- Added optional install script: `npm run hyperframes:worker:install-log-policy`.
+- Script writes a systemd drop-in at `/etc/systemd/system/zsp-hyperframes-worker.service.d/log-policy.conf` with:
+  - `LogRateLimitIntervalSec`
+  - `LogRateLimitBurst`
+- Default mode is **dry-run** and prints the planned config; nothing is applied unless `HYPERFRAMES_LOG_POLICY_CONFIRM=YES`.
+- Drop-in values are configurable:
+  - `HYPERFRAMES_LOG_RATE_LIMIT_INTERVAL_SEC` (default `30s`)
+  - `HYPERFRAMES_LOG_RATE_LIMIT_BURST` (default `500`)
+- Journal summary command now supports:
+  - `HYPERFRAMES_JOURNAL_SUMMARY_LINES` (default `200`)
+  - `HYPERFRAMES_JOURNAL_SUMMARY_SINCE` (default `24 hours ago`)
+  - log sanitization for common secret/token patterns.
+
+### Recommended journald limits (operator baseline)
+
+Use host-level journald retention limits in `/etc/systemd/journald.conf` to cap total journal growth (example baseline):
+
+```ini
+[Journal]
+SystemMaxUse=1G
+SystemKeepFree=1G
+RuntimeMaxUse=256M
+MaxRetentionSec=14day
+```
+
+These are host policy examples only; choose values based on disk budget and retention requirements.
+
+### Safe apply flow
+
+```bash
+npm run hyperframes:worker:install-log-policy
+HYPERFRAMES_LOG_POLICY_CONFIRM=YES npm run hyperframes:worker:install-log-policy
+sudo systemctl restart zsp-hyperframes-worker
+npm run hyperframes:worker:journal-summary
+```
+
 ## Phase 2.11: secure artifact serving and downloads
 
 - Download API endpoint: `GET /api/hyperframes/render/:id/download` (also supports `HEAD`).
