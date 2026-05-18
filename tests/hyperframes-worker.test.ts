@@ -8,7 +8,7 @@ vi.mock("node:child_process", async (importOriginal) => {
 import { RenderJobStatus } from "@prisma/client";
 
 const mkdirMock = vi.fn().mockResolvedValue(undefined);
-const statMock = vi.fn().mockResolvedValue({ size: 1024 });
+const statMock = vi.fn().mockResolvedValue({ size: 1024, isFile: () => true });
 
 vi.mock("node:fs/promises", async (importOriginal) => {
   const actual = await importOriginal<typeof import("node:fs/promises")>();
@@ -69,6 +69,7 @@ describe("worker", () => {
     process.env.HYPERFRAMES_WORKDIR = "/tmp/hf-w";
     process.env.HYPERFRAMES_OUTPUT_DIR = "/tmp/hf-o";
     process.env.HYPERFRAMES_MIN_FREE_MB = "1";
+    process.env.HYPERFRAMES_FFPROBE_BIN = "__missing_ffprobe__";
 
     const { processOnePendingJob } = await import("../scripts/hyperframes/render-worker");
     const first = await processOnePendingJob({ runRenderCommand: async () => {} });
@@ -85,15 +86,17 @@ describe("worker", () => {
     process.env.HYPERFRAMES_WORKDIR = "/tmp/hf-w";
     process.env.HYPERFRAMES_OUTPUT_DIR = "/tmp/hf-o";
     process.env.HYPERFRAMES_MIN_FREE_MB = "1";
-    statMock.mockResolvedValue({ size: 1024 });
+    process.env.HYPERFRAMES_FFPROBE_BIN = "__missing_ffprobe__";
+    statMock.mockResolvedValue({ size: 4096, isFile: () => true });
 
     const { processOnePendingJob } = await import("../scripts/hyperframes/render-worker");
     await processOnePendingJob({
       now: () => new Date("2026-01-01T00:00:00.000Z"),
+      maybeExtractThumbnail: async () => true,
       runRenderCommand: async (_bin, args) => {
         const outputPath = args[args.indexOf("--output") + 1];
         mkdirSync("/tmp/hf-o", { recursive: true });
-        writeFileSync(outputPath, Buffer.from("ok"));
+        writeFileSync(outputPath, Buffer.alloc(4096, 7));
       }
     });
 
@@ -101,6 +104,7 @@ describe("worker", () => {
     expect(doneUpdate?.data.status).toBe(RenderJobStatus.COMPLETED);
     expect(String(doneUpdate?.data.outputPath)).toMatch(/^\/tmp\/hf-o\//);
     expect(doneUpdate?.data.completedAt).toEqual(new Date("2026-01-01T00:00:00.000Z"));
+    expect((doneUpdate?.data.compositionMetadata as Record<string, unknown>).thumbnailName).toBe("j1.jpg");
   });
 
   it("marks failed job with controlled error", async () => {
@@ -135,6 +139,31 @@ describe("worker", () => {
     expect(failUpdate?.data.failedAt).toEqual(new Date("2026-01-01T00:00:00.000Z"));
   });
 
+
+  it("fails job when artifact validation fails", async () => {
+    state.claimCount = 1;
+    state.updates.length = 0;
+    process.env.HYPERFRAMES_RENDER_ENABLED = "true";
+    process.env.HYPERFRAMES_WORKDIR = "/tmp/hf-w";
+    process.env.HYPERFRAMES_OUTPUT_DIR = "/tmp/hf-o";
+    process.env.HYPERFRAMES_MIN_FREE_MB = "1";
+    process.env.HYPERFRAMES_FFPROBE_BIN = "__missing_ffprobe__";
+    statMock.mockResolvedValue({ size: 10, isFile: () => true });
+
+    const { processOnePendingJob } = await import("../scripts/hyperframes/render-worker");
+    await processOnePendingJob({
+      now: () => new Date("2026-01-01T00:00:00.000Z"),
+      runRenderCommand: async (_bin, args) => {
+        const outputPath = args[args.indexOf("--output") + 1];
+        mkdirSync("/tmp/hf-o", { recursive: true });
+        writeFileSync(outputPath, Buffer.from("small"));
+      }
+    });
+
+    const failUpdate = state.updates.at(-1);
+    expect(failUpdate?.data.status).toBe(RenderJobStatus.FAILED);
+    expect(String(failUpdate?.data.errorMessage)).toContain("HyperFrames render failed:");
+  });
   it("uses npx command vector in enabled worker path", async () => {
     vi.resetModules();
     state.claimCount = 1;
