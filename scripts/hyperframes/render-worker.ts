@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { mkdir, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 import { RenderJobStatus, type HyperFrameRenderJob } from "@prisma/client";
@@ -8,6 +8,7 @@ import { execSync } from "node:child_process";
 import { getHyperFramesRenderConfig } from "@/lib/hyperframes/render-config";
 import { ensureOutputWithinDir } from "@/lib/hyperframes/render-safety";
 import { buildHyperFramesCommand, renderCommandToDisplayString } from "@/lib/hyperframes/render-command";
+import { validateRenderArtifact } from "@/lib/hyperframes/render-validation";
 
 const execFileAsync = promisify(execFile);
 
@@ -81,9 +82,7 @@ export async function processOnePendingJob(options: ProcessOnePendingJobOptions 
     const renderCmd = buildHyperFramesCommand(["render", "--input", jobDir, "--output", outputPath, "--duration", String(config.maxDurationSeconds)], config);
     console.log(`[OK] running render command: ${renderCommandToDisplayString(renderCmd)}`);
     await runRenderCommand(renderCmd.bin, renderCmd.args);
-    const renderedStat = await stat(outputPath);
-    const maxBytes = config.maxOutputMb * 1024 * 1024;
-    if (renderedStat.size > maxBytes) throw new Error(`output exceeds max size: ${renderedStat.size} > ${maxBytes}`);
+    await validateRenderArtifact(outputPath, { minBytes: 1024, maxOutputMb: config.maxOutputMb, maxDurationSeconds: config.maxDurationSeconds, ffprobeBin: process.env.HYPERFRAMES_FFPROBE_BIN ?? "ffprobe" });
     await prisma.hyperFrameRenderJob.update({ where: { id: job.id }, data: { status: RenderJobStatus.COMPLETED, outputPath, outputUrl: null, completedAt: now(), errorMessage: null, failedAt: null, lockedAt: null, lockedBy: null } });
   } catch (error) {
     await prisma.hyperFrameRenderJob.update({ where: { id: job.id }, data: { status: RenderJobStatus.FAILED, errorMessage: toControlledErrorMessage(error), failedAt: now(), lockedAt: null, lockedBy: null } });
