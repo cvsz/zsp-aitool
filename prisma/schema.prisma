@@ -39,6 +39,7 @@ model User {
   email              String              @unique
   name               String?
   password           String?
+  planTier           PlanTier            @default(FREE)
   products           Product[]
   contentGenerations ContentGeneration[]
   affiliateLinks     AffiliateLink[]
@@ -287,6 +288,13 @@ model APIUsageLog {
   @@index([deletedAt])
 }
 
+
+enum PlanTier {
+  FREE
+  PRO
+  TEAM
+  ENTERPRISE
+}
 
 enum RenderJobStatus {
   PENDING
