@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 import { withAuth, type AuthenticatedRequest } from "@/middleware/auth-middleware";
 import { prisma } from "@/lib/prisma";
 import { getHyperFramesRenderConfig } from "@/lib/hyperframes/render-config";
+import { canManage, resolveScope } from "@/lib/hyperframes/org-access";
 import {
   buildSafeArtifactFilename,
   getArtifactContentType,
@@ -15,6 +16,10 @@ import { getHyperFramesDownloadTokenConfig, verifyDownloadToken } from "@/lib/hy
 
 async function resolveDownload(request: AuthenticatedRequest, context: { params: Promise<{ id: string }> }, headOnly = false) {
   const { id } = await context.params;
+  const orgId = new URL(request.url).searchParams.get("orgId");
+  const scope = await resolveScope(request.auth.userId, orgId);
+  if (!scope) return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Organization access denied" } }, { status: 403 });
+  const job = await prisma.hyperFrameRenderJob.findFirst({ where: { id, deletedAt: null, ...(scope.orgId ? { orgId: scope.orgId } : { userId: request.auth.userId, orgId: null }) } });
   const { searchParams } = new URL(request.url);
   const signedDownloads = getHyperFramesDownloadTokenConfig();
   const token = searchParams.get("token");
