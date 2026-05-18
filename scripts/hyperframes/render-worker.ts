@@ -27,7 +27,8 @@ async function claim(workerId: string): Promise<HyperFrameRenderJob | null> {
 
 function toControlledErrorMessage(error: unknown): string {
   if (error instanceof Error) {
-    return `HyperFrames render failed: ${error.message}`.slice(0, 500);
+    const safe = error.message.replace(/[\r\n\t]+/g, " ").replace(/\s+/g, " ").trim();
+    return `HyperFrames render failed: ${safe}`.slice(0, 500);
   }
   return "HyperFrames render failed";
 }
