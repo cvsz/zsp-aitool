@@ -11,5 +11,10 @@ export function createRenderShareToken(): { token: string; tokenHash: string } {
 }
 
 export function hashRenderShareToken(token: string): string {
+export function createShareToken(): string {
+  return randomBytes(24).toString("base64url");
+}
+
+export function hashShareToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
