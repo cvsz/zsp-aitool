@@ -304,3 +304,76 @@ npm run health
 ```
 
 After trial completion, `systemctl is-enabled zsp-hyperframes-worker` must not report `enabled` and service should be inactive.
+
+## Phase 2.8: operator status dashboard and runbook
+
+This phase adds read-only operator visibility without enabling persistent rendering.
+
+### Safety defaults
+
+- Keep `HYPERFRAMES_RENDER_ENABLED=false` unless running an explicit trial.
+- Keep `HYPERFRAMES_OPERATOR_STATUS_ENABLED=false` by default.
+- Operator status API is authenticated and returns controlled 404 when disabled.
+- Status response excludes secrets and local filesystem paths.
+
+### Operator status endpoint
+
+- Route: `GET /api/hyperframes/render/status`
+- Expected fields:
+  - `pending`
+  - `running`
+  - `completedLast24h`
+  - `failedLast24h`
+  - `oldestPendingCreatedAt`
+  - `renderEnabled`
+  - `maxPendingJobs`
+  - `maxRunningJobs`
+  - `diskFreeMb` (if available)
+
+### Dashboard
+
+- Read-only page: `/dashboard/hyperframes/ops`
+- Shows queue counts, render enabled/disabled state, and warnings.
+- No controls that start worker.
+- No destructive buttons.
+
+### Live trial interpretation
+
+- `pending` rising with `running=0` while `renderEnabled=false` is expected safe idle behavior.
+- `running > 0` should only happen during explicit controlled trials.
+- `failedLast24h > 0` requires operator review of worker logs and render job status.
+- Low `diskFreeMb` signals risk of output failures; run cleanup dry-run first.
+
+### Rollback and cleanup
+
+- Disable endpoint visibility: set `HYPERFRAMES_OPERATOR_STATUS_ENABLED=false`.
+- Ensure worker is not persistent:
+
+```bash
+sudo systemctl stop zsp-hyperframes-worker
+sudo systemctl disable zsp-hyperframes-worker
+```
+
+- Run safe cleanup dry-run:
+
+```bash
+HYPERFRAMES_CLEANUP_DRY_RUN=true npm run hyperframes:cleanup-renders
+```
+
+### Stale recovery
+
+If queue has jobs stuck in running state beyond stale threshold:
+
+```bash
+npm run hyperframes:recover-stale-jobs
+npm run hyperframes:queue-status
+```
+
+### When to enable persistent worker
+
+Enable persistent worker only when all are true:
+
+1. Trial run completed successfully.
+2. Queue backlog needs sustained processing.
+3. Disk guard and retention policy are active.
+4. On-call operator can monitor logs and rollback immediately.
