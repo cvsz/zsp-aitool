@@ -39,6 +39,7 @@ model User {
   email              String              @unique
   name               String?
   password           String?
+  planTier           PlanTier            @default(FREE)
   products           Product[]
   contentGenerations ContentGeneration[]
   affiliateLinks     AffiliateLink[]
@@ -257,6 +258,12 @@ model UserSetting {
   affiliateDisclosure String?
   defaultHashtags     String[]
   ctaStyle            String?
+  brandColors         String[]
+  fontPreference      String?
+  logoUrl             String?
+  watermarkText       String?
+  defaultAspectRatio  String?
+  defaultCTA          String?
   user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
@@ -288,6 +295,13 @@ model APIUsageLog {
   @@index([deletedAt])
 }
 
+
+enum PlanTier {
+  FREE
+  PRO
+  TEAM
+  ENTERPRISE
+}
 
 enum RenderJobStatus {
   PENDING
@@ -332,6 +346,7 @@ model HyperFrameRenderJob {
   compositionMetadata Json?
   outputPath          String?
   outputUrl           String?
+  outputSizeBytes     BigInt?
   errorMessage        String?
   durationSeconds     Int?
   width               Int?

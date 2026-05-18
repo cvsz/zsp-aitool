@@ -12,7 +12,24 @@ describe("buildHyperFramesCommand", () => {
       nodeBin: "node",
       ffmpegBin: "ffmpeg",
       cliBin: "npx",
-      cliArgs: ["-y", "hyperframes"]
+      cliArgs: ["-y", "hyperframes"],
+      maxPendingJobs: 25,
+      maxRunningJobs: 1,
+      maxAttempts: 3,
+      retryBackoffSeconds: 300,
+      runningStaleMinutes: 30,
+      minFreeMb: 2048,
+      maxOutputMb: 512,
+      retentionDays: 14,
+      cleanupDryRun: true,
+      watchdogStaleRunningMinutes: 30,
+      watchdogMaxFailedLast24h: 5,
+      watchdogMaxPendingJobs: 25,
+      watchdogMinFreeMb: 2048,
+      watchdogRequireServiceActive: true,
+      watchdogRecoverStale: false,
+      allowedQualityProfiles: "preview,standard,high",
+      highQualityEnabled: false
     });
 
     expect(cmd.bin).toBe("npx");
@@ -29,7 +46,24 @@ describe("buildHyperFramesCommand", () => {
       nodeBin: "node",
       ffmpegBin: "ffmpeg",
       cliBin: "hyperframes",
-      cliArgs: []
+      cliArgs: [],
+      maxPendingJobs: 25,
+      maxRunningJobs: 1,
+      maxAttempts: 3,
+      retryBackoffSeconds: 300,
+      runningStaleMinutes: 30,
+      minFreeMb: 2048,
+      maxOutputMb: 512,
+      retentionDays: 14,
+      cleanupDryRun: true,
+      watchdogStaleRunningMinutes: 30,
+      watchdogMaxFailedLast24h: 5,
+      watchdogMaxPendingJobs: 25,
+      watchdogMinFreeMb: 2048,
+      watchdogRequireServiceActive: true,
+      watchdogRecoverStale: false,
+      allowedQualityProfiles: "preview,standard,high",
+      highQualityEnabled: false
     });
 
     expect(cmd.bin).toBe("hyperframes");

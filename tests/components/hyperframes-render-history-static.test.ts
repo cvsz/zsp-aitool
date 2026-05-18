@@ -11,6 +11,7 @@ describe("render history static safety", () => {
     expect(page).not.toContain("/var/lib");
     expect(card).not.toContain("outputPath");
     expect(card).toContain("downloadUrl");
+    expect(card).toContain("ลองใหม่");
     expect(sidebar).toContain("/dashboard/hyperframes/renders");
   });
 });
