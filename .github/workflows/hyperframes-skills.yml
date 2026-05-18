@@ -1,0 +1,69 @@
+name: HyperFrames Skills Validation
+
+on:
+  pull_request:
+    paths:
+      - '.agents/skills/**'
+      - 'skills-lock.json'
+      - '.github/workflows/hyperframes-skills.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - '.agents/skills/**'
+      - 'skills-lock.json'
+      - '.github/workflows/hyperframes-skills.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  smoke-and-t1:
+    name: Smoke + T1 corpus
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install shell/python/media deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bash python3 ffmpeg
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate shell script syntax
+        run: |
+          set -euo pipefail
+          while IFS= read -r file; do
+            bash -n "$file"
+          done < <(find .agents/skills -type f -name '*.sh')
+
+      - name: Validate Python script syntax
+        run: |
+          set -euo pipefail
+          while IFS= read -r file; do
+            python3 -m py_compile "$file"
+          done < <(find .agents/skills -type f -name '*.py')
+
+      - name: Run remotion-to-hyperframes smoke harness
+        run: bash .agents/skills/remotion-to-hyperframes/scripts/tests/smoke.sh
+
+      - name: Run remotion-to-hyperframes T1 corpus
+        run: bash .agents/skills/remotion-to-hyperframes/assets/test-corpus/run.sh --tier T1
+
+      - name: Upload corpus report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: remotion-to-hyperframes-t1-report
+          path: .agents/skills/remotion-to-hyperframes/assets/test-corpus/run-report.json
