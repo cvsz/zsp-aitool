@@ -13,6 +13,7 @@
     "prisma:generate": "prisma generate",
     "prisma:seed": "prisma db seed",
     "postbuild": "bash scripts/fix-next-server-chunks.sh",
+    "test": "vitest run tests/smoke.test.ts tests/branding.test.ts tests/middleware.auth.test.ts tests/api/products.test.ts tests/api/hyperframes-compose.test.ts tests/api/tenant-isolation.test.ts tests/api/product-import-routes.test.ts tests/api/content-workflow-hardening.test.ts tests/product-validation.test.ts tests/url-safety.test.ts tests/services/ProductService.hardening.test.ts tests/services/AIContentService.test.ts tests/services/ExportService.test.ts tests/services/AuthValidation.test.ts tests/services/ProductService.test.ts tests/services/OCRService.test.ts tests/services/PromptBuilder.test.ts tests/services/TemplateRenderer.test.ts tests/services/SimilarProductService.test.ts tests/hyperframes-sanitize.test.ts tests/export-panel-security.test.ts tests/api/hyperframes-render.test.ts tests/hyperframes-worker.test.ts tests/hyperframes-render-safety.test.ts tests/hyperframes-render-command.test.ts tests/hyperframes-render-smoke.test.ts tests/hyperframes-enqueue-smoke-job.test.ts tests/hyperframes-worker-trial-script.test.ts tests/hyperframes-live-queue-trial-script.test.ts tests/hyperframes-watchdog.test.ts tests/hyperframes-worker-alerts.test.ts",
     "test": "vitest run tests/smoke.test.ts tests/branding.test.ts tests/middleware.auth.test.ts tests/api/products.test.ts tests/api/hyperframes-compose.test.ts tests/api/tenant-isolation.test.ts tests/api/product-import-routes.test.ts tests/api/content-workflow-hardening.test.ts tests/product-validation.test.ts tests/url-safety.test.ts tests/services/ProductService.hardening.test.ts tests/services/AIContentService.test.ts tests/services/ExportService.test.ts tests/services/AuthValidation.test.ts tests/services/ProductService.test.ts tests/services/OCRService.test.ts tests/services/PromptBuilder.test.ts tests/services/TemplateRenderer.test.ts tests/services/SimilarProductService.test.ts tests/hyperframes-sanitize.test.ts tests/export-panel-security.test.ts tests/api/hyperframes-render.test.ts tests/hyperframes-worker.test.ts tests/hyperframes-render-safety.test.ts tests/hyperframes-render-command.test.ts tests/hyperframes-render-smoke.test.ts tests/hyperframes-enqueue-smoke-job.test.ts tests/hyperframes-worker-trial-script.test.ts tests/hyperframes-live-queue-trial-script.test.ts tests/hyperframes-watchdog.test.ts tests/hyperframes-cleanup-timer.test.ts",
     "test:db": "vitest run tests/services/similar-isolation.test.ts",
     "test:all": "npm run test && npm run test:db",
@@ -39,6 +40,8 @@
     "hyperframes:worker:disable-real": "bash scripts/hyperframes/disable-real-worker-daemon.sh",
     "hyperframes:worker:watchdog": "tsx scripts/hyperframes/worker-watchdog.ts",
     "hyperframes:worker:journal-summary": "bash scripts/hyperframes/worker-journal-summary.sh",
+    "hyperframes:worker:alerts": "tsx scripts/hyperframes/worker-alerts.ts",
+    "hyperframes:worker:install-alert-timer": "bash scripts/hyperframes/install-worker-alert-timer.sh"
     "hyperframes:cleanup:install-timer": "bash scripts/hyperframes/install-cleanup-timer.sh",
     "hyperframes:cleanup:disable-timer": "bash scripts/hyperframes/disable-cleanup-timer.sh",
     "hyperframes:cleanup:status": "bash scripts/hyperframes/cleanup-timer-status.sh"
