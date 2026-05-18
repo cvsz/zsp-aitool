@@ -5,10 +5,16 @@ import { POST as postToComposition } from "@/app/api/hyperframes/script-to-compo
 
 vi.mock("@/lib/auth", () => ({ getSessionFromRequest: vi.fn() }));
 vi.mock("@/services/ProductService", () => ({ productService: { getById: vi.fn() } }));
-vi.mock("@/lib/prisma", () => ({ prisma: { hyperFrameScriptGeneration: { create: vi.fn(async (x: unknown) => x) } } }));
+vi.mock("@/lib/prisma", () => ({
+  prisma: {
+    hyperFrameScriptGeneration: { create: vi.fn(async (x: unknown) => x) },
+    hyperFrameRenderJob: { create: vi.fn(async (x: unknown) => x) },
+  },
+}));
 
 const { getSessionFromRequest } = await import("@/lib/auth");
 const { productService } = await import("@/services/ProductService");
+const { prisma } = await import("@/lib/prisma");
 
 describe("hyperframes script api", () => {
   beforeEach(() => vi.clearAllMocks());
@@ -32,6 +38,29 @@ describe("hyperframes script api", () => {
     const res = await postScript(new NextRequest("http://localhost/api/hyperframes/script", { method: "POST", body: JSON.stringify({ productId: "p1", platform: "tiktok", tone: "friendly", language: "th", durationSeconds: 15, aspectRatio: "9:16" }) }) as never);
     const body = await res.json();
     expect(body.data.disclosure).toBeTruthy();
+    expect(body.data.beats.map((b: { type: string }) => b.type)).toEqual(["hook", "problem", "productDemo", "benefits", "CTA", "disclosure"]);
+  });
+
+  it("language respected (en)", async () => {
+    vi.mocked(getSessionFromRequest).mockReturnValueOnce({ userId: "u1", email: "u@x.com", exp: 1_999_999_999 });
+    vi.mocked(productService.getById).mockResolvedValueOnce({ id: "p1", title: "Lamp", description: "Good", price: 100, currency: "THB", category: null, shopName: null, affiliateUrl: "https://aff", images: [] } as never);
+    const res = await postScript(new NextRequest("http://localhost/api/hyperframes/script", { method: "POST", body: JSON.stringify({ productId: "p1", platform: "facebook", tone: "friendly", language: "en", durationSeconds: 18, aspectRatio: "9:16" }) }) as never);
+    const body = await res.json();
+    expect(body.data.script).toContain("Looking for");
+  });
+
+  it("no render job auto-created", async () => {
+    vi.mocked(getSessionFromRequest).mockReturnValueOnce({ userId: "u1", email: "u@x.com", exp: 1_999_999_999 });
+    vi.mocked(productService.getById).mockResolvedValueOnce({ id: "p1", title: "Lamp", description: "Good", price: 100, currency: "THB", category: null, shopName: null, affiliateUrl: "https://aff", images: [] } as never);
+    await postScript(new NextRequest("http://localhost/api/hyperframes/script", { method: "POST", body: JSON.stringify({ productId: "p1", platform: "tiktok", tone: "friendly", language: "th", durationSeconds: 15, aspectRatio: "9:16" }) }) as never);
+    expect(prisma.hyperFrameRenderJob.create).not.toHaveBeenCalled();
+  });
+
+  it("fake claims blocked", async () => {
+    vi.mocked(getSessionFromRequest).mockReturnValueOnce({ userId: "u1", email: "u@x.com", exp: 1_999_999_999 });
+    vi.mocked(productService.getById).mockResolvedValueOnce({ id: "p1", title: "Lamp", description: "guaranteed 100%", price: 100, currency: "THB", category: null, shopName: null, affiliateUrl: "https://aff", images: [] } as never);
+    const res = await postScript(new NextRequest("http://localhost/api/hyperframes/script", { method: "POST", body: JSON.stringify({ productId: "p1", platform: "tiktok", tone: "friendly", language: "en", durationSeconds: 15, aspectRatio: "9:16" }) }) as never);
+    expect(res.status).toBe(400);
   });
 
   it("composition metadata safe + no render", async () => {
