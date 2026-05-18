@@ -2,7 +2,7 @@ import { createReadStream } from "node:fs";
 import { lstat, realpath, stat } from "node:fs/promises";
 import path from "node:path";
 
-const ALLOWED_EXTENSIONS = new Set([".mp4", ".webm", ".mov"]);
+const ALLOWED_EXTENSIONS = new Set([".mp4", ".webm", ".mov", ".jpg", ".jpeg", ".png"]);
 
 export function assertArtifactInsideOutputDir(outputDir: string, artifactPath: string): void {
   const resolvedOutputDir = path.resolve(outputDir);

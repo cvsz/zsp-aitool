@@ -526,3 +526,95 @@ Failed job guidance:
 Retention/cleanup:
 - Artifact lifecycle still follows `HYPERFRAMES_RETENTION_DAYS` and cleanup policy.
 - Once cleaned up, download endpoint returns controlled not-available response.
+
+## Phase 2.20: backup and disaster recovery for render metadata
+
+### Render inventory command
+
+Use `npm run hyperframes:render-inventory` to compare DB job metadata with render artifacts on disk.
+
+The command outputs safe JSON summary only:
+- `totalJobs`
+- `completedJobs`
+- `failedJobs`
+- `missingArtifactCount`
+- `orphanArtifactCount`
+- `totalArtifactBytes`
+- `repairEnabled`
+- `repairedJobs`
+
+Safety behavior:
+- Repair mode is disabled by default (`HYPERFRAMES_INVENTORY_REPAIR=false`).
+- No files are deleted by this command.
+- Path traversal is blocked; artifacts must be inside `HYPERFRAMES_OUTPUT_DIR`.
+- Output does not print secrets.
+
+### Optional repair mode
+
+To repair only missing completed artifacts:
+
+```bash
+HYPERFRAMES_INVENTORY_REPAIR=true npm run hyperframes:render-inventory
+```
+
+Repair action:
+- Completed jobs with missing artifact files are marked `FAILED` with `errorMessage=ARTIFACT_MISSING`.
+- No artifact files are removed.
+
+### Backup plan
+
+1. **Database backup**
+   - Run scheduled PostgreSQL dumps for metadata durability.
+   - Example: `pg_dump "$DATABASE_URL" > backup-$(date +%F).sql`.
+2. **Artifact backup**
+   - Snapshot/sync `HYPERFRAMES_OUTPUT_DIR` to durable storage (same cadence as DB or faster).
+   - Keep retention windows aligned with DB backup retention.
+3. **Integrity verification**
+   - Run `npm run hyperframes:render-inventory` on a schedule.
+   - Alert on non-zero `missingArtifactCount` or high `orphanArtifactCount`.
+
+### Restore sequence
+
+1. Restore database backup first.
+2. Restore artifact directory backup to `HYPERFRAMES_OUTPUT_DIR`.
+3. Run `npm run hyperframes:render-inventory` and validate zero unexpected missing artifacts.
+4. If missing artifacts remain, optionally run repair mode to downgrade stale `COMPLETED` rows to `FAILED` with `ARTIFACT_MISSING`.
+5. Re-run queue/health checks before returning to normal operations.
+## Cleanup timer (Phase 2.14)
+
+- Retention is controlled by `HYPERFRAMES_RETENTION_DAYS` (default 14).
+- Cleanup is dry-run by default because `HYPERFRAMES_CLEANUP_DRY_RUN=true` unless explicitly set to `false`.
+- Install cleanup units (install only, no auto-enable by default):
+
+```bash
+npm run hyperframes:cleanup:install-timer
+```
+
+- Explicitly enable/start timer only when confirmed:
+
+```bash
+HYPERFRAMES_CLEANUP_TIMER_CONFIRM=YES npm run hyperframes:cleanup:install-timer
+```
+
+- Check status:
+
+```bash
+npm run hyperframes:cleanup:status
+```
+
+- Disable and remove timer/service:
+
+```bash
+npm run hyperframes:cleanup:disable-timer
+```
+
+- Emergency rollback:
+  1. `npm run hyperframes:cleanup:disable-timer`
+  2. Keep `HYPERFRAMES_CLEANUP_DRY_RUN=true`.
+  3. Re-run `npm run hyperframes:cleanup:status` and `npm run hyperframes:worker:watchdog`.
+
+Safety guarantees remain:
+- Cleanup scope is constrained to `HYPERFRAMES_OUTPUT_DIR`.
+- Path escape attempts are blocked.
+- Active `RUNNING` job outputs are skipped.
+- Symlink escapes are blocked via `realpath` root-prefix checks.

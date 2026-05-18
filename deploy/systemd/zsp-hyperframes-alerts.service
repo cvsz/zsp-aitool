@@ -1,0 +1,14 @@
+[Unit]
+Description=zsp-aitool HyperFrames Worker Alerts (optional)
+After=network.target
+
+[Service]
+Type=oneshot
+User=zeazdev
+WorkingDirectory=/home/zeazdev/zsp-aitool
+EnvironmentFile=/home/zeazdev/zsp-aitool/.env
+ExecStart=/usr/bin/npm run hyperframes:worker:alerts
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ReadWritePaths=/var/lib/zsp-aitool/hyperframes
