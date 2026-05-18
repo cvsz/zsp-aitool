@@ -3,12 +3,14 @@ import { mkdirSync, writeFileSync } from "node:fs";
 
 vi.mock("node:child_process", async (importOriginal) => {
   const actual = await importOriginal<typeof import("node:child_process")>();
-  return { ...actual, execSync: vi.fn().mockReturnValue("99999\n") };
+  return { ...actual, execSync: vi.fn().mockReturnValue("99999\n"), execFile: vi.fn((bin: string, args: string[], cb?: (err: Error | null, out?: { stdout: string; stderr: string } | string) => void) => {
+      if (typeof cb === "function") cb(null, "duration=10\nformat_name=mov,mp4,m4a,3gp,3g2,mj2\n", "");
+    }) };
 });
 import { RenderJobStatus } from "@prisma/client";
 
 const mkdirMock = vi.fn().mockResolvedValue(undefined);
-const statMock = vi.fn().mockResolvedValue({ size: 1024 });
+const statMock = vi.fn().mockResolvedValue({ size: 2048, isFile: () => true });
 
 vi.mock("node:fs/promises", async (importOriginal) => {
   const actual = await importOriginal<typeof import("node:fs/promises")>();
@@ -85,7 +87,7 @@ describe("worker", () => {
     process.env.HYPERFRAMES_WORKDIR = "/tmp/hf-w";
     process.env.HYPERFRAMES_OUTPUT_DIR = "/tmp/hf-o";
     process.env.HYPERFRAMES_MIN_FREE_MB = "1";
-    statMock.mockResolvedValue({ size: 1024 });
+    statMock.mockResolvedValue({ size: 2048, isFile: () => true });
 
     const { processOnePendingJob } = await import("../scripts/hyperframes/render-worker");
     await processOnePendingJob({
