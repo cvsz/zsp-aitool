@@ -4,6 +4,8 @@ import { POST as createJob } from "@/app/api/hyperframes/render/route";
 import { GET as getJob } from "@/app/api/hyperframes/render/[id]/route";
 import { POST as cancelJob } from "@/app/api/hyperframes/render/[id]/cancel/route";
 
+const state = { pendingCount: 0, dailyCount: 0 };
+vi.mock("@/lib/prisma", () => ({ prisma: { hyperFrameRenderJob: { count: vi.fn().mockImplementation(async ({ where }: { where?: { status?: string; userId?: string } }) => where?.status === "PENDING" ? state.pendingCount : state.dailyCount), create: vi.fn().mockResolvedValue({ id: "j1", status: "PENDING" }), findFirst: vi.fn().mockResolvedValue(null), update: vi.fn().mockResolvedValue({ id: "j1", status: "CANCELLED" }) } } }));
 const quotaMocks = vi.hoisted(() => ({ enforceBeforeEnqueue: vi.fn().mockResolvedValue({ allowed: true, summary: { remainingMonthlyRenders: 10, storageUsedMb: 0, storageQuotaMb: 1024, retentionDays: 14 } }) }));
 vi.mock("@/services/HyperFramesQuotaService", () => ({ HyperFramesQuotaService: { enforceBeforeEnqueue: quotaMocks.enforceBeforeEnqueue } }));
 
@@ -22,6 +24,12 @@ describe("hyperframes render api", () => {
     process.env.HYPERFRAMES_RENDER_ENABLED = "false";
     const res = await createJob(new Request("http://localhost/api/hyperframes/render", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ productId: "p1", platform: "facebook", aspectRatio: "16:9", durationSeconds: 10, caption: "ok" }) }) as never);
     expect(res.status).toBe(503);
+  });
+
+  it("rejects arbitrary compositionHtml payload", async () => {
+    vi.spyOn(auth, "getSessionFromRequest").mockReturnValue({ userId: "u1", email: "a@a.com" });
+    process.env.HYPERFRAMES_RENDER_ENABLED = "true";
+    await expect(createJob(new Request("http://localhost/api/hyperframes/render", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ productId: "p1", platform: "facebook", aspectRatio: "16:9", durationSeconds: 10, caption: "ok", compositionHtml: "<script>alert(1)</script>" }) }) as never)).rejects.toBeTruthy();
   });
 
   it("status endpoint user-scoped 404", async () => {
