@@ -85,3 +85,24 @@ describe("hyperframes composition output hardening", () => {
     ).toThrowError(/invalid media URL/);
   });
 });
+
+it("applies brand kit safely in composition", () => {
+  const result = buildHyperFrameComposition({
+    productId: "p1",
+    platform: "facebook",
+    aspectRatio: "9:16",
+    durationSeconds: 12,
+    caption: "hello",
+    brandKit: {
+      brandColors: ["#FF0033"],
+      logoUrl: "https://example.com/logo.png",
+      watermarkText: "<style>bad</style>",
+      defaultCTA: "<script>x</script>ซื้อเลย",
+    },
+    product: { title: "safe", imageUrl: "https://example.com/i.jpg", affiliateUrl: null },
+  });
+
+  expect(result.compositionHtml).toContain("#FF0033");
+  expect(result.compositionHtml).toContain("logo.png");
+  expect(result.compositionHtml).not.toMatch(/<script/i);
+});

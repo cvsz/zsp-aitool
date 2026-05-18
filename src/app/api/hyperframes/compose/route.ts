@@ -6,6 +6,7 @@ import { HYPERFRAME_MAX_DURATION_SECONDS, HYPERFRAME_MAX_TEXT_LENGTH, HYPERFRAME
 import { withAuth } from "@/middleware/auth-middleware";
 import { AppError } from "@/lib/errors";
 import { productService } from "@/services/ProductService";
+import { getHyperframesBrandKit } from "@/services/hyperframes-brand-kit-service";
 
 const bodySchema = z
   .object({
@@ -26,6 +27,7 @@ export const POST = withAuth(async (request) => {
     const payload = bodySchema.parse(await request.json());
     const product = await productService.getById(request.auth.userId, payload.productId);
 
+    const brandKit = await getHyperframesBrandKit(request.auth.userId);
     const composition = buildHyperFrameComposition({
       ...payload,
       durationSeconds: payload.durationSeconds,
@@ -36,6 +38,7 @@ export const POST = withAuth(async (request) => {
         imageUrl: product.images[0]?.url,
         affiliateUrl: product.affiliateUrl,
       },
+      brandKit,
     });
 
     return NextResponse.json({ ok: true, data: composition });
