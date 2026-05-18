@@ -27,8 +27,10 @@ export function ExportPanel(): JSX.Element {
 
   const onExportSingle = (event: FormEvent) => {
     event.preventDefault();
-    if (!singleContentId.trim()) return;
-    window.location.href = `/api/export/content/${singleContentId.trim()}.txt`;
+    const trimmedId = singleContentId.trim();
+    if (!trimmedId) return;
+    const encodedId = encodeURIComponent(trimmedId);
+    window.location.href = `/api/export/content/${encodedId}.txt`;
   };
 
   return (
