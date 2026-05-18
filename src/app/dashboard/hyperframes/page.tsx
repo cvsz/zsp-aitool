@@ -25,6 +25,8 @@ export default function HyperFramesPage() {
   const [templateId, setTemplateId] = useState(hyperFrameTemplates[0]?.id ?? "");
   const [beats, setBeats] = useState<Beat[]>([]);
   const [composition, setComposition] = useState("");
+  const [variants, setVariants] = useState<any[]>([]);
+  const [selectedVariants, setSelectedVariants] = useState<string[]>([]);
   const templateMetadata = useMemo(() => buildHyperFrameTemplateMetadata(templateId), [templateId]);
   const [visualStyle, setVisualStyle] = useState("clean-minimal");
   const [cta, setCta] = useState("กดดูรายละเอียดสินค้าจากลิงก์แนะนำได้เลย");
@@ -84,6 +86,28 @@ export default function HyperFramesPage() {
     setBeats(data.data.beats);
   }
 
+
+
+  async function generateVariants() {
+    setErrorMessage("");
+    const res = await fetch("/api/hyperframes/variants", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ productId, beats, targetPlatforms: ["tiktok", "reels", "shorts", "facebook", "generic"] }),
+    });
+    const data = await res.json();
+    if (!data.ok) return setErrorMessage(data?.error?.message ?? "สร้าง variants ไม่สำเร็จ");
+    setVariants(data.data.variants ?? []);
+  }
+
+  async function enqueueVariant(variant: any) {
+    const caption = (variant.captions ?? []).map((x: any) => x.text).join(" ").slice(0, 1200);
+    const res = await fetch("/api/hyperframes/render", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ productId, platform: "facebook", aspectRatio: variant.aspectRatio, durationSeconds: variant.durationSeconds, caption }),
+    });
+    if (!res.ok) setErrorMessage("enqueue ไม่สำเร็จ");
   async function saveBrandKit() {
     const res = await fetch("/api/hyperframes/brand-kit", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ brandColors: [brandKit.brandColors], fontPreference: brandKit.fontPreference || null, logoUrl: brandKit.logoUrl || null, watermarkText: brandKit.watermarkText || null, defaultAspectRatio: brandKit.defaultAspectRatio || null, defaultCTA: brandKit.defaultCTA || null }) });
     const data = await res.json();
@@ -123,6 +147,11 @@ export default function HyperFramesPage() {
     <div className="grid gap-3 md:grid-cols-3"><select className="rounded border p-2" value={productId} onChange={(e) => setProductId(e.target.value)}><option value="">เลือกสินค้า</option>{products.map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}</select><select className="rounded border p-2" value={platform} onChange={(e) => setPlatform(e.target.value as never)}>{SCRIPT_PLATFORMS.map((p) => <option key={p}>{p}</option>)}</select><input className="rounded border p-2" value={tone} onChange={(e) => setTone(e.target.value)} placeholder="tone" /></div>
     <TemplateSelector templates={hyperFrameTemplates} selectedTemplateId={templateId} onSelectTemplate={setTemplateId} />
     <div className="grid gap-3 md:grid-cols-3"><input className="rounded border p-2" value={language} onChange={(e) => setLanguage(e.target.value)} placeholder="language" /><select className="rounded border p-2" value={aspectRatio} onChange={(e) => setAspectRatio(e.target.value as never)}>{ASPECT_RATIO_OPTIONS.map((a) => <option key={a}>{a}</option>)}</select><input className="rounded border p-2" type="number" min={3} max={60} value={durationSeconds} onChange={(e) => setDurationSeconds(Number(e.target.value))} /></div>
+    <div className="flex gap-2"><button className="rounded bg-slate-900 px-4 py-2 text-white disabled:opacity-50" disabled={!canGenerate} onClick={generateScript}>Generate script</button><button className="rounded border px-4 py-2" disabled={!beats.length} onClick={createComposition}>Create composition</button><button className="rounded border px-4 py-2" disabled={!beats.length} onClick={generateVariants}>Generate variants</button><button className="rounded border px-4 py-2" disabled={!composition} onClick={() => { const b = new Blob([composition], { type: "application/json" }); const u = URL.createObjectURL(b); const a = document.createElement("a"); a.href = u; a.download = "hyperframes-composition-metadata.json"; a.click(); URL.revokeObjectURL(u); }}>Export HTML</button><button className="rounded border border-slate-300 px-4 py-2 text-slate-400" disabled>Render (disabled)</button></div>
+    <textarea className="min-h-28 w-full rounded border p-2" value={script} onChange={(e) => setScript(e.target.value)} />
+    <div className="space-y-2">{beats.map((b, idx) => <div key={idx} className="grid grid-cols-[120px_1fr] gap-2"><input className="rounded border p-2" type="number" value={b.atSecond} onChange={(e) => setBeats((prev) => prev.map((x, i) => i === idx ? { ...x, atSecond: Number(e.target.value) } : x))} /><input className="rounded border p-2" value={b.text} onChange={(e) => setBeats((prev) => prev.map((x, i) => i === idx ? { ...x, text: e.target.value } : x))} /></div>)}</div>
+    {errorMessage ? <p className="text-sm text-red-600">{errorMessage}</p> : null}
+    <div className="space-y-2">{variants.map((v, idx) => <label key={idx} className="flex items-center gap-2 rounded border p-2"><input type="checkbox" checked={selectedVariants.includes(v.platform)} onChange={(e) => setSelectedVariants((prev) => e.target.checked ? [...prev, v.platform] : prev.filter((x) => x !== v.platform))} /><span className="text-sm">{v.platform} • {v.aspectRatio} • {v.durationSeconds}s • CTA: {v.cta}</span><button className="rounded border px-2 py-1 text-xs" onClick={() => enqueueVariant(v)}>Enqueue</button></label>)}</div>
     <div className="grid gap-2 md:grid-cols-3"><input className="rounded border p-2" value={brandKit.brandColors} onChange={(e) => setBrandKit((p) => ({ ...p, brandColors: e.target.value }))} placeholder="#22C55E" /><input className="rounded border p-2" value={brandKit.logoUrl} onChange={(e) => setBrandKit((p) => ({ ...p, logoUrl: e.target.value }))} placeholder="Logo URL" /><input className="rounded border p-2" value={brandKit.defaultCTA} onChange={(e) => setBrandKit((p) => ({ ...p, defaultCTA: e.target.value }))} placeholder="CTA" /></div><div className="flex gap-2"><button className="rounded border px-4 py-2" onClick={saveBrandKit}>Save Brand Kit</button><button className="rounded bg-slate-900 px-4 py-2 text-white disabled:opacity-50" disabled={!canGenerate} onClick={generateScript}>Generate script</button><button className="rounded border px-4 py-2" disabled={!beats.length} onClick={createComposition}>Create composition</button><button className="rounded border px-4 py-2" disabled={!composition} onClick={() => { const b = new Blob([composition], { type: "application/json" }); const u = URL.createObjectURL(b); const a = document.createElement("a"); a.href = u; a.download = "hyperframes-composition-metadata.json"; a.click(); URL.revokeObjectURL(u); }}>Export HTML</button><button className="rounded border border-slate-300 px-4 py-2 text-slate-400" disabled>Render (disabled)</button></div>
     <div className="flex flex-wrap gap-2"><button className="rounded bg-slate-900 px-4 py-2 text-white disabled:opacity-50" disabled={!canGenerate} onClick={generateScript}>Generate script</button><button className="rounded border px-4 py-2" disabled={!beats.length} onClick={createComposition}>Create composition</button><button className="rounded border px-4 py-2" disabled={!composition} onClick={() => { const b = new Blob([composition], { type: "application/json" }); const u = URL.createObjectURL(b); const a = document.createElement("a"); a.href = u; a.download = "hyperframes-composition-metadata.json"; a.click(); URL.revokeObjectURL(u); }}>Export metadata</button><button className="rounded border border-emerald-700 bg-emerald-700 px-4 py-2 text-white disabled:cursor-not-allowed disabled:opacity-50" disabled={Boolean(renderDisabledReason) || isRendering} onClick={enqueueRender}>Render now</button><Link className="rounded border px-4 py-2" href="/dashboard/hyperframes/renders">ดูประวัติเรนเดอร์</Link></div>
     {renderDisabledReason ? <p className="text-sm text-amber-700">{renderDisabledReason}</p> : null}
