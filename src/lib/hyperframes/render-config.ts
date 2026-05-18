@@ -25,6 +25,10 @@ export type HyperFramesRenderConfig = {
   watchdogMinFreeMb: number;
   watchdogRequireServiceActive: boolean;
   watchdogRecoverStale: boolean;
+  allowedQualityProfiles: string;
+  highQualityEnabled: boolean;
+  maxBatchSize: number;
+  maxPendingPerUser: number;
 };
 
 let envLoaded = false;
@@ -63,7 +67,7 @@ export function getHyperFramesRenderConfig(): HyperFramesRenderConfig {
     runningStaleMinutes: toInt(process.env.HYPERFRAMES_RUNNING_STALE_MINUTES, 30),
     minFreeMb: toInt(process.env.HYPERFRAMES_MIN_FREE_MB, 2048),
     maxOutputMb: toInt(process.env.HYPERFRAMES_MAX_OUTPUT_MB, 512),
-    retentionDays: toInt(process.env.HYPERFRAMES_RETENTION_DAYS, 14),
+    retentionDays: toInt(process.env.HYPERFRAMES_RETENTION_DAYS, toInt(process.env.HYPERFRAMES_DEFAULT_RETENTION_DAYS, 14)),
     cleanupDryRun: process.env.HYPERFRAMES_CLEANUP_DRY_RUN !== "false",
     watchdogStaleRunningMinutes: toInt(process.env.HYPERFRAMES_WATCHDOG_STALE_RUNNING_MINUTES, 30),
     watchdogMaxFailedLast24h: toInt(process.env.HYPERFRAMES_WATCHDOG_MAX_FAILED_LAST_24H, 5),
@@ -71,5 +75,9 @@ export function getHyperFramesRenderConfig(): HyperFramesRenderConfig {
     watchdogMinFreeMb: toInt(process.env.HYPERFRAMES_WATCHDOG_MIN_FREE_MB, 2048),
     watchdogRequireServiceActive: process.env.HYPERFRAMES_WATCHDOG_REQUIRE_SERVICE_ACTIVE !== "false",
     watchdogRecoverStale: process.env.HYPERFRAMES_WATCHDOG_RECOVER_STALE === "true",
+    allowedQualityProfiles: process.env.HYPERFRAMES_ALLOWED_QUALITY_PROFILES ?? "preview,standard,high",
+    highQualityEnabled: process.env.HYPERFRAMES_HIGH_QUALITY_ENABLED === "true",
+    maxBatchSize: toInt(process.env.HYPERFRAMES_MAX_BATCH_SIZE, 10),
+    maxPendingPerUser: toInt(process.env.HYPERFRAMES_MAX_PENDING_PER_USER, 10),
   };
 }
