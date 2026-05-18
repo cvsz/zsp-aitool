@@ -25,6 +25,8 @@ export type HyperFramesRenderConfig = {
   watchdogMinFreeMb: number;
   watchdogRequireServiceActive: boolean;
   watchdogRecoverStale: boolean;
+  maxBatchSize: number;
+  maxPendingPerUser: number;
 };
 
 let envLoaded = false;
@@ -71,5 +73,7 @@ export function getHyperFramesRenderConfig(): HyperFramesRenderConfig {
     watchdogMinFreeMb: toInt(process.env.HYPERFRAMES_WATCHDOG_MIN_FREE_MB, 2048),
     watchdogRequireServiceActive: process.env.HYPERFRAMES_WATCHDOG_REQUIRE_SERVICE_ACTIVE !== "false",
     watchdogRecoverStale: process.env.HYPERFRAMES_WATCHDOG_RECOVER_STALE === "true",
+    maxBatchSize: toInt(process.env.HYPERFRAMES_MAX_BATCH_SIZE, 10),
+    maxPendingPerUser: toInt(process.env.HYPERFRAMES_MAX_PENDING_PER_USER, 10),
   };
 }
