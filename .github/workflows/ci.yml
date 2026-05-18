@@ -6,7 +6,7 @@ on:
     branches:
       - main
   schedule:
-    - cron: "0 3 * * *"
+    - cron: '20 3 * * *'
   workflow_dispatch:
 
 permissions:
@@ -101,6 +101,29 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Setup Node
+      - name: HyperFrames mock CI workflow
+        run: npm run hyperframes:ci:mock
+
+  hyperframes-real-nightly:
+    name: HyperFrames real render nightly (optional)
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    env:
+      HYPERFRAMES_CI_REAL_RENDER_CONFIRM: ${{ secrets.HYPERFRAMES_CI_REAL_RENDER_CONFIRM }}
+      AUTH_SECRET: ci-secret
+      OPENAI_API_KEY: ci-placeholder
+
+    steps:
+      - name: Skip when confirm secret is missing
+        if: env.HYPERFRAMES_CI_REAL_RENDER_CONFIRM != 'YES'
+        run: echo "HYPERFRAMES_CI_REAL_RENDER_CONFIRM is not YES; skipping optional real-render workflow."
+
+      - name: Checkout
+        if: env.HYPERFRAMES_CI_REAL_RENDER_CONFIRM == 'YES'
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        if: env.HYPERFRAMES_CI_REAL_RENDER_CONFIRM == 'YES'
         uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -118,3 +141,21 @@ jobs:
         with:
           name: hyperframes-real-render
           path: .artifacts/hyperframes
+        if: env.HYPERFRAMES_CI_REAL_RENDER_CONFIRM == 'YES'
+        run: npm ci
+
+      - name: Generate Prisma client
+        if: env.HYPERFRAMES_CI_REAL_RENDER_CONFIRM == 'YES'
+        run: npm run prisma:generate
+
+      - name: Run real HyperFrames CI workflow
+        if: env.HYPERFRAMES_CI_REAL_RENDER_CONFIRM == 'YES'
+        run: npm run hyperframes:ci:real
+
+      - name: Upload HyperFrames smoke artifact
+        if: env.HYPERFRAMES_CI_REAL_RENDER_CONFIRM == 'YES' && always() && env.CI == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: hyperframes-real-render-smoke
+          path: artifacts/hyperframes-smoke-renders.tgz
+          if-no-files-found: warn

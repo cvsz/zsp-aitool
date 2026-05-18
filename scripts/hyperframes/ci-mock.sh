@@ -9,3 +9,9 @@ npx vitest run \
   tests/hyperframes-enqueue-smoke-job.test.ts \
   tests/hyperframes-worker.test.ts \
   tests/hyperframes-watchdog.test.ts
+export CI="${CI:-true}"
+export HYPERFRAMES_RENDER_ENABLED="${HYPERFRAMES_RENDER_ENABLED:-false}"
+
+npm run hyperframes:doctor
+npm run hyperframes:queue-status
+npm run hyperframes:worker:once
