@@ -37,7 +37,7 @@ export async function generateHyperframesScript(userId: string, input: Hyperfram
     { atSecond: Math.floor((input.durationSeconds * 2) / 3), text: `บอกข้อมูลจริง: ${product.price} ${product.currency}`, safe: true },
   ];
 
-  const captions = beats.map((beat) => ({ start: beat.atSecond, end: Math.min(input.durationSeconds, beat.atSecond + 4), text: beat.text }));
+  const captions = beats.map((beat) => ({ start: beat.atSecond, end: Math.min(input.durationSeconds, beat.atSecond + 4), text: beat.text, style: "default", language: input.language }));
   const metadata = { productId: product.id, platform: input.platform, aspectRatio: input.aspectRatio, durationSeconds: input.durationSeconds, safe: warnings.length === 0, renderTriggered: false };
 
   await prisma.hyperFrameScriptGeneration.create({

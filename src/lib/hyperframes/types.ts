@@ -1,3 +1,4 @@
+import type { HyperFrameSubtitle } from "@/lib/hyperframes/subtitles";
 export const hyperFrameAspectRatios = ["16:9", "9:16", "1:1"] as const;
 export type HyperFrameAspectRatio = (typeof hyperFrameAspectRatios)[number];
 
@@ -9,6 +10,8 @@ export const HYPERFRAME_MAX_DURATION_SECONDS = 60;
 export const HYPERFRAME_MAX_TEXT_LENGTH = 1200;
 
 export type HyperFrameCompositionRequest = {
+  subtitles?: HyperFrameSubtitle[];
+  burnedInCaptions?: boolean;
   productId: string;
   platform: HyperFramePlatform;
   aspectRatio: HyperFrameAspectRatio;

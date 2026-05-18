@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 
 import { escapeHtml, sanitizeText, validateHttpMediaUrl } from "@/lib/hyperframes/sanitize";
+import { validateSubtitles } from "@/lib/hyperframes/subtitles";
 import type { HyperFrameAspectRatio, HyperFrameCompositionProduct, HyperFrameCompositionRequest, HyperFrameCompositionResult } from "@/lib/hyperframes/types";
 
 const aspectRatioMap: Record<HyperFrameAspectRatio, { width: number; height: number }> = {
@@ -21,6 +22,7 @@ export function buildHyperFrameComposition(
     ? sanitizeText(`${input.product.price} ${input.product.currency}`)
     : null;
 
+  const subtitles = input.subtitles ? validateSubtitles(input.subtitles, input.durationSeconds) : [];
   const hasAffiliate = Boolean(input.product.affiliateUrl);
   const disclosureText = hasAffiliate
     ? sanitizeText("โพสต์นี้มีลิงก์แอฟฟิลิเอต ผู้เขียนอาจได้รับค่าคอมมิชชัน")
@@ -56,7 +58,8 @@ export function buildHyperFrameComposition(
     .title { font-size: 30px; font-weight: 700; }
     .price { margin-top: 8px; font-size: 26px; opacity: 0.95; }
     .cta { background: #22c55e; color: #052e16; border-radius: 999px; padding: 14px 22px; font-size: 24px; font-weight: 700; }
-    .disclosure { position: absolute; left: 40px; right: 40px; bottom: 18px; font-size: 19px; opacity: 0.9; }
+     .disclosure { position: absolute; left: 40px; right: 40px; bottom: 18px; font-size: 19px; opacity: 0.9; }
+    .captions { position: absolute; left: 40px; right: 40px; bottom: 52px; text-align: center; font-size: 28px; font-weight: 600; text-shadow: 0 2px 8px rgba(0,0,0,.8); }
     @keyframes fadeUp { from { transform: translateY(18px); opacity: 0; } to { transform: none; opacity: 1; } }
   </style>
 </head>
@@ -72,6 +75,7 @@ export function buildHyperFrameComposition(
       </div>
       <div class="cta">ซื้อผ่านลิงก์แนะนำ</div>
     </div>
+        ${input.burnedInCaptions && subtitles.length ? `<div class="captions" aria-label="captions-preview">${subtitles.map((line) => `<span data-start="${line.start}" data-end="${line.end}" data-style="${line.style}" data-language="${line.language}">${line.text}</span>`).join("<br />")}</div>` : ""}
     ${disclosureText ? `<div class="disclosure">${disclosureText}</div>` : ""}
   </div>
 </body>
