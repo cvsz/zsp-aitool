@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-import { escapeHtml, sanitizeText, validateMediaUrl } from "@/lib/hyperframes/sanitize";
+import { escapeHtml, sanitizeText, validateHttpMediaUrl } from "@/lib/hyperframes/sanitize";
 import type { HyperFrameAspectRatio, HyperFrameCompositionProduct, HyperFrameCompositionRequest, HyperFrameCompositionResult } from "@/lib/hyperframes/types";
 
 const aspectRatioMap: Record<HyperFrameAspectRatio, { width: number; height: number }> = {
@@ -15,7 +15,7 @@ export function buildHyperFrameComposition(
   const { width, height } = aspectRatioMap[input.aspectRatio];
   const contentText = sanitizeText(input.script ?? input.caption ?? "");
   const safeTitle = sanitizeText(input.product.title);
-  const safeImage = validateMediaUrl(input.product.imageUrl);
+  const safeImage = input.product.imageUrl ? validateHttpMediaUrl(input.product.imageUrl) : null;
 
   const safePrice = input.product.price && input.product.currency
     ? sanitizeText(`${input.product.price} ${input.product.currency}`)

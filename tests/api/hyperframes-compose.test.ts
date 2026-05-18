@@ -45,7 +45,7 @@ describe("hyperframes compose", () => {
     expect(response.status).toBe(422);
   });
 
-  it("sanitizes script tags and rejects javascript media URL", async () => {
+  it("returns controlled validation error for unsafe media URL", async () => {
     vi.spyOn(auth, "getSessionFromRequest").mockReturnValue({ userId: "u1", email: "a@a.com" });
     vi.spyOn(productService, "getById").mockResolvedValue({
       id: "p1",
@@ -64,11 +64,7 @@ describe("hyperframes compose", () => {
     const response = await POST(req as never);
     const body = await response.json();
 
-    expect(response.status).toBe(200);
-    expect(body.data.compositionHtml).toContain("สินค้าทดสอบ");
-    expect(body.data.compositionHtml).toContain("แอฟฟิลิเอต");
-    expect(body.data.compositionHtml).not.toContain("<script>alert(1)</script>");
-    expect(body.data.compositionHtml).not.toContain("javascript:alert(1)");
-    expect(body.data.compositionHtml).not.toMatch(/<script[\s>]/i);
+    expect(response.status).toBe(422);
+    expect(body.ok).toBe(false);
   });
 });
