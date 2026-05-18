@@ -12,14 +12,6 @@ const state = {
   updates: [] as Array<{ where: unknown; data: unknown }>,
 };
 
-vi.mock("node:child_process", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("node:child_process")>();
-  return {
-    ...actual,
-    execFile: vi.fn((_file, _args, cb) => cb(new Error("cli exploded")))
-  };
-});
-
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     hyperFrameRenderJob: {
@@ -54,11 +46,19 @@ describe("worker", () => {
     process.env.HYPERFRAMES_OUTPUT_DIR = "/tmp/hf-o";
 
     const { processOnePendingJob } = await import("../scripts/hyperframes/render-worker");
-    await processOnePendingJob("worker-test");
+    const processed = await processOnePendingJob({
+      workerId: "worker-test",
+      now: () => new Date("2026-01-01T00:00:00.000Z"),
+      runRenderCommand: async () => {
+        throw new Error("simulated render failure");
+      }
+    });
 
+    expect(processed).toBe(true);
     const failUpdate = state.updates.at(-1);
     expect(failUpdate).toBeDefined();
     expect((failUpdate?.data as { status: string }).status).toBe(RenderJobStatus.FAILED);
-    expect(((failUpdate?.data as { errorMessage: string }).errorMessage)).toContain("HyperFrames render failed");
+    expect((failUpdate?.data as { errorMessage: string }).errorMessage).toContain("HyperFrames render failed:");
+    expect((failUpdate?.data as { failedAt: Date }).failedAt).toEqual(new Date("2026-01-01T00:00:00.000Z"));
   });
 });

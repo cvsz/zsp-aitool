@@ -9,6 +9,14 @@ import { buildHyperFramesCommand } from "@/lib/hyperframes/render-command";
 
 const execFileAsync = promisify(execFile);
 
+type RenderCommandRunner = (bin: string, args: string[]) => Promise<void>;
+
+type ProcessOnePendingJobOptions = {
+  runRenderCommand?: RenderCommandRunner;
+  now?: () => Date;
+  workerId?: string;
+};
+
 async function claim(workerId: string): Promise<HyperFrameRenderJob | null> {
   const pending = await prisma.hyperFrameRenderJob.findFirst({ where: { status: RenderJobStatus.PENDING, deletedAt: null }, orderBy: { createdAt: "asc" } });
   if (!pending) return null;
@@ -24,7 +32,10 @@ function toControlledErrorMessage(error: unknown): string {
   return "HyperFrames render failed";
 }
 
-export async function processOnePendingJob(workerId = `worker-${process.pid}`): Promise<boolean> {
+export async function processOnePendingJob(options: ProcessOnePendingJobOptions = {}): Promise<boolean> {
+  const runRenderCommand = options.runRenderCommand ?? ((bin, args) => execFileAsync(bin, args).then(() => undefined));
+  const now = options.now ?? (() => new Date());
+  const workerId = options.workerId ?? `worker-${process.pid}`;
   const config = getHyperFramesRenderConfig();
   const job = await claim(workerId);
   if (!job) return false;
@@ -36,10 +47,10 @@ export async function processOnePendingJob(workerId = `worker-${process.pid}`): 
     const outputPath = ensureOutputWithinDir(config.outputDir, `${job.id}.mp4`);
     await writeFile(htmlPath, job.compositionHtml, "utf8");
     const renderCmd = buildHyperFramesCommand(["render", "--input", htmlPath, "--output", outputPath, "--duration", String(config.maxDurationSeconds)], config);
-    await execFileAsync(renderCmd.bin, renderCmd.args);
-    await prisma.hyperFrameRenderJob.update({ where: { id: job.id }, data: { status: RenderJobStatus.COMPLETED, outputPath, outputUrl: null, completedAt: new Date(), lockedAt: null, lockedBy: null } });
+    await runRenderCommand(renderCmd.bin, renderCmd.args);
+    await prisma.hyperFrameRenderJob.update({ where: { id: job.id }, data: { status: RenderJobStatus.COMPLETED, outputPath, outputUrl: null, completedAt: now(), lockedAt: null, lockedBy: null } });
   } catch (error) {
-    await prisma.hyperFrameRenderJob.update({ where: { id: job.id }, data: { status: RenderJobStatus.FAILED, errorMessage: toControlledErrorMessage(error), failedAt: new Date(), lockedAt: null, lockedBy: null } });
+    await prisma.hyperFrameRenderJob.update({ where: { id: job.id }, data: { status: RenderJobStatus.FAILED, errorMessage: toControlledErrorMessage(error), failedAt: now(), lockedAt: null, lockedBy: null } });
   } finally {
     await rm(jobDir, { recursive: true, force: true });
   }
