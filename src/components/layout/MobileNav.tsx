@@ -1,5 +1,23 @@
 import Link from "next/link";
 
+const links = [
+  { href: "/dashboard", label: "ภาพรวม" },
+  { href: "/dashboard/products", label: "สินค้า" },
+  { href: "/dashboard/generator", label: "AI" },
+  { href: "/dashboard/hyperframes", label: "วิดีโอ" },
+  { href: "/dashboard/hyperframes/renders", label: "เรนเดอร์" },
+];
+
 export function MobileNav() {
-  return <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-slate-200 bg-white p-2 md:hidden"><div className="grid grid-cols-5 gap-1 text-center text-xs"><Link href="/dashboard">ภาพรวม</Link><Link href="/dashboard/products">สินค้า</Link><Link href="/dashboard/generator">AI</Link><Link href="/dashboard/hyperframes">วิดีโอ</Link><Link href="/dashboard/settings">ตั้งค่า</Link></div></nav>;
+  return (
+    <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-white/70 bg-white/90 px-2 py-2 shadow-[0_-12px_30px_rgba(15,23,42,0.08)] backdrop-blur-xl md:hidden" aria-label="เมนูหลักบนมือถือ">
+      <div className="grid grid-cols-5 gap-1 text-center text-[11px] font-medium text-slate-600">
+        {links.map((link) => (
+          <Link key={link.href} href={link.href} className="rounded-xl px-2 py-2 transition hover:bg-slate-100 hover:text-slate-950 focus:outline-none focus:ring-2 focus:ring-slate-300">
+            {link.label}
+          </Link>
+        ))}
+      </div>
+    </nav>
+  );
 }
