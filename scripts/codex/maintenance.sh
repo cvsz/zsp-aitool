@@ -7,22 +7,6 @@ warn() { log WARN "$1"; }
 fail() { log FAIL "$1"; }
 skip() { log SKIP "$1"; }
 
-run_required() {
-  local label="$1"
-  shift
-  ok "$label"
-  "$@"
-}
-
-run_optional() {
-  local label="$1"
-  shift
-  ok "$label"
-  if ! "$@"; then
-    warn "$label failed; treating as environment warning when dependency is unavailable"
-  fi
-}
-
 is_systemd_available() {
   command -v systemctl >/dev/null 2>&1 || return 1
   [ -d /run/systemd/system ] || return 1
@@ -31,10 +15,18 @@ is_systemd_available() {
   return 0
 }
 
-main() {
-  ok "zsp-aitool Codex maintenance started"
+note_systemd_policy() {
+  if is_systemd_available; then
+    ok "systemd is available, but Codex maintenance does not start/stop/restart/enable/disable services"
+  else
+    skip "systemd unavailable or not PID 1; skipping all systemctl operations"
+  fi
+}
 
-  cd "${CODEX_WORKSPACE_DIR:-$PWD}" || exit 1
+main() {
+  ok "Running zsp-aitool maintenance setup"
+
+  cd "${CODEX_WORKSPACE_DIR:-$PWD}" || exit 0
   ok "Current directory: $(pwd)"
 
   export NEXT_TELEMETRY_DISABLED=1
@@ -45,34 +37,43 @@ main() {
   export HYPERFRAMES_CLEANUP_DRY_RUN=true
 
   mkdir -p "$HYPERFRAMES_WORKDIR" "$HYPERFRAMES_OUTPUT_DIR"
+  note_systemd_policy
 
-  if is_systemd_available; then
-    ok "systemd is available, but Codex maintenance does not start/stop/enable/disable services"
+  if [ -f package.json ]; then
+    python3 -m json.tool package.json >/tmp/package-json-ok.json || warn "package.json JSON validation failed during maintenance"
+    npm install --legacy-peer-deps || warn "root npm install failed during maintenance"
   else
-    skip "systemd unavailable or not PID 1; skipping all systemctl operations"
+    skip "package.json not found"
   fi
 
-  run_required "Validate package.json" python3 -m json.tool package.json
-
-  if [ -f package-lock.json ]; then
-    run_required "Install dependencies with npm ci" npm ci
+  if [ -f prisma/schema.prisma ]; then
+    npx prisma generate || warn "prisma generate failed during maintenance"
+    npx prisma validate || warn "prisma validate failed during maintenance"
   else
-    run_required "Install dependencies with npm install --legacy-peer-deps" npm install --legacy-peer-deps
+    skip "prisma/schema.prisma not found"
   fi
 
-  run_optional "Generate Prisma client" npm run prisma:generate
-  run_optional "Validate Prisma schema" npx prisma validate
-  run_required "Typecheck" npm run typecheck
-  run_required "Test" npm run test
-  run_required "Build" npm run build
-  run_optional "Health check" npm run health
+  if [ -f extension/package.json ]; then
+    (
+      cd extension || exit 1
+      npm install --legacy-peer-deps
+    ) || warn "extension npm install failed during maintenance"
+  else
+    skip "extension/package.json not found"
+  fi
 
-  run_optional "HyperFrames doctor" npm run hyperframes:doctor
-  run_optional "HyperFrames disabled worker once" npm run hyperframes:worker:once
-  run_optional "HyperFrames queue status" npm run hyperframes:queue-status
-  run_optional "HyperFrames watchdog" npm run hyperframes:worker:watchdog
+  # These checks are helpful but should not block Codex from opening the workspace for repair.
+  npm run typecheck || warn "typecheck failed during maintenance"
+  npm run test || warn "test failed during maintenance"
+  npm run build || warn "build failed during maintenance"
+  npm run health || warn "health failed during maintenance"
 
-  ok "Codex maintenance complete"
+  npm run hyperframes:doctor || warn "hyperframes:doctor failed during maintenance"
+  npm run hyperframes:worker:once || warn "hyperframes:worker:once failed during maintenance"
+  npm run hyperframes:queue-status || warn "hyperframes:queue-status failed during maintenance"
+  npm run hyperframes:worker:watchdog || warn "hyperframes:worker:watchdog failed during maintenance"
+
+  ok "Maintenance setup complete"
   printf 'CODEX_MAINTENANCE_READY=true\n'
 }
 
