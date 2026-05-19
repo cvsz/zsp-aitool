@@ -11,6 +11,9 @@ HOST="${HOST:-127.0.0.1}"
 PORT="${PORT:-3001}"
 BASE_URL="http://${HOST}:${PORT}"
 PUBLIC_BASE_URL="${PUBLIC_BASE_URL:-https://studio.zeaz.dev}"
+SCRIPT_START_UTC="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+JOURNAL_SINCE="${JOURNAL_SINCE:-$SCRIPT_START_UTC}"
+BENIGN_SYSTEMD_CGROUP_RE="Failed to kill control group .*ignoring: Invalid argument"
 
 log() { printf '\n[%s] %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*"; }
 ok() { printf '[OK] %s\n' "$*"; }
@@ -22,12 +25,30 @@ run() {
   "$@"
 }
 
+has_npm_script() {
+  local script_name="$1"
+  node -e "const p=require('./package.json'); process.exit(p.scripts && p.scripts[process.argv[1]] ? 0 : 1)" "$script_name" >/dev/null 2>&1
+}
+
+journal_filtered_since() {
+  local unit_name="$1"
+  local output
+  output="$(sudo journalctl -u "$unit_name" --since "$JOURNAL_SINCE" -l --no-pager 2>/dev/null \
+    | grep -Ev "$BENIGN_SYSTEMD_CGROUP_RE" || true)"
+
+  if [[ -n "$output" ]]; then
+    printf '%s\n' "$output"
+  else
+    ok "No recent non-benign logs for ${unit_name} since ${JOURNAL_SINCE}"
+  fi
+}
+
 on_error() {
   local exit_code=$?
   local line_no=${1:-unknown}
   printf '\n[FAIL] start.sh failed at line %s with exit code %s\n' "$line_no" "$exit_code" >&2
-  printf '[INFO] Recent %s logs:\n' "$APP_SERVICE" >&2
-  sudo journalctl -u "$APP_SERVICE" -n 80 -l --no-pager >&2 || true
+  printf '[INFO] Recent %s logs since %s:\n' "$APP_SERVICE" "$JOURNAL_SINCE" >&2
+  sudo journalctl -u "$APP_SERVICE" --since "$JOURNAL_SINCE" -l --no-pager >&2 || true
   exit "$exit_code"
 }
 trap 'on_error $LINENO' ERR
@@ -92,7 +113,7 @@ validate_install_prisma() {
   run npx prisma migrate deploy --schema prisma/schema.prisma
   run npx prisma migrate status --schema prisma/schema.prisma
 
-  if npm run | grep -q '^  db:schema-drift-check'; then
+  if has_npm_script "db:schema-drift-check"; then
     run npm run db:schema-drift-check
   else
     warn "db:schema-drift-check script not found; skipping"
@@ -142,7 +163,7 @@ run_health_checks() {
   run npm run hyperframes:queue-status
   run npm run hyperframes:worker:watchdog
 
-  if npm run | grep -q '^  db:schema-drift-check'; then
+  if has_npm_script "db:schema-drift-check"; then
     run npm run db:schema-drift-check
   fi
 }
@@ -208,11 +229,18 @@ route_smoke() {
 }
 
 journal_drift_check() {
-  log "Checking recent app journal for Prisma/UserSetting drift errors"
-  sudo journalctl -u "$APP_SERVICE" --since "30 minutes ago" -l --no-pager \
-    | grep -iE "UserSetting|brandColors|fontPreference|logoUrl|watermarkText|defaultAspectRatio|defaultCTA|prisma:error" \
-    && warn "Recent Prisma/UserSetting-related journal entries found; review output above" \
-    || ok "No recent UserSetting drift errors found"
+  log "Checking app journal since ${JOURNAL_SINCE} for new Prisma/UserSetting drift errors"
+  local matches
+  matches="$(sudo journalctl -u "$APP_SERVICE" --since "$JOURNAL_SINCE" -l --no-pager 2>/dev/null \
+    | grep -iE "prisma:error|column .*UserSetting|UserSetting\..*does not exist|brandColors.*does not exist|fontPreference.*does not exist|logoUrl.*does not exist|watermarkText.*does not exist|defaultAspectRatio.*does not exist|defaultCTA.*does not exist" \
+    || true)"
+
+  if [[ -n "$matches" ]]; then
+    printf '%s\n' "$matches"
+    warn "Recent Prisma/UserSetting drift entries found; review output above"
+  else
+    ok "No new UserSetting drift errors found since ${JOURNAL_SINCE}"
+  fi
 }
 
 report_systemd_failed_units() {
@@ -234,16 +262,17 @@ report_systemd_failed_units() {
 }
 
 show_recent_logs() {
-  log "Recent ${APP_SERVICE} logs"
-  sudo journalctl -u "$APP_SERVICE" -n 80 -l --no-pager || true
+  log "Recent ${APP_SERVICE} logs since ${JOURNAL_SINCE} (benign cgroup-stop noise filtered)"
+  journal_filtered_since "$APP_SERVICE"
 
-  log "Recent ${WORKER_SERVICE} logs"
-  sudo journalctl -u "$WORKER_SERVICE" -n 80 -l --no-pager || true
+  log "Recent ${WORKER_SERVICE} logs since ${JOURNAL_SINCE} (benign cgroup-stop noise filtered)"
+  journal_filtered_since "$WORKER_SERVICE"
 }
 
 main() {
   resolve_repo_dir
   log "Starting full production deployment for $(pwd)"
+  ok "Journal checks scoped since ${JOURNAL_SINCE}"
   require_systemd_vm
   pull_latest
   cleanup_temp_files
