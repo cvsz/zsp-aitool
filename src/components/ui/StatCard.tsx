@@ -1,19 +1,16 @@
 import { Card, CardContent } from "@/components/ui/Card";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 
-export function StatCard({
-  label,
-  value,
-  hint,
-  tone,
-}: {
+type StatCardProps = {
   label: string;
   value: string | number;
   hint?: string;
-  tone?: "success" | "warning" | "danger" | "info";
-}) {
+  tone?: "default" | "muted" | "dark" | "success" | "warning" | "danger" | "info";
+};
+
+export function StatCard({ label, value, hint, tone }: StatCardProps) {
   return (
-    <Card>
+    <Card tone={tone === "dark" ? "dark" : "default"}>
       <CardContent>
         <div className="flex items-start justify-between gap-3">
           <p className="text-sm text-slate-500">{label}</p>

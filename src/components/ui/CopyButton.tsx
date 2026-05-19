@@ -1,3 +1,28 @@
 "use client";
+
 import { useState } from "react";
-export function CopyButton({ value }: { value: string }) { const [copied, setCopied] = useState(false); return <button className="rounded-lg border px-3 py-2 text-sm" onClick={async () => { await navigator.clipboard.writeText(value); setCopied(true); setTimeout(() => setCopied(false), 1500); }}>{copied ? "คัดลอกแล้ว" : "คัดลอก"}</button>; }
+import { Button } from "@/components/ui/Button";
+
+type CopyButtonProps = {
+  value: string;
+  label?: string;
+  copiedLabel?: string;
+  className?: string;
+  tone?: "default" | "muted" | "info" | "success" | "warning" | "danger" | "dark";
+};
+
+export function CopyButton({ value, label = "คัดลอก", copiedLabel = "คัดลอกแล้ว", className = "", tone = "default" }: CopyButtonProps) {
+  const [copied, setCopied] = useState(false);
+
+  async function onCopy() {
+    await navigator.clipboard.writeText(value);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1500);
+  }
+
+  return (
+    <Button type="button" variant="secondary" tone={tone} onClick={() => void onCopy()} className={className} aria-label={copied ? copiedLabel : label}>
+      {copied ? copiedLabel : label}
+    </Button>
+  );
+}

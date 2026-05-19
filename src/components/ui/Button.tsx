@@ -1,24 +1,32 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 
 type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
+type ButtonTone = "default" | "muted" | "info" | "success" | "warning" | "danger" | "dark";
 type ButtonSize = "sm" | "md" | "lg";
 
 export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   children: ReactNode;
   variant?: ButtonVariant;
+  tone?: ButtonTone;
   size?: ButtonSize;
   busy?: boolean;
 };
 
 const variantClasses: Record<ButtonVariant, string> = {
-  primary:
-    "bg-slate-950 text-white hover:bg-slate-800 focus-visible:ring-slate-400 disabled:bg-slate-400",
-  secondary:
-    "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 focus-visible:ring-slate-300",
-  ghost:
-    "text-slate-700 hover:bg-slate-100 focus-visible:ring-slate-300",
-  danger:
-    "bg-rose-600 text-white hover:bg-rose-700 focus-visible:ring-rose-300 disabled:bg-rose-300",
+  primary: "bg-slate-950 text-white hover:bg-slate-800",
+  secondary: "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
+  ghost: "text-slate-700 hover:bg-slate-100",
+  danger: "bg-rose-600 text-white hover:bg-rose-700",
+};
+
+const toneClasses: Record<ButtonTone, string> = {
+  default: "focus-visible:ring-slate-400",
+  muted: "focus-visible:ring-slate-300",
+  info: "focus-visible:ring-sky-400",
+  success: "focus-visible:ring-emerald-400",
+  warning: "focus-visible:ring-amber-400",
+  danger: "focus-visible:ring-rose-400",
+  dark: "focus-visible:ring-slate-500",
 };
 
 const sizeClasses: Record<ButtonSize, string> = {
@@ -27,7 +35,7 @@ const sizeClasses: Record<ButtonSize, string> = {
   lg: "h-11 px-5 text-base",
 };
 
-export function Button({ children, className = "", variant = "primary", size = "md", busy = false, disabled, ...props }: ButtonProps) {
+export function Button({ children, className = "", variant = "primary", tone = "default", size = "md", busy = false, disabled, ...props }: ButtonProps) {
   const isDisabled = Boolean(disabled || busy);
 
   return (
@@ -35,9 +43,10 @@ export function Button({ children, className = "", variant = "primary", size = "
       {...props}
       disabled={isDisabled}
       className={[
-        "inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition focus-visible:outline-none focus-visible:ring-2",
-        "disabled:cursor-not-allowed disabled:opacity-70",
+        "inline-flex items-center justify-center gap-2 rounded-2xl font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-white",
+        "disabled:cursor-not-allowed disabled:opacity-60",
         variantClasses[variant],
+        toneClasses[tone],
         sizeClasses[size],
         className,
       ].join(" ")}
