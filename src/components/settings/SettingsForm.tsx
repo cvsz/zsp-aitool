@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import { BackgroundColorSelect } from "@/components/theme/BackgroundColorSelect";
 
 const initialState = {
   aiProvider: "openai",
@@ -50,6 +51,7 @@ export function SettingsForm() {
     <form onSubmit={onSubmit} className="max-w-3xl space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
       <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">ตั้งค่า</h1>
       <ThemeToggle />
+      <BackgroundColorSelect />
       <p className="text-sm text-slate-600 dark:text-slate-300">สถานะคีย์ AI: <strong>{status.ai}</strong></p>
       <p className="text-sm text-slate-600 dark:text-slate-300">สถานะคีย์ OCR: <strong>{status.ocr}</strong></p>
       <textarea className="w-full rounded-xl border border-slate-200 p-2 dark:border-slate-700 dark:bg-slate-950" value={form.affiliateDisclosure} onChange={(e) => setForm({ ...form, affiliateDisclosure: e.target.value })} />

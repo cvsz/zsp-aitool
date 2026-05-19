@@ -13,3 +13,13 @@ body {
 html.dark body {
   @apply bg-slate-950 text-slate-100;
 }
+
+
+:root[data-bg-theme="default"] body { @apply bg-slate-50 dark:bg-slate-950; }
+:root[data-bg-theme="slate"] body { @apply bg-slate-100 dark:bg-slate-900; }
+:root[data-bg-theme="indigo"] body { @apply bg-indigo-50 dark:bg-indigo-950; }
+:root[data-bg-theme="emerald"] body { @apply bg-emerald-50 dark:bg-emerald-950; }
+:root[data-bg-theme="amber"] body { @apply bg-amber-50 dark:bg-amber-950; }
+:root[data-bg-theme="rose"] body { @apply bg-rose-50 dark:bg-rose-950; }
+:root[data-bg-theme="zinc"] body { @apply bg-zinc-100 dark:bg-zinc-900; }
+:root[data-bg-theme="neutral"] body { @apply bg-neutral-100 dark:bg-neutral-900; }
