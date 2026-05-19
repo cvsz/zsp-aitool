@@ -1,30 +1,74 @@
 # ZSP-AITool
 
-zsp-aitool is a Thai-first full-stack SaaS foundation for Shopee Affiliate workflows. This initial baseline sets up the core project structure so future tasks can safely add features module by module.
+ZSP-AITool is a Thai-first full-stack SaaS application for Shopee Affiliate workflows. It helps users collect product information, manage affiliate links, generate AI promotional content, export content and product data, run OCR extraction, find similar saved products, and create HyperFrames promotional video compositions and render jobs.
 
-## Included in this initial foundation
+Production domain:
 
-- Next.js App Router + TypeScript strict mode
-- Tailwind CSS setup
-- Prisma + PostgreSQL setup
-- Dockerfile + docker-compose.yml
-- Environment template (`.env.example`)
-- Shared types and utility modules under `src/types` and `src/lib`
-- Test scaffold (Vitest + Testing Library)
+```text
+https://studio.zeaz.dev
+```
 
-## Tech stack
+## Core Features
 
-- Next.js (App Router)
+- User authentication
+- Product library
+- Product import by manual form, URL, browser extension payload, screenshot OCR, and JSON
+- AI content generation for Facebook, Instagram, Threads, X, blogs, SEO articles, captions, and comment replies
+- Platform-specific prompt/template management
+- Content history
+- OCR extraction workflow
+- Similar product recommendations from the user’s saved products
+- Affiliate link management
+- Export as CSV, TXT, and Markdown
+- Chrome Extension Manifest V3 for one-click product collection after user confirmation
+- Thai-first responsive SaaS dashboard UI
+- HyperFrames Studio for deterministic AI video composition
+- HyperFrames render queue, history, retry/cancel controls, secure downloads, thumbnails, shares, quotas, operator views, and watchdog tooling
+
+## Tech Stack
+
+- Next.js App Router
+- React
 - TypeScript
 - Tailwind CSS
-- Prisma
+- Next.js API routes
 - PostgreSQL
+- Prisma
 - Zod
 - Vitest
+- Testing Library
 - Docker Compose
-- HyperFrames (planned integration target for content workflows)
+- Chrome Extension Manifest V3
+- OpenAI-compatible AI provider abstraction
+- Pluggable OCR provider abstraction
+- HyperFrames render worker
+- systemd on the production VM
 
-## Quick start
+## Repository Structure
+
+```text
+src/
+  app/          # App Router pages and API routes
+  components/   # Reusable UI, layout, dashboard, HyperFrames components
+  lib/          # Shared utilities and infrastructure helpers
+  schemas/      # Zod request/response schemas
+  services/     # Business logic modules
+  types/        # Shared TypeScript contracts
+prisma/
+  schema.prisma
+  migrations/
+  seed.ts
+scripts/
+  health-zsp-aitool.sh
+  fix-next-server-chunks.sh
+  hyperframes/
+extension/
+  # Chrome Extension MV3 workspace
+docs/
+  # Architecture, runbooks, prompt packs, and HyperFrames documentation
+```
+
+## Quick Start
 
 ```bash
 npm install
@@ -36,9 +80,37 @@ npm run prisma:seed
 npm run dev
 ```
 
-Open http://localhost:3001
+Open:
 
-## Scripts
+```text
+http://localhost:3001
+```
+
+## Environment
+
+Copy `.env.example` to `.env` and configure values for your local environment.
+
+Important local defaults:
+
+- Keep real provider keys out of source control.
+- Use mock AI/OCR providers in tests.
+- Keep HyperFrames rendering disabled in generic local/Codex/container environments unless you are explicitly testing a controlled render path.
+- Do not point development or Codex environments at a production database.
+
+## Common Scripts
+
+```bash
+python3 -m json.tool package.json >/tmp/package-json-ok.json
+npm ci
+npm run prisma:generate
+npx prisma validate
+npm run typecheck
+npm run test
+npm run build
+npm run health
+```
+
+Development:
 
 ```bash
 npm run dev
@@ -46,23 +118,85 @@ npm run lint
 npm run typecheck
 npm run test
 npm run build
-npm run health
 ```
 
-## Deployment verification
-
-Use environment-appropriate checks:
-
-### Production server verification (systemd host)
-
-Run these on the actual production machine where `zsp-aitool` service and local PostgreSQL are running:
+Database:
 
 ```bash
-systemctl status zsp-aitool --no-pager
-curl -I http://127.0.0.1:3001
-curl -I http://127.0.0.1:3001/dashboard
-curl -I http://127.0.0.1:3001/dashboard/products
-npx prisma migrate status
+npm run prisma:generate
+npm run prisma:migrate
+npm run prisma:migrate:deploy
+npm run prisma:seed
+```
+
+HyperFrames:
+
+```bash
+npm run hyperframes:doctor
+npm run hyperframes:worker:once
+npm run hyperframes:queue-status
+npm run hyperframes:worker:watchdog
+npm run hyperframes:cleanup-renders
+npm run hyperframes:recover-stale-jobs
+```
+
+## HyperFrames Operations
+
+HyperFrames rendering is designed to be explicit and guarded.
+
+Key rules:
+
+- Rendering should be disabled by default in Codex/CI/container environments.
+- Production worker enablement is operator-controlled.
+- Worker commands must use safe `bin` + `argv` execution.
+- Queue limits, retry limits, disk checks, and stale job detection must stay enabled.
+- Cleanup is dry-run by default.
+- User-facing APIs and UI must never expose `outputPath`, `/var/lib`, or internal render work directories.
+
+Useful production checks:
+
+```bash
+npm run hyperframes:doctor
+npm run hyperframes:queue-status
+npm run hyperframes:worker:watchdog
+systemctl is-active zsp-hyperframes-worker
+```
+
+## Deployment Verification
+
+### Production server verification
+
+Run these on the actual production machine where `zsp-aitool`, PostgreSQL, and the optional HyperFrames worker service are running:
+
+```bash
+cd ~/zsp-aitool
+git pull --rebase origin main
+python3 -m json.tool package.json >/tmp/package-json-ok.json
+npm ci
+npm run prisma:generate
+npx prisma validate
+npm run typecheck
+npm run test
+npm run build
+npm run health
+npm run hyperframes:queue-status
+npm run hyperframes:worker:watchdog
+```
+
+If migrations are pending on production, apply them with:
+
+```bash
+npx prisma migrate deploy --schema prisma/schema.prisma
+npx prisma migrate status --schema prisma/schema.prisma
+```
+
+Do not use `prisma migrate dev` on production.
+
+After a successful build, restart the production app service:
+
+```bash
+sudo systemctl restart zsp-aitool
+sleep 5
 npm run health
 ```
 
@@ -72,42 +206,41 @@ In Codex, CI, or generic containers:
 
 - `systemctl` may be unavailable because systemd is not PID 1.
 - `127.0.0.1:3001` may be unreachable because the production service is not running inside that environment.
-- `npx prisma migrate status` may fail if PostgreSQL is not running or not reachable.
-- `https://studio.zeaz.dev/*` can return Cloudflare challenge `403` (`cf-mitigated: challenge`), which is not automatically an app failure.
+- PostgreSQL may not be running locally.
+- `https://studio.zeaz.dev/*` can return a Cloudflare challenge `403`, which is an environment/edge warning rather than an app failure.
+- DB-dependent HyperFrames checks may need to be skipped or reported as warnings.
 
-Use these baseline checks:
+Baseline checks:
 
 ```bash
-git status
+python3 -m json.tool package.json >/tmp/package-json-ok.json
+npm ci
+npm run prisma:generate
+npx prisma validate
 npm run typecheck
 npm run test
 npm run build
 npm run health
 ```
 
-## Project structure
+## Security and Compliance Notes
 
-```text
-src/
-  app/          # App Router pages + API routes
-  components/   # Reusable UI + feature components
-  lib/          # Shared utilities / infrastructure helpers
-  schemas/      # Zod schemas
-  services/     # Business logic modules
-  types/        # Shared TypeScript contracts
-prisma/
-  schema.prisma
-  seed.ts
-extension/
-  # Chrome Extension MV3 workspace
-```
+- Product ingestion must use user-provided data, official APIs where configured, or user-visible data captured by the browser extension after user confirmation.
+- Do not bypass CAPTCHA, login walls, Shopee anti-bot systems, or private/undocumented Shopee endpoints.
+- Do not automate mass scraping.
+- Do not generate fake reviews, unsupported product claims, fake scarcity, or invented specifications.
+- Include affiliate disclosure where relevant.
+- User-facing APIs must preserve auth, tenant isolation, org isolation, and safe response shaping.
+- Do not expose secrets, `DATABASE_URL`, tokens, stack traces, `outputPath`, `/var/lib`, or internal render directories.
 
-## Environment
+## Documentation
 
-Copy `.env.example` and set values for your local machine.
+- `AGENTS.md` — operating rules for AI agents and Codex
+- `SECURITY.md` — security policy and vulnerability handling
+- `CONTRIBUTING.md` — contribution workflow and verification checklist
+- `.faf` — persistent project context metadata
+- `docs/hyperframes-render-worker.md` — HyperFrames worker and operator runbook
 
-## Notes
+## License
 
-- User-facing UI defaults to Thai (`lang="th"`).
-- Product ingestion must use user-provided or user-visible data only.
-- AI/OCR providers are abstracted and can be mocked in tests.
+This project is licensed under the MIT License. See `LICENSE` for details.
