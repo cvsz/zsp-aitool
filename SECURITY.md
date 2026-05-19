@@ -30,6 +30,21 @@ When reporting, include:
 
 Do not include live credentials, private API tokens, session cookies, or production database dumps in the report.
 
+## GitHub Security Advisories
+
+This repository uses GitHub Security Advisories for coordinated disclosure, fix tracking, and CVE publication when needed.
+
+Maintainers should use this process:
+
+1. Create a **draft private advisory** in the repository Security tab.
+2. Add affected package/component metadata and impacted version ranges.
+3. Grant access only to the minimum required maintainers/collaborators.
+4. Link the remediation pull request and keep discussion in the private advisory thread.
+5. Merge the fix, update release notes/changelog, and prepare user-facing mitigation guidance.
+6. Publish the advisory and request a CVE through GitHub if the impact warrants one.
+
+For reporters, prefer GitHub private vulnerability reporting over public issues to avoid unintentional disclosure.
+
 ## Security Principles
 
 ZSP-AITool follows these security principles:

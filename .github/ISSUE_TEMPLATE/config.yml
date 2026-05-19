@@ -1,6 +1,8 @@
 blank_issues_enabled: true
 contact_links:
+  - name: Report a security vulnerability (private)
+    url: https://github.com/cvsz/zsp-aitool/security/advisories/new
+    about: Please use private GitHub Security Advisories for vulnerability reports instead of public issues.
   - name: ZeaZDev project context
     url: https://github.com/cvsz/zsp-aitool
     about: Review README.md, .faf, AGENTS.md, and docs/prompts before filing architecture-related issues.
-
