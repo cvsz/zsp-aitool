@@ -1,39 +1,58 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
 import * as auth from "@/lib/auth";
 import { POST as createJob } from "@/app/api/hyperframes/render/route";
 
-const state = { pendingCount: 0, usage: 0, createCalled: false };
+const mocks = vi.hoisted(() => ({
+  state: { planTier: "FREE", monthCount: 0, runningCount: 0, globalPending: 0, createCalled: false },
+}));
 
 vi.mock("@/services/ProductService", () => ({ productService: { getById: vi.fn().mockResolvedValue({ id: "p1", title: "P", price: 10, currency: "THB", images: [] }) } }));
-vi.mock("@/lib/prisma", () => ({ prisma: { hyperFrameRenderJob: { count: vi.fn().mockImplementation(async (args?: { where?: { status?: string } }) => args?.where?.status ? state.pendingCount : state.usage), create: vi.fn().mockImplementation(async () => { state.createCalled = true; return { id: "j1", status: "PENDING" }; }) } } }));
+vi.mock("@/lib/prisma", () => ({
+  prisma: {
+    user: { findUnique: vi.fn().mockImplementation(async () => ({ planTier: mocks.state.planTier })) },
+    userSetting: { findUnique: vi.fn().mockResolvedValue(null) },
+    hyperFrameRenderJob: {
+      count: vi.fn().mockImplementation(async ({ where }: any = {}) => {
+        if (where?.createdAt) return mocks.state.monthCount;
+        if (where?.status && typeof where.status === "object") return mocks.state.runningCount;
+        if (where?.userId) return mocks.state.monthCount;
+        return mocks.state.globalPending;
+      }),
+      aggregate: vi.fn().mockResolvedValue({ _sum: { outputSizeBytes: 0 } }),
+      create: vi.fn().mockImplementation(async () => { mocks.state.createCalled = true; return { id: "j1", status: "PENDING", orgId: null }; }),
+    },
+  },
+}));
+vi.mock("@/services/HyperFramesQuotaService", () => ({ HyperFramesQuotaService: { enforceBeforeEnqueue: vi.fn().mockResolvedValue({ allowed: true, summary: { remainingMonthlyRenders: 10, storageUsedMb: 0, storageQuotaMb: 1024, retentionDays: 14 } }) } }));
 
 describe("hyperframes billing gates", () => {
   beforeEach(() => {
-    vi.restoreAllMocks();
     vi.spyOn(auth, "getSessionFromRequest").mockReturnValue({ userId: "u1", email: "u1@test.com" });
     process.env.HYPERFRAMES_RENDER_ENABLED = "true";
-    process.env.HYPERFRAMES_BILLING_PLAN = "free";
-    process.env.HYPERFRAMES_MONTHLY_QUOTA = "10";
-    state.pendingCount = 0;
-    state.usage = 0;
-    state.createCalled = false;
+    process.env.HYPERFRAMES_MAX_PENDING_JOBS = "10";
+    mocks.state.planTier = "FREE";
+    mocks.state.monthCount = 0;
+    mocks.state.runningCount = 0;
+    mocks.state.globalPending = 0;
+    mocks.state.createCalled = false;
   });
 
-  it("blocks unpaid plan premium options", async () => {
-    const res = await createJob(new Request("http://localhost", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ productId: "p1", platform: "facebook", aspectRatio: "16:9", durationSeconds: 10, quality: "high" }) }) as never);
+  it("blocks unpaid plan long renders", async () => {
+    const res = await createJob(new Request("http://localhost", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ productId: "p1", platform: "facebook", aspectRatio: "16:9", durationSeconds: 30 }) }) as never);
     expect(res.status).toBe(402);
   });
 
-  it("blocks when quota exceeded", async () => {
-    state.usage = 10;
+  it("blocks when plan quota is exceeded", async () => {
+    mocks.state.monthCount = 10;
     const res = await createJob(new Request("http://localhost", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ productId: "p1", platform: "facebook", aspectRatio: "16:9", durationSeconds: 10 }) }) as never);
     expect(res.status).toBe(402);
   });
 
-  it("allows when plan/quota are valid", async () => {
-    process.env.HYPERFRAMES_BILLING_PLAN = "pro";
-    const res = await createJob(new Request("http://localhost", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ productId: "p1", platform: "facebook", aspectRatio: "16:9", durationSeconds: 30, quality: "high", batchSize: 3, removeWatermark: true }) }) as never);
+  it("allows when plan and quota are valid", async () => {
+    mocks.state.planTier = "PRO";
+    const res = await createJob(new Request("http://localhost", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ productId: "p1", platform: "facebook", aspectRatio: "16:9", durationSeconds: 30, qualityProfile: "standard" }) }) as never);
     expect(res.status).toBe(200);
-    expect(state.createCalled).toBe(true);
+    expect(mocks.state.createCalled).toBe(true);
   });
 });

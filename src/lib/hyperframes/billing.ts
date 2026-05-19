@@ -37,9 +37,9 @@ export function enforceHyperFramesBilling(request: NextRequest, requiredFeatures
   const billing = getHyperFramesRequestBillingState(request);
   if (requiredFeatures.length === 0) return { allowed: true };
   if (!paidPlans.has(billing.plan)) return { allowed: false, reason: "UPGRADE_REQUIRED", message: "Upgrade required for paid HyperFrames render features", missingFeatures: requiredFeatures };
+  if (billing.quotaRemaining < 1) return { allowed: false, reason: "QUOTA_EXCEEDED", message: "HyperFrames quota exceeded for current billing period", missingFeatures: [] };
   const missingFeatures = requiredFeatures.filter((feature) => !featureByPlan[billing.plan].includes(feature));
   if (missingFeatures.length > 0) return { allowed: false, reason: "UPGRADE_REQUIRED", message: "Current plan does not include requested HyperFrames features", missingFeatures };
-  if (billing.quotaRemaining < 1) return { allowed: false, reason: "QUOTA_EXCEEDED", message: "HyperFrames quota exceeded for current billing period", missingFeatures: [] };
   return { allowed: true };
 }
 

@@ -1,3 +1,4 @@
+import { Readable } from "node:stream";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import * as auth from "@/lib/auth";
 import { GET, HEAD } from "@/app/api/hyperframes/render/[id]/download/route";
@@ -20,7 +21,7 @@ vi.mock("@/lib/hyperframes/artifact-access", () => ({
 describe("hyperframes render download api", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    openArtifactStream.mockReturnValue({ on() {}, pipe() {}, destroy() {} });
+    openArtifactStream.mockReturnValue(Readable.from([Buffer.from("ok")]));
   });
 
   it("returns 401 unauthenticated", async () => {

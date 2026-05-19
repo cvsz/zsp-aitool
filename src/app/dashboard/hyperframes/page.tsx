@@ -29,6 +29,8 @@ export default function HyperFramesPage() {
     }).catch(() => setQueueStatus(null));
   }, []);
 
+  const hasValidComposition = Boolean(productId && caption.trim().length <= 1200);
+
   const disabledReason = useMemo(() => {
     if (!productId) return "กรุณาเลือกสินค้า";
     if (!queueStatus?.renderEnabled || !queueStatus?.serviceActive || !queueStatus?.serviceEnabled) return "บริการเรนเดอร์ยังไม่พร้อมใช้งาน";
@@ -62,7 +64,7 @@ export default function HyperFramesPage() {
           <label className="text-sm font-medium text-slate-700">เวลา (วินาที)<input className="mt-1 w-full rounded border border-slate-300 px-3 py-2" type="number" min={3} max={300} value={durationSeconds} onChange={(event) => setDurationSeconds(Number(event.target.value))} /></label>
         </div>
         <label className="text-sm font-medium text-slate-700">Caption<textarea className="mt-1 min-h-28 w-full rounded border border-slate-300 px-3 py-2" value={caption} onChange={(event) => setCaption(event.target.value)} maxLength={1200} /></label>
-        <button className="rounded bg-indigo-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50" disabled={Boolean(disabledReason) || isRendering} onClick={() => void enqueueRender()}>{isRendering ? "กำลังเพิ่มคิว..." : "เริ่มเรนเดอร์"}</button>
+        <button className="rounded bg-indigo-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50" disabled={!hasValidComposition || Boolean(disabledReason) || isRendering} onClick={() => void enqueueRender()}>{isRendering ? "กำลังเพิ่มคิว..." : <span>เริ่มเรนเดอร์<span className="sr-only"> Render now</span></span>}</button>
         {disabledReason ? <p className="text-sm text-amber-700">{disabledReason}</p> : null}
         {message ? <p className="text-sm text-slate-700">{message}</p> : null}
       </section>

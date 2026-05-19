@@ -23,7 +23,6 @@ const bodySchema = z.object({
   durationSeconds: z.number().int().min(3).max(300),
   caption: z.string().max(1200).optional(),
   script: z.string().max(1200).optional(),
-  compositionHtml: z.string().max(250_000).optional(),
   qualityProfile: z.enum(hyperFramesQualityProfiles).optional(),
   voiceover: hyperframesVoiceoverSchema.optional(),
   watermark: z.object({
@@ -62,12 +61,7 @@ export const POST = withAuth(async (request) => {
 
   const product = await productService.getById(request.auth.userId, payload.productId);
   const brandKit = await getHyperframesBrandKit(request.auth.userId);
-  const composition = payload.compositionHtml
-    ? {
-        compositionHtml: payload.compositionHtml,
-        metadata: { productId: payload.productId, productTitle: product.title, platform: payload.platform, aspectRatio: payload.aspectRatio, durationSeconds, width: 0, height: 0, hasAffiliateDisclosure: false, watermarkEnabled: false, watermarkPosition: null, voiceover: payload.voiceover ?? null, qualityProfile: quality.profile },
-      }
-    : buildHyperFrameComposition({ ...payload, durationSeconds, brandKit, product: { title: product.title, price: String(product.price), currency: product.currency, imageUrl: product.images[0]?.url, affiliateUrl: product.affiliateUrl } });
+  const composition = buildHyperFrameComposition({ ...payload, durationSeconds, brandKit, product: { title: product.title, price: String(product.price), currency: product.currency, imageUrl: product.images[0]?.url, affiliateUrl: product.affiliateUrl } });
 
   const job = await prisma.hyperFrameRenderJob.create({
     data: {
