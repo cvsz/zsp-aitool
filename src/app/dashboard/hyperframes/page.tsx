@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { HyperFramesStatusGrid } from "@/components/hyperframes/HyperFramesStatusGrid";
+import { OperatorWarningBanner } from "@/components/hyperframes/OperatorWarningBanner";
 
 const ASPECT_RATIO_OPTIONS = ["16:9", "9:16", "1:1"] as const;
 const PLATFORM_OPTIONS = ["facebook", "instagram", "threads", "x", "blog"] as const;
@@ -35,6 +37,13 @@ export default function HyperFramesPage() {
     return "";
   }, [productId, queueStatus]);
 
+  const cards = [
+    { label: "Render enabled", value: queueStatus?.renderEnabled ? "เปิด" : "ปิด/ไม่ทราบ", tone: queueStatus?.renderEnabled ? "success" as const : "warning" as const, hint: "ควบคุมด้วย environment flag" },
+    { label: "Worker active", value: queueStatus?.serviceActive ? "active" : "inactive/unknown", tone: queueStatus?.serviceActive ? "success" as const : "warning" as const, hint: "แสดงสถานะเท่านั้น" },
+    { label: "Service enabled", value: queueStatus?.serviceEnabled ? "enabled" : "disabled/unknown", tone: queueStatus?.serviceEnabled ? "success" as const : "info" as const, hint: "ไม่มี systemd controls ใน UI" },
+    { label: "Duration", value: `${durationSeconds}s`, tone: "info" as const, hint: "จำกัดตาม policy ฝั่ง API" },
+  ];
+
   async function enqueueRender() {
     setIsRendering(true);
     setMessage("");
@@ -45,46 +54,70 @@ export default function HyperFramesPage() {
   }
 
   return (
-    <main className="mx-auto max-w-5xl space-y-6 p-6">
-      <header className="space-y-2">
-        <h1 className="text-2xl font-bold">HyperFrames Studio</h1>
-        <p className="text-sm text-slate-600">ออกแบบ composition และส่งงานอย่างปลอดภัยสำหรับ Shopee Affiliate</p>
-        <p className="rounded border border-indigo-100 bg-indigo-50 p-3 text-xs text-indigo-900">ประกาศ: คอนเทนต์นี้มีลิงก์แนะนำสินค้าแบบ Affiliate ผู้ใช้ควรเปิดเผยให้ชัดเจนก่อนเผยแพร่</p>
-        <div className="flex gap-4 text-sm">
-          <Link className="text-indigo-700 underline" href="/dashboard/hyperframes/renders">ประวัติเรนเดอร์</Link>
-          <Link className="text-indigo-700 underline" href="/dashboard/hyperframes/batch">Batch</Link>
-          <Link className="text-indigo-700 underline" href="/dashboard/hyperframes/ops">Ops</Link>
+    <main className="space-y-6">
+      <header className="overflow-hidden rounded-3xl border border-indigo-100 bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 p-6 text-white shadow-xl">
+        <div className="max-w-3xl">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-indigo-200">HyperFrames Studio</p>
+          <h1 className="mt-2 text-3xl font-bold">สร้างวิดีโอโปรโมตแบบปลอดภัยและตรวจสอบได้</h1>
+          <p className="mt-3 text-sm leading-6 text-indigo-100">ออกแบบ composition สำหรับ Shopee Affiliate โดยคงขีดจำกัดคิว, โควต้า, worker safety และการเปิดเผย Affiliate ให้ชัดเจนก่อนเผยแพร่</p>
+        </div>
+        <div className="mt-5 flex flex-wrap gap-2 text-sm">
+          <Link className="rounded-full bg-white px-4 py-2 font-semibold text-slate-950" href="/dashboard/hyperframes/renders">ประวัติเรนเดอร์</Link>
+          <Link className="rounded-full bg-white/10 px-4 py-2 font-semibold text-white ring-1 ring-white/20" href="/dashboard/hyperframes/batch">Batch Render</Link>
+          <Link className="rounded-full bg-white/10 px-4 py-2 font-semibold text-white ring-1 ring-white/20" href="/dashboard/hyperframes/ops">Ops</Link>
         </div>
       </header>
 
-      <section className="grid gap-4 rounded-lg border border-slate-200 bg-white p-4">
-        <div className="grid gap-4 md:grid-cols-2">
-          <label className="text-sm font-medium">สินค้า
-            <select className="mt-1 w-full rounded border px-3 py-2" value={productId} onChange={(e) => setProductId(e.target.value)}>
-              <option value="">เลือกสินค้า</option>
-              {products.map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}
-            </select>
+      <OperatorWarningBanner items={["ต้องมี Affiliate disclosure ทุกครั้งก่อนนำคอนเทนต์ไปเผยแพร่", "ระบบไม่ execute arbitrary HTML และไม่เปิดเผย local render paths", "การควบคุม worker จริงให้ทำผ่าน production CLI/systemd เท่านั้น"]} />
+      <HyperFramesStatusGrid cards={cards} />
+
+      <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="mb-5">
+            <h2 className="text-lg font-bold text-slate-950">ตั้งค่า Composition</h2>
+            <p className="mt-1 text-sm text-slate-500">เลือกสินค้าและกำหนดแพลตฟอร์มอย่างมีขีดจำกัดปลอดภัย</p>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="text-sm font-semibold text-slate-700">สินค้า
+              <select className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm shadow-sm outline-none focus:border-indigo-300 focus:ring-4 focus:ring-indigo-100" value={productId} onChange={(e) => setProductId(e.target.value)}>
+                <option value="">เลือกสินค้า</option>
+                {products.map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}
+              </select>
+            </label>
+            <label className="text-sm font-semibold text-slate-700">Org ID (ไม่บังคับ)
+              <input className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm shadow-sm outline-none focus:border-indigo-300 focus:ring-4 focus:ring-indigo-100" value={orgId} onChange={(e) => setOrgId(e.target.value)} placeholder="ใช้เมื่อเป็นงานทีม" />
+            </label>
+          </div>
+
+          <div className="mt-4 grid gap-4 sm:grid-cols-3">
+            <label className="text-sm font-semibold text-slate-700">แพลตฟอร์ม<select className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm" value={platform} onChange={(e) => setPlatform(e.target.value as typeof platform)}>{PLATFORM_OPTIONS.map((v) => <option key={v}>{v}</option>)}</select></label>
+            <label className="text-sm font-semibold text-slate-700">สัดส่วน<select className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm" value={aspectRatio} onChange={(e) => setAspectRatio(e.target.value as typeof aspectRatio)}>{ASPECT_RATIO_OPTIONS.map((v) => <option key={v}>{v}</option>)}</select></label>
+            <label className="text-sm font-semibold text-slate-700">ระยะเวลา<input type="number" min={3} max={300} className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm" value={durationSeconds} onChange={(e) => setDurationSeconds(Number(e.target.value))} /></label>
+          </div>
+
+          <label className="mt-4 block text-sm font-semibold text-slate-700">แคปชัน/ไอเดีย Composition
+            <textarea maxLength={1200} className="mt-1.5 min-h-32 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm shadow-sm outline-none focus:border-indigo-300 focus:ring-4 focus:ring-indigo-100" value={caption} onChange={(e) => setCaption(e.target.value)} placeholder="ระบุ key message, CTA, จุดขายสินค้า และ platform tone" />
           </label>
-          <label className="text-sm font-medium">Org ID (ไม่บังคับ)
-            <input className="mt-1 w-full rounded border px-3 py-2" value={orgId} onChange={(e) => setOrgId(e.target.value)} />
-          </label>
+
+          <div className="mt-5 flex flex-wrap items-center gap-3">
+            <button className="rounded-xl bg-indigo-700 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-indigo-800 disabled:cursor-not-allowed disabled:opacity-50" disabled={!hasValidComposition || Boolean(disabledReason) || isRendering} onClick={() => void enqueueRender()}>
+              {isRendering ? "กำลังเพิ่มคิว..." : <>ส่งเข้าคิวเรนเดอร์<span className="sr-only"> Render now</span></>}
+            </button>
+            {disabledReason ? <p className="text-sm font-medium text-amber-700">{disabledReason}</p> : null}
+            {message ? <p className="text-sm text-slate-700">{message}</p> : null}
+          </div>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-3">
-          <label className="text-sm font-medium">แพลตฟอร์ม<select className="mt-1 w-full rounded border px-3 py-2" value={platform} onChange={(e) => setPlatform(e.target.value as typeof platform)}>{PLATFORM_OPTIONS.map((v) => <option key={v}>{v}</option>)}</select></label>
-          <label className="text-sm font-medium">สัดส่วน<select className="mt-1 w-full rounded border px-3 py-2" value={aspectRatio} onChange={(e) => setAspectRatio(e.target.value as typeof aspectRatio)}>{ASPECT_RATIO_OPTIONS.map((v) => <option key={v}>{v}</option>)}</select></label>
-          <label className="text-sm font-medium">ระยะเวลา (วินาที)<input type="number" min={3} max={300} className="mt-1 w-full rounded border px-3 py-2" value={durationSeconds} onChange={(e) => setDurationSeconds(Number(e.target.value))} /></label>
-        </div>
-
-        <label className="text-sm font-medium">แคปชัน/ไอเดีย Composition
-          <textarea maxLength={1200} className="mt-1 min-h-28 w-full rounded border px-3 py-2" value={caption} onChange={(e) => setCaption(e.target.value)} />
-        </label>
-
-        <button className="rounded bg-indigo-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50" disabled={!hasValidComposition || Boolean(disabledReason) || isRendering} onClick={() => void enqueueRender()}>
-          {isRendering ? "กำลังเพิ่มคิว..." : <>ส่งเข้าคิวเรนเดอร์<span className="sr-only"> Render now</span></>}
-        </button>
-        {disabledReason ? <p className="text-sm text-amber-700">{disabledReason}</p> : null}
-        {message ? <p className="text-sm">{message}</p> : null}
+        <aside className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 className="text-lg font-bold text-slate-950">Workflow ปลอดภัย</h2>
+          <ol className="mt-4 space-y-3 text-sm text-slate-600">
+            <li className="rounded-2xl bg-slate-50 p-3"><b>1.</b> เลือกสินค้าที่ผู้ใช้บันทึกเอง</li>
+            <li className="rounded-2xl bg-slate-50 p-3"><b>2.</b> ตรวจ caption และ Affiliate disclosure</li>
+            <li className="rounded-2xl bg-slate-50 p-3"><b>3.</b> enqueue ผ่าน API ที่บังคับ queue limits</li>
+            <li className="rounded-2xl bg-slate-50 p-3"><b>4.</b> ติดตามผลและดาวน์โหลดผ่าน secure API route</li>
+          </ol>
+        </aside>
       </section>
     </main>
   );
