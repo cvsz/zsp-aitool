@@ -65,6 +65,12 @@ describe("hyperframes batch render api", () => {
     expect(JSON.stringify(body)).not.toContain("/var/lib/");
   });
 
+
+  it("rejects arbitrary compositionHtml items", async () => {
+    vi.spyOn(auth, "getSessionFromRequest").mockReturnValue({ userId: "u1", email: "u@u.com" });
+    await expect(batchPost(new Request("http://localhost/api/hyperframes/render/batch", { method: "POST", body: JSON.stringify({ items: [{ productId: "p1", platform: "facebook", aspectRatio: "16:9", durationSeconds: 10, compositionHtml: "<script>alert(1)</script>" }] }) }) as never)).rejects.toThrowError(/Unrecognized key/);
+  });
+
   it("enforces global queue limit", async () => {
     vi.spyOn(auth, "getSessionFromRequest").mockReturnValue({ userId: "u1", email: "u@u.com" });
     state.globalPending = 3;

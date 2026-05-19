@@ -17,10 +17,9 @@ const itemSchema = z.object({
   durationSeconds: z.number().int().min(3).max(60),
   caption: z.string().max(1200).optional(),
   script: z.string().max(1200).optional(),
-  compositionHtml: z.string().optional(),
-});
+}).strict();
 
-const bodySchema = z.object({ items: z.array(itemSchema).min(1) });
+const bodySchema = z.object({ items: z.array(itemSchema).min(1) }).strict();
 
 type BatchResult = {
   productId: string;
@@ -56,21 +55,16 @@ export const POST = withAuth(async (request) => {
 
     try {
       const product = await productService.getById(request.auth.userId, item.productId);
-      const composition = item.compositionHtml
-        ? {
-            compositionHtml: item.compositionHtml,
-            metadata: { ...item, productTitle: product.title, width: 0, height: 0, hasAffiliateDisclosure: false },
-          }
-        : buildHyperFrameComposition({
-            ...item,
-            product: {
-              title: product.title,
-              price: String(product.price),
-              currency: product.currency,
-              imageUrl: product.images[0]?.url,
-              affiliateUrl: product.affiliateUrl,
-            },
-          });
+      const composition = buildHyperFrameComposition({
+        ...item,
+        product: {
+          title: product.title,
+          price: String(product.price),
+          currency: product.currency,
+          imageUrl: product.images[0]?.url,
+          affiliateUrl: product.affiliateUrl,
+        },
+      });
       const job = await prisma.hyperFrameRenderJob.create({
         data: {
           userId: request.auth.userId,

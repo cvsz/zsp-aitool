@@ -39,6 +39,12 @@ export default function HyperFramesRendersPage() {
         <h1 className="text-2xl font-bold text-slate-900">ประวัติ HyperFrames renders</h1>
         <p className="text-sm text-slate-600">ดูประวัติงานส่วนตัว หรือกรอก Org ID เพื่อดูประวัติที่แชร์ในทีมตามสิทธิ์สมาชิก</p>
       </header>
+
+      <section className="grid gap-2 rounded-lg border border-indigo-100 bg-indigo-50 p-4 text-sm text-indigo-900">
+        <p className="font-semibold">โควต้ารายเดือนคงเหลือ</p>
+        <p>ตรวจสอบโควต้าและพื้นที่จัดเก็บผ่าน /api/hyperframes/quota ก่อนสั่งเรนเดอร์เพิ่ม หากต้องการใช้งานมากขึ้นสามารถกดอัปเกรดแพ็กเกจได้</p>
+        <a className="font-semibold underline" href="/dashboard/settings/billing">อัปเกรดแพ็กเกจ</a>
+      </section>
       <section className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 sm:flex-row sm:items-end">
         <label className="flex-1 text-sm font-medium text-slate-700">Org ID (ไม่บังคับ)<input className="mt-1 w-full rounded border border-slate-300 px-3 py-2" value={orgId} onChange={(event) => setOrgId(event.target.value)} placeholder="org_xxx" /></label>
         <button className="rounded bg-slate-900 px-4 py-2 text-sm font-semibold text-white" onClick={() => void load()}>โหลดประวัติ</button>

@@ -45,7 +45,7 @@ export function buildHyperFrameComposition(input: HyperFrameCompositionRequest &
   const captionHtml = subtitles.length > 0
     ? `<div class="captions">${escapeHtml(subtitles.map((subtitle) => subtitle.text).join(" • "))}</div>`
     : contentText
-      ? `<div class="content">${escapeHtml(contentText)}</div>`
+      ? `<div class="content">${contentText}</div>`
       : "";
 
   const compositionHtml = `<!doctype html>
@@ -75,8 +75,8 @@ export function buildHyperFrameComposition(input: HyperFrameCompositionRequest &
     ${safeImage ? `<img class="media" src="${escapeHtml(safeImage)}" alt="" />` : ""}
     <div class="overlay"></div>
     ${captionHtml}
-    <div class="facts"><div><div class="title">${escapeHtml(safeTitle)}</div>${safePrice ? `<div class="price">${escapeHtml(safePrice)}</div>` : ""}</div><div class="cta">${escapeHtml(safeCta)}</div></div>
-    ${hasWatermark ? `<div class="watermark">${safeWatermarkLogo ? `<img src="${escapeHtml(safeWatermarkLogo)}" alt="" />` : ""}${watermarkText ? `<span>${escapeHtml(watermarkText)}</span>` : ""}</div>` : ""}
+    <div class="facts"><div><div class="title">${safeTitle}</div>${safePrice ? `<div class="price">${safePrice}</div>` : ""}</div><div class="cta">${safeCta}</div></div>
+    ${hasWatermark ? `<div class="watermark">${safeWatermarkLogo ? `<img src="${escapeHtml(safeWatermarkLogo)}" alt="" />` : ""}${watermarkText ? `<span>${watermarkText}</span>` : ""}</div>` : ""}
     ${hasAffiliate ? `<div class="disclosure">${escapeHtml("โพสต์นี้มีลิงก์แอฟฟิลิเอต ผู้เขียนอาจได้รับค่าคอมมิชชัน")}</div>` : ""}
   </div>
 </body>
