@@ -1,25 +1,20 @@
-# Shopee Open API Integration Runbook (Foundation Only)
+# Shopee Open API Integration Runbook (Foundation)
 
 ## Scope
-This runbook covers **optional, disabled-by-default** Shopee Open API foundation setup for `zsp-aitool`.
+This runbook defines a safe, optional, disabled-by-default foundation for **official Shopee Open API only**.
 
-## Eligibility notes (from July 2022 guide)
-- Thailand Open API eligibility includes Mall sellers, non-mall managed sellers with KAM, and third-party partner platforms.
-- OpenAPI onboarding is ongoing maintenance, not one-time setup.
+## Eligibility and onboarding notes
+- Thailand eligibility from guide: Mall sellers, non-mall managed sellers with KAM, and third-party partner platforms.
+- OpenAPI is ongoing maintenance, not one-time setup.
+- Developer account is different from Shopee seller account.
+- Flow: register developer -> profile audit -> create app -> obtain credentials/webhook -> sandbox testing -> go-live request.
 
-## Developer account warning
-Shopee Open Platform developer account is different from marketplace seller account. Never store seller or developer passwords in this app.
-
-## Sandbox / test-stable flow
-1. Register developer account
-2. Shopee profile audit
-3. Create app
-4. Obtain credentials (+ optional webhook)
-5. Test in sandbox/test-stable
-6. Request Go-Live and obtain live partner credentials
+## Sandbox and go-live
+- Start in sandbox/test-stable.
+- Only move to live after Shopee approval and live partner credentials.
 
 ## Environment variables
-- `SHOPEE_OPEN_API_ENABLED=false`
+- `SHOPEE_OPEN_API_ENABLED=false` (default)
 - `SHOPEE_OPEN_API_ENV=sandbox|live`
 - `SHOPEE_PARTNER_ID`
 - `SHOPEE_PARTNER_KEY`
@@ -29,29 +24,32 @@ Shopee Open Platform developer account is different from marketplace seller acco
 - `SHOPEE_WEBHOOK_SECRET`
 
 ## Credential handling policy
-- Keep partner key/webhook secret in environment/secret manager only.
-- Do not persist partner key/client secret in database.
-- Do not expose access/refresh tokens, partner key, or webhook secret in UI/API/logs.
+- Never store partner key/client secret in database.
+- Never log partner key, webhook secret, access token, refresh token.
+- Keep credentials in runtime env/secret manager only.
 
 ## User review-before-save policy
-Any official API import remains review-first: user must review/edit product fields before final save.
+- Imported product data must remain reviewable/editable before save.
+- Existing manual/URL/extension/OCR/JSON modes stay unchanged.
 
 ## Unsupported actions
-- CAPTCHA bypass
-- login wall bypass
+- CAPTCHA/login bypass
 - anti-bot bypass
-- private/undocumented endpoint use
-- mass scraping automation
+- private/undocumented endpoints
+- mass scraping
+- collecting private Shopee user data
+- automated bulk import without explicit future approval
 
 ## Troubleshooting checklist
-- Confirm feature flag is intentionally enabled.
-- Validate required env vars only when enabled.
-- Verify sandbox base URLs and redirect URL.
-- Check status API for `setupRequired` / `docsRequired` flags.
+1. Confirm `SHOPEE_OPEN_API_ENABLED=false` in default environments.
+2. If enabled, validate all required env values exist.
+3. Verify status endpoint returns redacted configuration only.
+4. Confirm no real network calls in unit tests.
+5. Confirm no secret/token in logs/test output.
 
-## Documentation gap before full implementation
-Endpoint-level official Shopee Open Platform v2.0 docs are required for:
-- exact auth URL format
-- callback verification/signing details
-- request/response schemas for product/order endpoints
-- signature construction algorithm and per-endpoint parameters
+## Documentation gaps before full implementation
+The current reference guide is orientation only. Add official endpoint-level docs before implementing:
+- auth URL construction details and callback verification rules
+- endpoint request/response schemas for products/orders
+- exact signature algorithm payload composition per endpoint class
+- token refresh lifecycle and error matrix

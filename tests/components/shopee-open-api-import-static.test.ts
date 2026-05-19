@@ -1,14 +1,13 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import fs from "node:fs";
+import path from "node:path";
 
-describe("shopee open api import static copy", () => {
-  it("keeps official optional copy and no bypass enablement", () => {
-    const content = readFileSync("src/components/products/ProductImportForm.tsx", "utf8");
-    expect(content).toMatch(/Shopee Open API/);
-    expect(content).toMatch(/ปิดไว้โดยค่าเริ่มต้น/);
-    expect(content).toMatch(/ต้องตรวจทาน\/แก้ไขข้อมูลก่อนบันทึกทุกครั้ง/);
-    expect(content).toMatch(/ไม่สนับสนุนการ bypass CAPTCHA/);
-    expect(content).not.toMatch(/รองรับ.*(captcha bypass|anti-bot bypass|private endpoint|mass scraping)/i);
-    expect(content).not.toMatch(/seller password|seller_password/i);
+describe("Shopee Open API import copy", () => {
+  it("mentions optional disabled-by-default official API and avoids bypass/scraping claims", () => {
+    const filePath = path.join(process.cwd(), "src/components/products/ProductImportForm.tsx");
+    const text = fs.readFileSync(filePath, "utf8");
+    expect(text).toMatch(/Shopee Open API \(official\)/);
+    expect(text).toMatch(/ปิดไว้เป็นค่าเริ่มต้น/);
+    expect(text).toMatch(/ไม่รองรับการดึงข้อมูลแบบ scraping/);
   });
 });

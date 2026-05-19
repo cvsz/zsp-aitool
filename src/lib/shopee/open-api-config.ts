@@ -1,88 +1,93 @@
 export type ShopeeOpenApiEnvironment = "sandbox" | "live";
 
+export type ShopeeOpenApiRawEnv = {
+  SHOPEE_OPEN_API_ENABLED?: string;
+  SHOPEE_OPEN_API_ENV?: string;
+  SHOPEE_PARTNER_ID?: string;
+  SHOPEE_PARTNER_KEY?: string;
+  SHOPEE_API_BASE_URL?: string;
+  SHOPEE_AUTH_BASE_URL?: string;
+  SHOPEE_REDIRECT_URL?: string;
+  SHOPEE_WEBHOOK_SECRET?: string;
+};
+
 export type ShopeeOpenApiConfig = {
   enabled: boolean;
   environment: ShopeeOpenApiEnvironment;
-  partnerId?: string;
-  partnerKey?: string;
-  apiBaseUrl?: string;
-  authBaseUrl?: string;
-  redirectUrl?: string;
-  webhookSecret?: string;
+  partnerId: string | null;
+  partnerKey: string | null;
+  apiBaseUrl: string | null;
+  authBaseUrl: string | null;
+  redirectUrl: string | null;
+  webhookSecret: string | null;
 };
 
-export type ShopeeOpenApiSafeStatus = {
-  enabled: boolean;
-  environment: ShopeeOpenApiEnvironment;
-  setupRequired: boolean;
-  docsRequired: boolean;
-  configured: {
-    partnerId: boolean;
-    partnerKey: boolean;
-    apiBaseUrl: boolean;
-    authBaseUrl: boolean;
-    redirectUrl: boolean;
-    webhookSecret: boolean;
-  };
-};
+export class ShopeeOpenApiConfigError extends Error {
+  readonly code = "SHOPEE_OPEN_API_CONFIG_INVALID";
+  constructor(message: string, readonly missingFields: string[]) {
+    super(message);
+    this.name = "ShopeeOpenApiConfigError";
+  }
+}
 
-const REQUIRED_WHEN_ENABLED: Array<keyof Pick<ShopeeOpenApiConfig, "partnerId" | "partnerKey" | "apiBaseUrl" | "authBaseUrl" | "redirectUrl" | "webhookSecret">> = [
-  "partnerId",
-  "partnerKey",
-  "apiBaseUrl",
-  "authBaseUrl",
-  "redirectUrl",
-  "webhookSecret",
+const REQUIRED_WHEN_ENABLED: Array<keyof ShopeeOpenApiRawEnv> = [
+  "SHOPEE_PARTNER_ID",
+  "SHOPEE_PARTNER_KEY",
+  "SHOPEE_API_BASE_URL",
+  "SHOPEE_AUTH_BASE_URL",
+  "SHOPEE_REDIRECT_URL",
+  "SHOPEE_WEBHOOK_SECRET"
 ];
 
-function parseBoolean(value: string | undefined, fallback = false): boolean {
-  if (!value) return fallback;
-  return value.trim().toLowerCase() === "true";
+function normalizeBoolean(raw: string | undefined): boolean {
+  return raw?.trim().toLowerCase() === "true";
 }
 
-function parseEnvironment(value: string | undefined): ShopeeOpenApiEnvironment {
-  return value === "live" ? "live" : "sandbox";
+function normalizeEnvironment(raw: string | undefined): ShopeeOpenApiEnvironment {
+  return raw?.trim().toLowerCase() === "live" ? "live" : "sandbox";
 }
 
-function normalizeOptional(value: string | undefined): string | undefined {
-  const trimmed = value?.trim();
-  return trimmed ? trimmed : undefined;
+function normalizeValue(raw: string | undefined): string | null {
+  const value = raw?.trim();
+  return value ? value : null;
 }
 
-export function getShopeeOpenApiConfig(source: NodeJS.ProcessEnv = process.env): ShopeeOpenApiConfig {
-  return {
-    enabled: parseBoolean(source.SHOPEE_OPEN_API_ENABLED, false),
-    environment: parseEnvironment(source.SHOPEE_OPEN_API_ENV),
-    partnerId: normalizeOptional(source.SHOPEE_PARTNER_ID),
-    partnerKey: normalizeOptional(source.SHOPEE_PARTNER_KEY),
-    apiBaseUrl: normalizeOptional(source.SHOPEE_API_BASE_URL),
-    authBaseUrl: normalizeOptional(source.SHOPEE_AUTH_BASE_URL),
-    redirectUrl: normalizeOptional(source.SHOPEE_REDIRECT_URL),
-    webhookSecret: normalizeOptional(source.SHOPEE_WEBHOOK_SECRET),
+export function loadShopeeOpenApiConfig(env: ShopeeOpenApiRawEnv = process.env as ShopeeOpenApiRawEnv): ShopeeOpenApiConfig {
+  const enabled = normalizeBoolean(env.SHOPEE_OPEN_API_ENABLED);
+  const environment = normalizeEnvironment(env.SHOPEE_OPEN_API_ENV);
+
+  const config: ShopeeOpenApiConfig = {
+    enabled,
+    environment,
+    partnerId: normalizeValue(env.SHOPEE_PARTNER_ID),
+    partnerKey: normalizeValue(env.SHOPEE_PARTNER_KEY),
+    apiBaseUrl: normalizeValue(env.SHOPEE_API_BASE_URL),
+    authBaseUrl: normalizeValue(env.SHOPEE_AUTH_BASE_URL),
+    redirectUrl: normalizeValue(env.SHOPEE_REDIRECT_URL),
+    webhookSecret: normalizeValue(env.SHOPEE_WEBHOOK_SECRET)
   };
+
+  if (!enabled) return config;
+
+  const missingFields = REQUIRED_WHEN_ENABLED.filter((field) => !normalizeValue(env[field]));
+  if (missingFields.length > 0) {
+    throw new ShopeeOpenApiConfigError("Shopee Open API is enabled but required configuration is missing", missingFields);
+  }
+
+  return config;
 }
 
-export function validateShopeeOpenApiConfig(config: ShopeeOpenApiConfig): { ok: true } | { ok: false; code: "SHOPEE_OPEN_API_MISCONFIGURED"; missing: string[] } {
-  if (!config.enabled) return { ok: true };
-  const missing = REQUIRED_WHEN_ENABLED.filter((key) => !config[key]);
-  if (missing.length > 0) return { ok: false, code: "SHOPEE_OPEN_API_MISCONFIGURED", missing };
-  return { ok: true };
-}
-
-export function toShopeeOpenApiSafeStatus(config: ShopeeOpenApiConfig): ShopeeOpenApiSafeStatus {
-  const validation = validateShopeeOpenApiConfig(config);
+export function toShopeeOpenApiSafeStatus(config: ShopeeOpenApiConfig) {
   return {
     enabled: config.enabled,
     environment: config.environment,
-    setupRequired: validation.ok ? false : true,
+    configured: Boolean(config.partnerId && config.apiBaseUrl && config.authBaseUrl && config.redirectUrl),
+    setupRequired: !config.enabled || !config.partnerId || !config.apiBaseUrl || !config.authBaseUrl || !config.redirectUrl,
     docsRequired: true,
-    configured: {
-      partnerId: Boolean(config.partnerId),
-      partnerKey: Boolean(config.partnerKey),
-      apiBaseUrl: Boolean(config.apiBaseUrl),
-      authBaseUrl: Boolean(config.authBaseUrl),
-      redirectUrl: Boolean(config.redirectUrl),
-      webhookSecret: Boolean(config.webhookSecret),
-    },
+    partnerId: config.partnerId ? `***${config.partnerId.slice(-4)}` : null,
+    hasPartnerKey: Boolean(config.partnerKey),
+    hasWebhookSecret: Boolean(config.webhookSecret),
+    authUrlAvailable: false,
+    callbackAvailable: false
   };
 }

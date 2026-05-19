@@ -1,16 +1,19 @@
-export class ShopeeOpenApiSignatureUnsupportedError extends Error {
+export class ShopeeSignatureUnsupportedError extends Error {
+  readonly code = "SHOPEE_SIGNATURE_UNSUPPORTED";
+
   constructor() {
-    super("Shopee Open API signature algorithm is not implemented. Add official endpoint-level signing documentation before enabling signed requests.");
-    this.name = "ShopeeOpenApiSignatureUnsupportedError";
+    super("Shopee signature generation is not implemented because endpoint-level signing documentation is not present in docs/reference. Add official endpoint docs before enabling signed calls.");
+    this.name = "ShopeeSignatureUnsupportedError";
   }
 }
 
 export type ShopeeSignatureInput = {
   path: string;
   timestamp: number;
-  partnerId: string;
+  accessToken?: string;
+  shopId?: string | number;
 };
 
-export function signShopeeOpenApiRequest(_input: ShopeeSignatureInput): never {
-  throw new ShopeeOpenApiSignatureUnsupportedError();
+export function buildShopeeSignature(_input: ShopeeSignatureInput): never {
+  throw new ShopeeSignatureUnsupportedError();
 }

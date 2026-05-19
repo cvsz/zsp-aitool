@@ -1,31 +1,36 @@
-import { getShopeeOpenApiConfig, toShopeeOpenApiSafeStatus, validateShopeeOpenApiConfig } from "@/lib/shopee/open-api-config";
-import { ShopeeOpenApiClient, type ShopeeClientResult } from "@/services/shopee-open-api-client";
+import { loadShopeeOpenApiConfig, ShopeeOpenApiConfigError, toShopeeOpenApiSafeStatus, type ShopeeOpenApiRawEnv } from "@/lib/shopee/open-api-config";
+import { buildShopeeSignature, ShopeeSignatureUnsupportedError } from "@/lib/shopee/signature";
+import { toSafeShopeeError, type HttpClient } from "@/services/shopee-open-api-client";
 
-export type ShopeeOpenApiServiceStatus = {
-  integration: ReturnType<typeof toShopeeOpenApiSafeStatus>;
-  mode: "DISABLED" | "FOUNDATION_ONLY" | "MISCONFIGURED";
-};
+export type ShopeeOpenApiStatusResult =
+  | { ok: true; code: "DISABLED" | "READY" | "FOUNDATION_ONLY"; data: ReturnType<typeof toShopeeOpenApiSafeStatus> }
+  | { ok: false; code: "CONFIG_ERROR" | "UNSUPPORTED" | "CLIENT_ERROR"; message: string; details?: unknown };
 
 export class ShopeeOpenApiService {
-  constructor(private readonly client?: ShopeeOpenApiClient) {}
+  constructor(private readonly dependencies: { httpClient: HttpClient; env?: ShopeeOpenApiRawEnv }) {}
 
-  getStatus(source: NodeJS.ProcessEnv = process.env): ShopeeOpenApiServiceStatus {
-    const config = getShopeeOpenApiConfig(source);
-    const validation = validateShopeeOpenApiConfig(config);
+  async getStatus(): Promise<ShopeeOpenApiStatusResult> {
+    try {
+      const config = loadShopeeOpenApiConfig(this.dependencies.env);
+      const safeStatus = toShopeeOpenApiSafeStatus(config);
+      if (!config.enabled) return { ok: true, code: "DISABLED", data: safeStatus };
 
-    if (!config.enabled) return { integration: toShopeeOpenApiSafeStatus(config), mode: "DISABLED" };
-    if (!validation.ok) return { integration: toShopeeOpenApiSafeStatus(config), mode: "MISCONFIGURED" };
+      try {
+        buildShopeeSignature({ path: "/placeholder", timestamp: Math.floor(Date.now() / 1000) });
+      } catch (error) {
+        if (error instanceof ShopeeSignatureUnsupportedError) {
+          return { ok: true, code: "FOUNDATION_ONLY", data: safeStatus };
+        }
+        throw error;
+      }
 
-    return { integration: toShopeeOpenApiSafeStatus(config), mode: "FOUNDATION_ONLY" };
-  }
-
-  async checkConnectivity(source: NodeJS.ProcessEnv = process.env): Promise<ShopeeClientResult> {
-    const status = this.getStatus(source);
-    if (status.mode === "DISABLED") return { ok: false, code: "DISABLED", message: "Shopee Open API integration is disabled" };
-    if (status.mode === "MISCONFIGURED") return { ok: false, code: "MISCONFIGURED", message: "Shopee Open API integration is misconfigured" };
-    if (!this.client) return { ok: false, code: "NETWORK_ERROR", message: "No HTTP client configured" };
-
-    const config = getShopeeOpenApiConfig(source);
-    return this.client.getStatusPing(`${config.apiBaseUrl}/health`);
+      return { ok: true, code: "READY", data: safeStatus };
+    } catch (error) {
+      if (error instanceof ShopeeOpenApiConfigError) {
+        return { ok: false, code: "CONFIG_ERROR", message: error.message, details: { missingFields: error.missingFields } };
+      }
+      const safeError = toSafeShopeeError(error);
+      return { ok: false, code: "CLIENT_ERROR", message: safeError.message };
+    }
   }
 }
