@@ -1,11 +1,5 @@
-import { RenderJobStatus } from "@prisma/client";
-
-import { prisma } from "@/lib/prisma";
-
-export const hyperFramesPlanKeys = ["free", "pro", "team", "enterprise"] as const;
-export type HyperFramesPlanKey = (typeof hyperFramesPlanKeys)[number];
-
 import { PlanTier, RenderJobStatus } from "@prisma/client";
+
 import { prisma } from "@/lib/prisma";
 
 export type HyperFramesPlanLimits = {
@@ -15,48 +9,20 @@ export type HyperFramesPlanLimits = {
   maxOutputSizeMb: number;
 };
 
-export const HYPERFRAMES_PLAN_LIMITS: Record<HyperFramesPlanKey, HyperFramesPlanLimits> = {
-  free: { monthlyRenders: 20, maxDurationSeconds: 15, maxConcurrentJobs: 1, maxOutputSizeMb: 100 },
-  pro: { monthlyRenders: 200, maxDurationSeconds: 60, maxConcurrentJobs: 3, maxOutputSizeMb: 512 },
-  team: { monthlyRenders: 1000, maxDurationSeconds: 120, maxConcurrentJobs: 8, maxOutputSizeMb: 1024 },
-  enterprise: { monthlyRenders: 10000, maxDurationSeconds: 300, maxConcurrentJobs: 25, maxOutputSizeMb: 4096 }
-};
-
-export async function getUserHyperFramesPlan(userId: string): Promise<HyperFramesPlanKey> {
-  const setting = await prisma.userSetting.findUnique({ where: { userId }, select: { subscriptionPlan: true } });
-  const value = setting?.subscriptionPlan?.toLowerCase();
-  return hyperFramesPlanKeys.includes(value as HyperFramesPlanKey) ? (value as HyperFramesPlanKey) : "free";
-}
-
-export async function getUserPlanUsage(userId: string, plan: HyperFramesPlanKey) {
-  const limits = HYPERFRAMES_PLAN_LIMITS[plan];
-  const start = new Date();
-  start.setUTCDate(1);
-  start.setUTCHours(0, 0, 0, 0);
-
-  const [monthCount, runningCount] = await Promise.all([
-    prisma.hyperFrameRenderJob.count({ where: { userId, deletedAt: null, createdAt: { gte: start } } }),
-    prisma.hyperFrameRenderJob.count({ where: { userId, deletedAt: null, status: { in: [RenderJobStatus.PENDING, RenderJobStatus.RUNNING] } } })
-  ]);
-
-  return {
-    limits,
-    monthCount,
-    runningCount,
-    monthlyRemaining: Math.max(0, limits.monthlyRenders - monthCount)
-  };
 export const HYPERFRAMES_PLAN_LIMITS: Record<PlanTier, HyperFramesPlanLimits> = {
   FREE: { monthlyRenders: 10, maxDurationSeconds: 20, maxConcurrentJobs: 1, maxOutputSizeMb: 80 },
   PRO: { monthlyRenders: 120, maxDurationSeconds: 60, maxConcurrentJobs: 3, maxOutputSizeMb: 256 },
   TEAM: { monthlyRenders: 600, maxDurationSeconds: 120, maxConcurrentJobs: 10, maxOutputSizeMb: 512 },
-  ENTERPRISE: { monthlyRenders: 5000, maxDurationSeconds: 300, maxConcurrentJobs: 25, maxOutputSizeMb: 2048 }
+  ENTERPRISE: { monthlyRenders: 2500, maxDurationSeconds: 300, maxConcurrentJobs: 25, maxOutputSizeMb: 2048 },
 };
 
+export type LimitUsage = { monthlyRendersUsed: number; runningJobs: number };
 export type LimitCheckResult =
-  | { allowed: true; plan: PlanTier; limits: HyperFramesPlanLimits; usage: { monthlyRendersUsed: number; runningJobs: number } }
-  | { allowed: false; status: 402 | 429; code: "MONTHLY_QUOTA_EXCEEDED" | "DURATION_LIMIT_EXCEEDED" | "CONCURRENT_LIMIT_EXCEEDED"; message: string; plan: PlanTier; limits: HyperFramesPlanLimits; usage: { monthlyRendersUsed: number; runningJobs: number } };
+  | { allowed: true; plan: PlanTier; limits: HyperFramesPlanLimits; usage: LimitUsage }
+  | { allowed: false; status: 402 | 429; code: "MONTHLY_QUOTA_EXCEEDED" | "DURATION_LIMIT_EXCEEDED" | "CONCURRENT_LIMIT_EXCEEDED"; message: string; plan: PlanTier; limits: HyperFramesPlanLimits; usage: LimitUsage };
 
 export async function resolveUserPlan(userId: string): Promise<PlanTier> {
+  if (!("user" in prisma) || !prisma.user) return PlanTier.FREE;
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { planTier: true } });
   return user?.planTier ?? PlanTier.FREE;
 }
@@ -69,10 +35,8 @@ export async function enforceRenderLimits(params: { userId: string; durationSeco
   const plan = await resolveUserPlan(params.userId);
   const limits = HYPERFRAMES_PLAN_LIMITS[plan];
   const [monthlyRendersUsed, runningJobs] = await Promise.all([
-    prisma.hyperFrameRenderJob.count({
-      where: { userId: params.userId, deletedAt: null, createdAt: { gte: getMonthStart() } }
-    }),
-    prisma.hyperFrameRenderJob.count({ where: { userId: params.userId, deletedAt: null, status: { in: [RenderJobStatus.PENDING, RenderJobStatus.RUNNING] } } })
+    prisma.hyperFrameRenderJob.count({ where: { userId: params.userId, deletedAt: null, createdAt: { gte: getMonthStart() } } }),
+    prisma.hyperFrameRenderJob.count({ where: { userId: params.userId, deletedAt: null, status: { in: [RenderJobStatus.PENDING, RenderJobStatus.RUNNING] } } }),
   ]);
 
   const usage = { monthlyRendersUsed, runningJobs };
@@ -87,4 +51,17 @@ export async function enforceRenderLimits(params: { userId: string; durationSeco
   }
 
   return { allowed: true, plan, limits, usage };
+}
+
+export async function getUserHyperFramesPlan(userId: string): Promise<PlanTier> {
+  return resolveUserPlan(userId);
+}
+
+export async function getUserPlanUsage(userId: string, plan: PlanTier) {
+  const limits = HYPERFRAMES_PLAN_LIMITS[plan];
+  const [monthCount, runningCount] = await Promise.all([
+    prisma.hyperFrameRenderJob.count({ where: { userId, deletedAt: null, createdAt: { gte: getMonthStart() } } }),
+    prisma.hyperFrameRenderJob.count({ where: { userId, deletedAt: null, status: { in: [RenderJobStatus.PENDING, RenderJobStatus.RUNNING] } } }),
+  ]);
+  return { limits, monthCount, runningCount, monthlyRemaining: Math.max(0, limits.monthlyRenders - monthCount) };
 }

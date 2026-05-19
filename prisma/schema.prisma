@@ -56,7 +56,6 @@ model User {
   hyperFrameRenderJobs HyperFrameRenderJob[]
   hyperFrameScriptGenerations HyperFrameScriptGeneration[]
   hyperFrameRenderShares HyperFrameRenderShare[]
-  hyperFrameRenderShares   HyperFrameRenderShare[]
   platformPosts      PlatformPost[]
   settings           UserSetting?
   apiUsageLogs       APIUsageLog[]
@@ -311,23 +310,6 @@ model UserSetting {
   deletedAt           DateTime?
 
   @@index([deletedAt])
-}
-
-model HyperFrameRenderShare {
-  id          String   @id @default(cuid())
-  userId      String
-  renderJobId String
-  tokenHash   String   @unique
-  expiresAt   DateTime
-  revokedAt   DateTime?
-  createdAt   DateTime @default(now())
-
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  renderJob   HyperFrameRenderJob @relation(fields: [renderJobId], references: [id], onDelete: Cascade)
-
-  @@index([userId, createdAt])
-  @@index([renderJobId])
-  @@index([expiresAt])
 }
 
 model APIUsageLog {

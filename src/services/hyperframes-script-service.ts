@@ -80,17 +80,14 @@ export async function generateHyperframesScript(userId: string, input: Hyperfram
   enforceSafety(beats.map((b) => ({ type: b.type, text: b.text })));
 
   const script = beats.map((b) => `[${b.type}] ${b.text}`).join("\n");
-  const captions = beats.map((beat, idx) => ({ start: beat.atSecond, end: idx === beats.length - 1 ? input.durationSeconds : beats[idx + 1].atSecond, text: beat.text }));
   const warnings: string[] = [];
-
   const captions = beats.map((beat) => ({ start: beat.atSecond, end: Math.min(input.durationSeconds, beat.atSecond + 4), text: beat.text, style: "default", language: input.language }));
-  const metadata = { productId: product.id, platform: input.platform, aspectRatio: input.aspectRatio, durationSeconds: input.durationSeconds, safe: warnings.length === 0, renderTriggered: false };
   const metadata = {
     productId: product.id,
     platform: input.platform,
     aspectRatio: input.aspectRatio,
     durationSeconds: input.durationSeconds,
-    safe: true,
+    safe: warnings.length === 0,
     renderTriggered: false,
     affiliateRequired: Boolean(product.affiliateUrl),
   };

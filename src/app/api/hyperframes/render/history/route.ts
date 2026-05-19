@@ -7,9 +7,25 @@ import { getHyperFramesRenderConfig } from "@/lib/hyperframes/render-config";
 import { canManage, historyWhere, resolveScope } from "@/lib/hyperframes/org-access";
 import { isRetryableStatus } from "@/lib/hyperframes/retry";
 
-const querySchema = z.object({ status: z.enum(["PENDING", "RUNNING", "COMPLETED", "FAILED", "CANCELLED"]).optional(), orgId: z.string().min(1).optional(), limit: z.coerce.number().int().min(1).max(100).default(20), cursor: z.string().min(1).optional() });
+const querySchema = z.object({
+  status: z.enum(["PENDING", "RUNNING", "COMPLETED", "FAILED", "CANCELLED"]).optional(),
+  orgId: z.string().min(1).optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  cursor: z.string().min(1).optional(),
+});
+
 const safeError = (message?: string | null) => message ? message.replace(/\/var\/lib\/[\w\-/.]+/g, "[redacted-path]").replace(/\s+/g, " ").trim().slice(0, 220) : null;
-const safeMetadata = (metadata: unknown): Record<string, unknown> | null => (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) ? null : { platform: typeof (metadata as Record<string, unknown>).platform === "string" ? (metadata as Record<string, unknown>).platform : undefined, aspectRatio: typeof (metadata as Record<string, unknown>).aspectRatio === "string" ? (metadata as Record<string, unknown>).aspectRatio : undefined };
+const safeMetadata = (metadata: unknown): Record<string, unknown> | null => {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return null;
+  const value = metadata as Record<string, unknown>;
+  return {
+    platform: typeof value.platform === "string" ? value.platform : undefined,
+    aspectRatio: typeof value.aspectRatio === "string" ? value.aspectRatio : undefined,
+    durationSeconds: typeof value.durationSeconds === "number" ? value.durationSeconds : undefined,
+    qualityProfile: typeof value.qualityProfile === "string" ? value.qualityProfile : undefined,
+  };
+};
+
 const safeThumbnailUrl = (job: { id: string; status: string; compositionMetadata: unknown }): string | null => {
   if (job.status !== "COMPLETED") return null;
   if (!job.compositionMetadata || typeof job.compositionMetadata !== "object" || Array.isArray(job.compositionMetadata)) return null;
@@ -20,15 +36,49 @@ const safeThumbnailUrl = (job: { id: string; status: string; compositionMetadata
 
 export const GET = withAuth(async (request) => {
   const parsed = querySchema.parse(Object.fromEntries(new URL(request.url).searchParams.entries()));
-  const config = getHyperFramesRenderConfig();
   const scope = await resolveScope(request.auth.userId, parsed.orgId);
   if (!scope) return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Organization access denied" } }, { status: 403 });
-  const jobs = await prisma.hyperFrameRenderJob.findMany({ where: { ...historyWhere(scope), ...(parsed.status ? { status: parsed.status } : {}) }, orderBy: { createdAt: "desc" }, take: parsed.limit + 1, ...(parsed.cursor ? { cursor: { id: parsed.cursor }, skip: 1 } : {}) });
+
+  const config = getHyperFramesRenderConfig();
+  const jobs = await prisma.hyperFrameRenderJob.findMany({
+    where: { ...historyWhere(scope), ...(parsed.status ? { status: parsed.status } : {}) },
+    orderBy: { createdAt: "desc" },
+    take: parsed.limit + 1,
+    ...(parsed.cursor ? { cursor: { id: parsed.cursor }, skip: 1 } : {}),
+  });
   const hasMore = jobs.length > parsed.limit;
   const items = jobs.slice(0, parsed.limit);
+  const manageable = canManage(scope);
 
-  return NextResponse.json({ ok: true, data: { items: items.map((job) => { const canDownload = job.status === "COMPLETED" && Boolean(job.outputPath); const canCancel = job.status === "PENDING" && canManage(scope); const canRetry = (job.status === "FAILED" || job.status === "CANCELLED") && job.attempts < config.maxAttempts && canManage(scope); return { id: job.id, status: job.status, attempts: job.attempts, durationSeconds: job.durationSeconds, width: job.width, height: job.height, createdAt: job.createdAt, startedAt: job.startedAt, completedAt: job.completedAt, failedAt: job.failedAt, errorMessage: safeError(job.errorMessage), canDownload, downloadUrl: canDownload ? `/api/hyperframes/render/${job.id}/download` : null, canCancel, canRetry, metadata: safeMetadata(job.compositionMetadata) }; }), pageInfo: { hasMore, nextCursor: hasMore ? items[items.length - 1]?.id ?? null : null } } });
-  return NextResponse.json({ ok: true, data: { items: items.map((job) => { const canDownload = job.status === "COMPLETED" && Boolean(job.outputPath); const canCancel = job.status === "PENDING"; const canRetry = (job.status === "FAILED" || job.status === "CANCELLED") && job.attempts < config.maxAttempts; return { id: job.id, status: job.status, attempts: job.attempts, durationSeconds: job.durationSeconds, width: job.width, height: job.height, createdAt: job.createdAt, startedAt: job.startedAt, completedAt: job.completedAt, failedAt: job.failedAt, errorMessage: safeError(job.errorMessage), canDownload, downloadUrl: canDownload ? `/api/hyperframes/render/${job.id}/download` : null, thumbnailUrl: canDownload ? `/api/hyperframes/render/${job.id}/thumbnail` : null, canCancel, canRetry, metadata: safeMetadata(job.compositionMetadata) }; }), pageInfo: { hasMore, nextCursor: hasMore ? items[items.length - 1]?.id ?? null : null } } });
-  return NextResponse.json({ ok: true, data: { items: items.map((job) => { const canDownload = job.status === "COMPLETED" && Boolean(job.outputPath); const canCancel = job.status === "PENDING"; const canRetry = (job.status === "FAILED" || job.status === "CANCELLED") && job.attempts < config.maxAttempts; return { id: job.id, status: job.status, attempts: job.attempts, durationSeconds: job.durationSeconds, width: job.width, height: job.height, createdAt: job.createdAt, startedAt: job.startedAt, completedAt: job.completedAt, failedAt: job.failedAt, errorMessage: safeError(job.errorMessage), canDownload, downloadUrl: canDownload ? `/api/hyperframes/render/${job.id}/download` : null, canCancel, canRetry, thumbnailUrl: safeThumbnailUrl(job), metadata: safeMetadata(job.compositionMetadata) }; }), pageInfo: { hasMore, nextCursor: hasMore ? items[items.length - 1]?.id ?? null : null } } });
-  return NextResponse.json({ ok: true, data: { items: items.map((job) => { const canDownload = job.status === "COMPLETED" && Boolean(job.outputPath); const canCancel = job.status === "PENDING"; const canRetry = isRetryableStatus(job.status) && job.attempts < config.maxAttempts; return { id: job.id, status: job.status, attempts: job.attempts, durationSeconds: job.durationSeconds, width: job.width, height: job.height, createdAt: job.createdAt, startedAt: job.startedAt, completedAt: job.completedAt, failedAt: job.failedAt, errorMessage: safeError(job.errorMessage), canDownload, downloadUrl: canDownload ? `/api/hyperframes/render/${job.id}/download` : null, canCancel, canRetry, metadata: safeMetadata(job.compositionMetadata) }; }), pageInfo: { hasMore, nextCursor: hasMore ? items[items.length - 1]?.id ?? null : null } } });
+  return NextResponse.json({
+    ok: true,
+    data: {
+      scope: { orgId: scope.orgId, role: scope.role },
+      items: items.map((job) => {
+        const canDownload = job.status === "COMPLETED" && Boolean(job.outputPath);
+        return {
+          id: job.id,
+          orgId: job.orgId,
+          ownerUserId: job.userId,
+          status: job.status,
+          attempts: job.attempts,
+          durationSeconds: job.durationSeconds,
+          width: job.width,
+          height: job.height,
+          createdAt: job.createdAt,
+          startedAt: job.startedAt,
+          completedAt: job.completedAt,
+          failedAt: job.failedAt,
+          errorMessage: safeError(job.errorMessage),
+          canDownload,
+          downloadUrl: canDownload ? `/api/hyperframes/render/${job.id}/download${scope.orgId ? `?orgId=${encodeURIComponent(scope.orgId)}` : ""}` : null,
+          thumbnailUrl: safeThumbnailUrl(job) ?? (canDownload ? `/api/hyperframes/render/${job.id}/thumbnail${scope.orgId ? `?orgId=${encodeURIComponent(scope.orgId)}` : ""}` : null),
+          canCancel: job.status === "PENDING" && manageable,
+          canRetry: isRetryableStatus(job.status) && job.attempts < config.maxAttempts && manageable,
+          metadata: safeMetadata(job.compositionMetadata),
+        };
+      }),
+      pageInfo: { hasMore, nextCursor: hasMore ? items[items.length - 1]?.id ?? null : null },
+    },
+  });
 });
