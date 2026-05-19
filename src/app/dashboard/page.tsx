@@ -3,11 +3,14 @@
 import Link from "next/link";
 
 import { AlertBanner } from "@/components/ui/AlertBanner";
+import { Button } from "@/components/ui/Button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { ModuleCard } from "@/components/ui/ModuleCard";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCard } from "@/components/ui/StatCard";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Toast } from "@/components/ui/Toast";
 import { useApi } from "@/hooks/use-api";
 import { useToast } from "@/hooks/use-toast";
@@ -21,22 +24,29 @@ type Overview = {
   recentActivity?: { title: string; at: string }[];
 };
 
-const releaseChecklist = [
+const onboardingChecklist = [
   "เพิ่มสินค้าเข้าคลังอย่างน้อย 1 รายการ",
-  "ผูกลิงก์ Affiliate สำหรับแพลตฟอร์มที่ใช้งาน",
-  "สร้างโพสต์ AI และตรวจสอบ Affiliate Disclosure",
-  "จัดตารางโพสต์สำหรับ Facebook / IG / Threads / X",
-  "ทดสอบ Export เป็น CSV และ Markdown",
-  "ตรวจสอบสถานะ HyperFrames ก่อนเรนเดอร์จริง",
+  "ตั้งค่าลิงก์ Affiliate ให้ถูกต้องก่อนเผยแพร่",
+  "สร้างคอนเทนต์ AI จากสินค้าที่ต้องการโปรโมต",
+  "ตรวจสอบข้อความ Affiliate Disclosure ทุกโพสต์",
+  "ทดสอบ Export เป็น CSV, TXT หรือ Markdown",
+  "เช็กสถานะ HyperFrames ก่อนเริ่มเรนเดอร์จริง",
 ];
 
-const opsLinks = [
-  { label: "คลังสินค้า", href: "/dashboard/products" },
-  { label: "สร้างคอนเทนต์", href: "/dashboard/generator" },
-  { label: "ประวัติคอนเทนต์", href: "/dashboard/content-history" },
-  { label: "HyperFrames Studio", href: "/dashboard/hyperframes" },
-  { label: "ตั้งค่าระบบ", href: "/dashboard/settings" },
+const quickActions = [
+  { title: "เพิ่มสินค้า", href: "/dashboard/products/new", description: "บันทึกสินค้าใหม่เข้าคลัง" },
+  { title: "สร้างคอนเทนต์ AI", href: "/dashboard/generator", description: "สร้างโพสต์ตามแพลตฟอร์ม" },
+  { title: "เปิด OCR", href: "/dashboard/ocr", description: "ดึงข้อมูลจากภาพและตรวจทาน" },
+  { title: "เปิด HyperFrames Studio", href: "/dashboard/hyperframes", description: "สร้างวิดีโอโปรโมตสินค้า" },
+  { title: "ดูประวัติเรนเดอร์", href: "/dashboard/hyperframes/renders", description: "ติดตามผลเรนเดอร์ล่าสุด" },
+  { title: "จัดการ Prompt Templates", href: "/dashboard/templates", description: "บริหารเทมเพลตสำหรับหลายช่องทาง" },
 ];
+
+function healthTone(health: Overview["hyperframesHealth"]) {
+  if (health === "พร้อมใช้งาน") return "success" as const;
+  if (health === "ต้องตรวจสอบ") return "warning" as const;
+  return "info" as const;
+}
 
 export default function Page() {
   const { data, loading, error, refetch } = useApi<Overview>("/api/dashboard/overview");
@@ -46,85 +56,115 @@ export default function Page() {
   return (
     <section className="space-y-6">
       <PageHeader
-        title="Final Release Dashboard"
-        subtitle="ศูนย์ควบคุมก่อนปล่อยงานจริงสำหรับทีม Shopee Affiliate แบบ Thai-first"
+        title="ศูนย์ควบคุม ZSP Affiliate"
+        subtitle="ภาพรวมการทำงานประจำวันแบบ Thai-first พร้อมแนวทางใช้งานที่ปลอดภัยและสอดคล้อง Compliance"
         actions={
-          <button
-            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-            onClick={() => {
-              void refetch();
-              showToast("รีเฟรชข้อมูล Release Dashboard แล้ว", "success");
-            }}
-          >
-            รีเฟรช
-          </button>
+          <>
+            <Button variant="secondary" onClick={() => void refetch()}>
+              รีเฟรชข้อมูล
+            </Button>
+            <Button
+              onClick={() => {
+                void refetch();
+                showToast("รีเฟรชแดชบอร์ดเรียบร้อยแล้ว", "success");
+              }}
+            >
+              อัปเดตด่วน
+            </Button>
+          </>
         }
       />
 
+      <Card tone="dark" className="overflow-hidden">
+        <CardContent className="grid gap-4 lg:grid-cols-[1.8fr_1fr]">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-300">Dashboard Overview</p>
+            <h2 className="mt-2 text-2xl font-semibold text-white">พร้อมเริ่มงานขายด้วยข้อมูลที่ตรวจสอบได้</h2>
+            <p className="mt-2 text-sm text-slate-300">ทุกคอนเทนต์ควรเปิดเผยว่าเป็นลิงก์ Affiliate และตรวจสอบข้อมูลสินค้าก่อนเผยแพร่เสมอ เพื่อความน่าเชื่อถือของแบรนด์และความปลอดภัยของผู้ใช้</p>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
+            <Link href="/dashboard/products/new" className="rounded-2xl border border-white/20 bg-white/5 px-4 py-3 text-sm font-medium text-white transition hover:bg-white/10">
+              เพิ่มสินค้าใหม่
+            </Link>
+            <Link href="/dashboard/generator" className="rounded-2xl border border-white/20 bg-white/5 px-4 py-3 text-sm font-medium text-white transition hover:bg-white/10">
+              สร้างคอนเทนต์ AI
+            </Link>
+            <Link href="/dashboard/hyperframes" className="rounded-2xl border border-white/20 bg-white/5 px-4 py-3 text-sm font-medium text-white transition hover:bg-white/10">
+              เปิด HyperFrames Studio
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+
       {loading ? <LoadingSpinner /> : null}
-      {error ? <AlertBanner title="ดึงข้อมูลไม่สำเร็จ" description="ไม่สามารถโหลดข้อมูลภาพรวมได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง" /> : null}
+      {error ? <AlertBanner title="ดึงข้อมูลภาพรวมไม่สำเร็จ" description="ไม่สามารถโหลดข้อมูลได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง" variant="error" /> : null}
 
       {!loading && !error ? (
         <>
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
             <StatCard label="จำนวนสินค้า" value={data?.productCount ?? 0} hint="พร้อมใช้งาน" />
-            <StatCard label="คอนเทนต์ที่สร้างแล้ว" value={data?.generatedContentCount ?? 0} hint="ตรวจสอบ Disclosure" />
-            <StatCard label="Prompt Templates" value={data?.promptTemplateCount ?? 0} hint="รองรับหลายแพลตฟอร์ม" />
-            <StatCard label="งานเรนเดอร์" value={data?.renderJobCount ?? 0} hint="รอ/กำลังทำ/เสร็จสิ้น" />
-            <StatCard label="HyperFrames Health" value={data?.hyperframesHealth ?? "กำลังตรวจสอบ"} hint="สถานะระบบ" tone="info" />
+            <StatCard label="คอนเทนต์ที่สร้างแล้ว" value={data?.generatedContentCount ?? 0} hint="ต้องมี Disclosure" />
+            <StatCard label="Prompt Templates" value={data?.promptTemplateCount ?? 0} hint="รองรับหลายช่องทาง" />
+            <StatCard label="งานเรนเดอร์" value={data?.renderJobCount ?? 0} hint="ติดตามคิวได้" />
+            <StatCard label="HyperFrames Health" value={data?.hyperframesHealth ?? "กำลังตรวจสอบ"} hint="สถานะระบบ" tone={healthTone(data?.hyperframesHealth)} />
           </div>
 
-          <div className="grid gap-4 xl:grid-cols-[2fr_1fr]">
-            <div className="rounded-2xl border border-slate-200 bg-white p-5">
-              <h2 className="text-lg font-semibold text-slate-900">Release Checklist</h2>
-              <p className="mt-1 text-sm text-slate-500">รายการตรวจสอบสำคัญก่อนเปิดใช้งานจริง เพื่อลดความเสี่ยงด้านคุณภาพและ Compliance</p>
-              <ul className="mt-4 space-y-2">
-                {releaseChecklist.map((item) => (
-                  <li key={item} className="flex items-start gap-2 text-sm text-slate-700">
-                    <span className="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 text-xs font-semibold text-emerald-700">✓</span>
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+          <div className="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
+            <Card>
+              <CardHeader>
+                <CardTitle>Onboarding & Release Checklist</CardTitle>
+                <CardDescription>เช็กลิสต์ก่อนใช้งานจริงเพื่อให้พร้อมทั้งด้านเนื้อหาและการปฏิบัติตามข้อกำหนด</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2">
+                  {onboardingChecklist.map((item) => (
+                    <li key={item} className="flex items-start gap-2 text-sm text-slate-700">
+                      <span className="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 text-xs font-semibold text-emerald-700">✓</span>
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
 
-            <div className="rounded-2xl border border-slate-200 bg-slate-900 p-5 text-white">
-              <h2 className="text-lg font-semibold">Quick Ops</h2>
-              <p className="mt-1 text-sm text-slate-300">ลิงก์ทางลัดสำหรับทีมปฏิบัติการ</p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {opsLinks.map((link) => (
-                  <Link key={link.href} href={link.href} className="rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-100 hover:bg-slate-800">
-                    {link.label}
-                  </Link>
-                ))}
-              </div>
-            </div>
+            <Card tone="info">
+              <CardHeader>
+                <CardTitle>Compliance Notice</CardTitle>
+                <CardDescription>เพื่อความปลอดภัยของบัญชีและความโปร่งใสของผู้ติดตาม</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <p>• หลีกเลี่ยงการอ้างอิงสรรพคุณเกินจริงหรือข้อมูลที่ตรวจสอบไม่ได้</p>
+                <p>• เพิ่มคำชี้แจง Affiliate Disclosure ทุกคอนเทนต์ที่มีลิงก์</p>
+                <p>• ตรวจทานข้อมูลจาก OCR และ AI ก่อนบันทึกหรือโพสต์</p>
+                <StatusBadge label="โหมดปลอดภัยสำหรับการใช้งานจริง" tone="success" />
+              </CardContent>
+            </Card>
           </div>
 
           <div>
-            <h2 className="mb-3 text-lg font-semibold text-slate-900">โมดูลหลักสำหรับ Final Release</h2>
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-              <ModuleCard title="เพิ่มสินค้า" description="เพิ่มรายการสินค้าใหม่เข้าคลัง" href="/dashboard/products/new" />
-              <ModuleCard title="สร้างคอนเทนต์ AI" description="สร้างโพสต์สำหรับโซเชียลอย่างรวดเร็ว" href="/dashboard/generator" />
-              <ModuleCard title="OCR ตรวจจับข้อความ" description="อัปโหลดภาพสินค้าและตรวจสอบผลก่อนบันทึก" href="/dashboard/ocr" />
-              <ModuleCard title="HyperFrames Studio" description="สร้างวิดีโอโปรโมตพร้อมคิวเรนเดอร์" href="/dashboard/hyperframes" />
-              <ModuleCard title="เทมเพลตและ Prompt" description="จัดการแม่แบบคอนเทนต์ทุกแพลตฟอร์ม" href="/dashboard/templates" />
+            <h2 className="mb-3 text-lg font-semibold text-slate-900">ทางลัดการทำงาน</h2>
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {quickActions.map((action) => (
+                <ModuleCard key={action.href} title={action.title} description={action.description} href={action.href} />
+              ))}
             </div>
           </div>
 
           <div>
             <h2 className="mb-3 text-lg font-semibold text-slate-900">กิจกรรมล่าสุด</h2>
             {recent.length === 0 ? (
-              <EmptyState title="ยังไม่มีกิจกรรม" description="เมื่อมีการเพิ่มสินค้า สร้างคอนเทนต์ หรือเรนเดอร์วิดีโอ จะแสดงที่นี่" />
+              <EmptyState title="ยังไม่มีกิจกรรมล่าสุด" description="เมื่อมีการเพิ่มสินค้า สร้างคอนเทนต์ หรือเรนเดอร์วิดีโอ ระบบจะแสดงสรุปที่ปลอดภัยในส่วนนี้" tone="muted" />
             ) : (
-              <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                {recent.map((item, index) => (
-                  <div key={`${item.title}-${index}`} className="flex items-center justify-between border-b border-slate-100 py-2 last:border-none">
-                    <p className="text-sm text-slate-700">{item.title}</p>
-                    <p className="text-xs text-slate-400">{item.at}</p>
-                  </div>
-                ))}
-              </div>
+              <Card>
+                <CardContent>
+                  {recent.map((item, index) => (
+                    <div key={`${item.title}-${index}`} className="flex items-center justify-between border-b border-slate-100 py-2 last:border-none">
+                      <p className="text-sm text-slate-700">{item.title}</p>
+                      <p className="text-xs text-slate-400">{item.at}</p>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
             )}
           </div>
         </>
