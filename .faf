@@ -1,44 +1,115 @@
-faf_version: "0.1"
+faf_version: "0.2"
 project:
   name: "ZSP AI Tool"
+  slug: "zsp-aitool"
   owner: "ZeaZDev"
   repository: "cvsz/zsp-aitool"
-  type: "ai-tooling"
-  description: "ZSP AI Tool is an AI-native workspace for structured prompt packs, persistent project context, automation scaffolds, and full-stack app generation workflows."
+  type: "thai-first-affiliate-saas"
+  language_default: "th"
+  description: "Thai-first full-stack SaaS for Shopee Affiliate product capture, AI promotional content generation, export workflows, OCR, similar-product recommendations, affiliate link management, and HyperFrames video composition/render operations."
+  production_domain: "https://studio.zeaz.dev"
+
+product:
+  goals:
+    - "Help Shopee Affiliate users save and manage product information."
+    - "Generate reviewable AI promotional content for Facebook, Instagram, Threads, X, blogs, SEO articles, captions, and comment replies."
+    - "Support user-confirmed product collection through manual forms, URLs, extension payloads, OCR, and JSON import."
+    - "Generate deterministic HyperFrames promotional video compositions and safely manage render jobs."
+  modules:
+    - "Authentication"
+    - "Product library"
+    - "Affiliate link management"
+    - "Product import"
+    - "AI content generation"
+    - "Prompt templates"
+    - "Content history"
+    - "OCR extraction"
+    - "Similar products"
+    - "CSV/TXT/Markdown export"
+    - "Chrome Extension MV3"
+    - "HyperFrames Studio"
+    - "Render history"
+    - "Secure render downloads"
+    - "Worker watchdog"
+    - "Operator/Admin surfaces"
 
 architecture:
-  style: "ai-tooling-workspace"
+  style: "modular-nextjs-saas"
+  directories:
+    app_routes: "src/app"
+    api_routes: "src/app/api"
+    components: "src/components"
+    shared_lib: "src/lib"
+    services: "src/services"
+    schemas: "src/schemas"
+    prisma: "prisma"
+    extension: "extension"
+    ops_scripts: "scripts"
+    docs: "docs"
   documentation:
     - README.md
     - AGENTS.md
-    - docs/architecture.md
-    - docs/roadmap.md
-    - docs/prompts/README.md
-  prompt_sources:
-    - docs/prompts/zsp-aitool-step-by-step-th.md
-    - docs/prompts/zsp-aitool-full-source-en.md
+    - SECURITY.md
+    - CONTRIBUTING.md
+    - docs/hyperframes-render-worker.md
   automation:
-    - .github/workflows/ci.yml
+    - "package.json scripts"
+    - "scripts/health-zsp-aitool.sh"
+    - "scripts/fix-next-server-chunks.sh"
+    - "scripts/hyperframes/*"
+    - ".github/workflows/*"
 
 stack:
-  summary: "Next.js,TypeScript,Tailwind CSS,PostgreSQL,Prisma,Chrome Extension MV3,Docker Compose,GitHub Actions"
+  frontend:
+    - "Next.js App Router"
+    - "React"
+    - "TypeScript"
+    - "Tailwind CSS"
+  backend:
+    - "Next.js API routes"
+    - "Prisma"
+    - "PostgreSQL"
+    - "Zod"
+  testing:
+    - "Vitest"
+    - "Testing Library"
+  integrations:
+    - "OpenAI-compatible AI provider abstraction"
+    - "Pluggable OCR provider abstraction"
+    - "Chrome Extension Manifest V3"
+    - "HyperFrames CLI / worker"
+  operations:
+    - "Docker Compose"
+    - "systemd on production VM"
+    - "Cloudflare Tunnel / edge routing"
 
 conventions:
   commit_style: "conventional commits"
-  branch_strategy: "main + feature branches"
-  documentation: "README + AGENTS + docs + .faf"
-  prompt_policy: "Project prompts live in docs/prompts and must stay aligned with architecture."
-  pull_requests: "small, reviewed, and linked to issues when possible"
+  branch_strategy: "main + focused feature branches"
+  documentation: "README + AGENTS + SECURITY + CONTRIBUTING + docs + .faf"
+  validation: "python3 -m json.tool package.json, npm ci, prisma generate/validate, typecheck, test, build, health"
+  ui_language: "Thai-first user-facing interface"
+  code_language: "English technical identifiers"
+  pull_requests: "small, reviewed, tested, and scoped"
 
 constraints:
-  - "Keep project documentation aligned with implementation."
-  - "Keep generated and temporary files out of version control."
-  - "Review production-impacting changes before merge."
-  - "Keep public repository content professional and accurate."
+  - "Do not bypass CAPTCHA, login walls, Shopee anti-bot systems, or private/undocumented Shopee endpoints."
+  - "Do not automate mass scraping."
+  - "Product import must rely on user-provided data, official APIs where configured, or visible page data captured after user confirmation."
+  - "Do not generate fake reviews or unsupported product claims."
+  - "Include affiliate disclosure where relevant."
+  - "Require auth and user/org scoping for user-facing APIs."
+  - "Do not expose secrets, DATABASE_URL, tokens, stack traces, outputPath, /var/lib, or internal render paths."
+  - "Do not execute arbitrary user HTML or use dangerouslySetInnerHTML for user-controlled content."
+  - "Do not run npm audit fix --force."
+  - "Do not upgrade Next.js or Prisma major versions unless explicitly requested."
+  - "Keep HyperFrames rendering disabled in Codex/container environments unless mocked by tests."
+  - "Do not start, stop, enable, or disable systemd services from Codex or UI."
+  - "Use prisma migrate deploy, not prisma migrate dev, on production."
 
 goals:
-  - "Provide a professional AI tooling repository for ZSP workflows."
-  - "Support AI-assisted development through persistent project context."
-  - "Store full project prompt content in the repository."
-  - "Maintain clear architecture, security, and contribution standards."
-
+  - "Keep the repository installable, typecheckable, testable, buildable, and production-deployable."
+  - "Maintain secure tenant/org isolation across products, content, exports, and render jobs."
+  - "Provide professional Thai-first SaaS UX with safe admin/operator surfaces."
+  - "Keep HyperFrames worker operations deterministic, gated, observable, and recoverable."
+  - "Keep documentation and agent instructions aligned with implementation."
