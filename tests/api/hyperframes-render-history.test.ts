@@ -30,6 +30,15 @@ describe("hyperframes render history", () => {
     expect(body.data.items[0].thumbnailUrl).toContain("/thumbnail");
   });
 
+  it("returns 422 on invalid history query", async () => {
+    vi.spyOn(auth, "getSessionFromRequest").mockReturnValueOnce({ userId: "u1", email: "x@y.com" });
+    const res = await historyGet(new Request("http://localhost/api/hyperframes/render/history?limit=0") as never);
+    const body = await res.json();
+    expect(res.status).toBe(422);
+    expect(body.ok).toBe(false);
+    expect(body.error.code).toBe("INVALID_QUERY");
+  });
+
   it("cancel cross-user returns 404", async () => {
     vi.spyOn(auth, "getSessionFromRequest").mockReturnValueOnce({ userId: "u1", email: "x@y.com" });
     const res = await cancelPost(new Request("http://localhost", { method: "POST" }) as never, { params: Promise.resolve({ id: "b1" }) });
