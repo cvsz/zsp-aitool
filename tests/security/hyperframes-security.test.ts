@@ -58,6 +58,7 @@ describe("hyperframes security regression suite", () => {
     expect(res.status).toBe(404);
   });
 
+
   it("returns generic not found and does not leak output paths", async () => {
     vi.spyOn(auth, "getSessionFromRequest").mockReturnValueOnce({ userId: "u1", email: "u1@a.com" });
     mocks.findFirst.mockResolvedValueOnce({ id: "job-3", userId: "u1", orgId: null, status: "COMPLETED", outputPath: "/safe/out/private.mp4", deletedAt: null });

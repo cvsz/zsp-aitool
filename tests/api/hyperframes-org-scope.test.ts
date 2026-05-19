@@ -25,7 +25,7 @@ describe("hyperframes org scope", () => {
   it("non-member blocked", async () => {
     vi.spyOn(auth, "getSessionFromRequest").mockReturnValueOnce({ userId: "u1", email: "x@y.com" });
     const res = await historyGet(new Request("http://localhost/api/hyperframes/render/history?orgId=o2") as never);
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(404);
   });
 
   it("viewer cannot cancel", async () => {

@@ -15,7 +15,7 @@ export const POST = withAuth(async (request, context: { params: Promise<{ id: st
   const { id } = await context.params;
   const orgId = new URL(request.url).searchParams.get("orgId");
   const scope = await resolveScope(request.auth.userId, orgId);
-  if (!scope) return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Organization access denied" } }, { status: 403 });
+  if (!scope) return NextResponse.json({ ok: false, error: { code: "NOT_FOUND", message: "Render job not found" } }, { status: 404 });
 
   const existing = await prisma.hyperFrameRenderJob.findFirst({ where: scopedRenderJobWhere(scope, { id }) });
   if (!existing) return NextResponse.json({ ok: false, error: { code: "NOT_FOUND", message: "Render job not found" } }, { status: 404 });
