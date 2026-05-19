@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { usePathname } from "next/navigation";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 const sectionTitles: { prefix: string; title: string; subtitle: string }[] = [
   { prefix: "/dashboard/admin", title: "Admin Console", subtitle: "ศูนย์ควบคุมและตรวจสอบระบบ" },
@@ -26,7 +27,7 @@ export function Header() {
   const section = useMemo(() => sectionTitles.find((item) => pathname === item.prefix || pathname.startsWith(`${item.prefix}/`)) ?? sectionTitles[sectionTitles.length - 1], [pathname]);
 
   return (
-    <header className="sticky top-0 z-20 border-b border-white/70 bg-white/80 px-4 py-3 shadow-sm backdrop-blur-xl sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-20 border-b border-white/70 bg-white/80 dark:border-slate-800 dark:bg-slate-950/90 px-4 py-3 shadow-sm backdrop-blur-xl sm:px-6 lg:px-8">
       <div className="mx-auto flex max-w-7xl flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">ZSP Affiliate SaaS</p>
@@ -39,6 +40,7 @@ export function Header() {
             <input placeholder="ค้นหาโมดูล (เร็ว ๆ นี้)" className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-4 focus:ring-slate-200 sm:w-64" />
           </label>
           <StatusBadge label="Production-safe" tone="success" />
+          <ThemeToggle />
           <button className="rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg">อัปเกรดแพ็กเกจ</button>
         </div>
       </div>
