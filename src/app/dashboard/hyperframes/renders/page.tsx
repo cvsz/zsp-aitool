@@ -1,44 +1,40 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { RenderJobCard, type RenderHistoryItem } from "@/components/hyperframes/RenderJobCard";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { RenderHistoryTable } from "@/components/hyperframes/RenderHistoryTable";
+import { HyperFramesStatusGrid } from "@/components/hyperframes/HyperFramesStatusGrid";
 
-type HistoryResponse = { ok: boolean; data?: { items: RenderHistoryItem[]; pageInfo: { hasMore: boolean; nextCursor: string | null }; scope?: { orgId: string | null; role: string | null } }; error?: { message: string } };
+type RenderHistoryItem = Parameters<typeof RenderHistoryTable>[0]["items"][number];
+type HistoryResponse = { ok: boolean; data?: { items: RenderHistoryItem[]; pageInfo: { hasMore: boolean; nextCursor: string | null } }; error?: { message: string } };
+const activeStatuses = new Set(["PENDING", "RUNNING"]);
 
 export default function HyperFramesRendersPage() {
   const [items, setItems] = useState<RenderHistoryItem[]>([]);
   const [orgId, setOrgId] = useState("");
+  const [status, setStatus] = useState("ALL");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
-    setLoading(true);
-    setError("");
+    setLoading(true); setError("");
     const params = new URLSearchParams();
     if (orgId.trim()) params.set("orgId", orgId.trim());
+    if (status !== "ALL") params.set("status", status);
     const res = await fetch(`/api/hyperframes/render/history${params.size ? `?${params}` : ""}`, { cache: "no-store" });
     const data = (await res.json()) as HistoryResponse;
-    if (!data.ok) setError(data.error?.message ?? "โหลดประวัติไม่สำเร็จ");
-    else setItems(data.data?.items ?? []);
+    if (!data.ok) setError(data.error?.message ?? "โหลดประวัติไม่สำเร็จ"); else setItems(data.data?.items ?? []);
     setLoading(false);
-  }, [orgId]);
+  }, [orgId, status]);
 
+  useEffect(() => { void load(); }, [load]);
+  const hasActiveJobs = useMemo(() => items.some((item) => activeStatuses.has(item.status)), [items]);
   useEffect(() => {
-    void load();
-    let pollCount = 0;
-    const maxPolls = 10;
-    const timer = window.setInterval(() => {
-      pollCount += 1;
-      if (pollCount > maxPolls) {
-        window.clearInterval(timer);
-        return;
-      }
-      void load();
-    }, 10000);
+    if (!hasActiveJobs) return;
+    const timer = window.setInterval(() => void load(), 10000);
     return () => window.clearInterval(timer);
-  }, [load]);
+  }, [hasActiveJobs, load]);
 
-  async function mutate(id: string, action: "cancel" | "retry") {
+  async function mutate(id: string, action: "cancel" | "retry") { if (action === "cancel" && !window.confirm("ยืนยันยกเลิกงานนี้ใช่หรือไม่?")) return;
     const params = orgId.trim() ? `?orgId=${encodeURIComponent(orgId.trim())}` : "";
     const res = await fetch(`/api/hyperframes/render/${id}/${action}${params}`, { method: "POST" });
     const data = await res.json();
@@ -46,28 +42,7 @@ export default function HyperFramesRendersPage() {
     await load();
   }
 
-  return (
-    <main className="mx-auto max-w-5xl space-y-6 p-6">
-      <header className="space-y-2">
-        <h1 className="text-2xl font-bold text-slate-900">ประวัติ HyperFrames renders</h1>
-        <p className="text-sm text-slate-600">ดูประวัติงานส่วนตัว หรือกรอก Org ID เพื่อดูประวัติที่แชร์ในทีมตามสิทธิ์สมาชิก</p>
-      </header>
+  const stats = useMemo(() => [{ label: "งานทั้งหมด", value: String(items.length) }, { label: "กำลังรัน/รอคิว", value: String(items.filter((x) => activeStatuses.has(x.status)).length), hint: "เปิด polling อัตโนมัติเฉพาะเมื่อมีงาน active" }, { label: "สำเร็จ", value: String(items.filter((x) => x.status === "COMPLETED").length) }, { label: "ล้มเหลว", value: String(items.filter((x) => x.status === "FAILED").length) }], [items]);
 
-      <section className="grid gap-2 rounded-lg border border-indigo-100 bg-indigo-50 p-4 text-sm text-indigo-900">
-        <p className="font-semibold">โควต้ารายเดือนคงเหลือ</p>
-        <p>ตรวจสอบโควต้าและพื้นที่จัดเก็บผ่าน /api/hyperframes/quota ก่อนสั่งเรนเดอร์เพิ่ม หากต้องการใช้งานมากขึ้นสามารถกดอัปเกรดแพ็กเกจได้</p>
-        <a className="font-semibold underline" href="/dashboard/settings/billing">อัปเกรดแพ็กเกจ</a>
-      </section>
-      <section className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 sm:flex-row sm:items-end">
-        <label className="flex-1 text-sm font-medium text-slate-700">Org ID (ไม่บังคับ)<input className="mt-1 w-full rounded border border-slate-300 px-3 py-2" value={orgId} onChange={(event) => setOrgId(event.target.value)} placeholder="org_xxx" /></label>
-        <button className="rounded bg-slate-900 px-4 py-2 text-sm font-semibold text-white" onClick={() => void load()}>โหลดประวัติ</button>
-      </section>
-      {error ? <div className="rounded border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{error}</div> : null}
-      {loading ? <div className="rounded border border-slate-200 p-4 text-sm text-slate-600">กำลังโหลด...</div> : null}
-      {!loading && items.length === 0 ? <div className="rounded border border-slate-200 p-4 text-sm text-slate-600">ยังไม่มีงานเรนเดอร์</div> : null}
-      <section className="grid gap-4">
-        {items.map((item) => <RenderJobCard key={item.id} item={item} onCancel={(id) => void mutate(id, "cancel")} onRetry={(id) => void mutate(id, "retry")} />)}
-      </section>
-    </main>
-  );
+  return <main className="mx-auto max-w-6xl space-y-6 p-6"><header className="space-y-1"><h1 className="text-2xl font-bold text-slate-900">ประวัติการเรนเดอร์ HyperFrames</h1><p className="text-sm text-slate-600">ปลอดภัย: ไม่แสดง local path และดาวน์โหลดผ่าน API route เท่านั้น</p></header><HyperFramesStatusGrid cards={stats} /><section className="grid gap-2 rounded-lg border border-indigo-100 bg-indigo-50 p-4 text-sm text-indigo-900"><p className="font-semibold">โควต้ารายเดือนคงเหลือ</p><p>ตรวจสอบโควต้าและพื้นที่จัดเก็บผ่าน /api/hyperframes/quota ก่อนสั่งเรนเดอร์เพิ่ม หากต้องการใช้งานมากขึ้นสามารถกดอัปเกรดแพ็กเกจได้</p><a className="font-semibold underline" href="/dashboard/settings/billing">อัปเกรดแพ็กเกจ</a></section><section className="grid gap-3 rounded-lg border border-slate-200 bg-white p-4 sm:grid-cols-3"><label className="text-sm font-medium text-slate-700">Org ID<input className="mt-1 w-full rounded border border-slate-300 px-3 py-2" value={orgId} onChange={(e) => setOrgId(e.target.value)} /></label><label className="text-sm font-medium text-slate-700">สถานะ<select className="mt-1 w-full rounded border border-slate-300 px-3 py-2" value={status} onChange={(e) => setStatus(e.target.value)}><option value="ALL">ทั้งหมด</option><option value="PENDING">รอคิว</option><option value="RUNNING">กำลังเรนเดอร์</option><option value="COMPLETED">สำเร็จ</option><option value="FAILED">ล้มเหลว</option><option value="CANCELLED">ยกเลิก</option></select></label><button className="self-end rounded bg-slate-900 px-4 py-2 text-sm font-semibold text-white" onClick={() => void load()}>รีเฟรช</button></section>{error ? <div className="rounded border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{error}</div> : null}{loading ? <div className="rounded border border-slate-200 p-4 text-sm text-slate-600">กำลังโหลด...</div> : <RenderHistoryTable items={items} onCancel={(id) => void mutate(id, "cancel")} onRetry={(id) => void mutate(id, "retry")} />}</main>;
 }
