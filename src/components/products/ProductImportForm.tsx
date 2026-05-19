@@ -1,7 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
 
-type ImportMethod = "manual" | "url" | "extension" | "ocr" | "json";
+type ImportMethod = "manual" | "url" | "extension" | "ocr" | "json" | "shopee-open-api";
 
 export function ProductImportForm() {
   const [method, setMethod] = useState<ImportMethod>("url");
@@ -14,13 +14,13 @@ export function ProductImportForm() {
 
   return <div className="space-y-4 rounded-xl border bg-white p-4">
     <h2 className="text-lg font-semibold">นำเข้าสินค้า</h2>
-    <p className="text-sm text-slate-600">รองรับ Manual, URL, Extension Payload, OCR และ JSON โดยต้องให้ผู้ใช้ตรวจสอบและแก้ไขก่อนบันทึกเสมอ</p>
+    <p className="text-sm text-slate-600">รองรับ Manual, URL, Extension Payload, OCR, JSON และ Shopee Open API (ทางเลือก) โดยต้องให้ผู้ใช้ตรวจสอบและแก้ไขก่อนบันทึกเสมอ</p>
     <p className="rounded-lg bg-amber-50 p-3 text-xs text-amber-800">ข้อกำหนดความปลอดภัย: ระบบไม่สนับสนุนการ bypass CAPTCHA, login wall, anti-bot หรือ private endpoints และไม่ทำ mass scraping</p>
 
     <p className="rounded-lg bg-blue-50 p-3 text-xs text-blue-800">Shopee Open API (official) เป็นตัวเลือกเสริม และปิดไว้เป็นค่าเริ่มต้นจนกว่าผู้ดูแลระบบจะตั้งค่า Sandbox/Live ตามเอกสารทางการครบถ้วน ระบบนี้ไม่รองรับการดึงข้อมูลแบบ scraping หรือ bypass ใด ๆ</p>
 
     <div className="flex flex-wrap gap-2">
-      {(["manual", "url", "extension", "ocr", "json"] as ImportMethod[]).map((m) => (
+      {(["manual", "url", "extension", "ocr", "json", "shopee-open-api"] as ImportMethod[]).map((m) => (
         <button key={m} type="button" onClick={() => setMethod(m)} className={`rounded-lg border px-3 py-1.5 text-sm ${method === m ? "bg-slate-900 text-white" : "bg-white"}`}>
           {m.toUpperCase()}
         </button>
@@ -41,6 +41,7 @@ export function ProductImportForm() {
     {method === "manual" ? <p className="rounded border-dashed border p-3 text-sm">ใช้ฟอร์ม Manual ด้านบนเพื่อกรอกข้อมูลเอง</p> : null}
     {method === "extension" ? <p className="rounded border-dashed border p-3 text-sm">รองรับข้อมูลจาก Chrome Extension หลังผู้ใช้กดยืนยันการส่งข้อมูล</p> : null}
     {method === "ocr" ? <p className="rounded border-dashed border p-3 text-sm">ไปที่หน้า OCR เพื่ออัปโหลดภาพและตรวจทานข้อมูลก่อนบันทึก</p> : null}
+    {method === "shopee-open-api" ? <p className="rounded border-dashed border p-3 text-sm">โหมด Shopee Open API เป็นทางเลือกและปิดไว้โดยค่าเริ่มต้น ใช้ได้เฉพาะการเชื่อมต่อทางการที่ตั้งค่าโดยผู้ดูแลระบบ และผู้ใช้ต้องตรวจทาน/แก้ไขข้อมูลก่อนบันทึกทุกครั้ง (ไม่มีการ scraping หรือ bypass)</p> : null}
 
     <div className="rounded-lg border bg-slate-50 p-3">
       <h3 className="font-medium">Review before save</h3>
