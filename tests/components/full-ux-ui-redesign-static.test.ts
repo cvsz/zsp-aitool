@@ -33,6 +33,9 @@ const dashboardUiFiles = [
   "src/components/ui/AlertBanner.tsx",
   "src/components/ui/EmptyState.tsx",
   "src/components/ui/Button.tsx",
+  "src/components/ui/LoadingSpinner.tsx",
+  "src/components/ui/Toast.tsx",
+  "src/components/ui/StatusBadge.tsx",
 ];
 
 const forbiddenTokens = ["outputPath", "/var/lib", "DATABASE_URL", "dangerouslySetInnerHTML"];
@@ -67,6 +70,20 @@ describe("full ux/ui redesign static safety", () => {
     const source = read("src/app/dashboard/admin/page.tsx");
     expect(source).toContain("AdminShell");
     expect(source).toContain("requireAdminAccess");
+  });
+
+
+
+  it("keeps Button focus-visible ring styles", () => {
+    const source = read("src/components/ui/Button.tsx");
+    expect(source).toContain("focus-visible:ring-2");
+    expect(source).toContain("focus-visible:ring-offset-2");
+  });
+
+  it("keeps LoadingSpinner accessible status semantics", () => {
+    const source = read("src/components/ui/LoadingSpinner.tsx");
+    expect(source).toContain('role="status"');
+    expect(source).toContain("aria-label");
   });
 
   it("keeps HyperFrames render card on next/image", () => {
