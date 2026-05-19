@@ -70,14 +70,17 @@ describe("hyperframes script api", () => {
     const body = await res.json();
     expect(body.data.renderTriggered).toBe(false);
     expect(body.data.scenes[0].text).not.toContain("<script>");
-    expect(body.data.scenes.map((x: { text: string }) => x.text)).toEqual(["safe", "a", "b"]);
+    expect(body.data.scenes[0].text).toContain("&lt;script&gt;");
+    expect(body.data.scenes.map((x: { text: string }) => x.text)).toEqual(["&lt;script&gt;x&lt;/script&gt;safe", "a", "b"]);
   });
 
-  it("invalid beat rejected", async () => {
+  it("html-like beat text is escaped", async () => {
     vi.mocked(getSessionFromRequest).mockReturnValueOnce({ userId: "u1", email: "u@x.com", exp: 1_999_999_999 });
     vi.mocked(productService.getById).mockResolvedValueOnce({ id: "p1" } as never);
     const res = await postToComposition(new NextRequest("http://localhost/api/hyperframes/script-to-composition", { method: "POST", body: JSON.stringify({ productId: "p1", aspectRatio: "9:16", durationSeconds: 15, beats: [{ atSecond: 0, text: "<script>alert(1)</script>" }] }) }) as never);
-    expect(res.status).toBe(422);
+    const body = await res.json();
+    expect(res.status).toBe(200);
+    expect(body.data.scenes[0].text).toBe("&lt;script&gt;alert(1)&lt;/script&gt;");
   });
 
   it("composition cross-user blocked", async () => {

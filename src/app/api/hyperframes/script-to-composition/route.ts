@@ -19,11 +19,21 @@ const bodySchema = z.object({
 });
 
 function sanitizeText(text: string): string {
-  return text
-    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "")
-    .replace(/<[^>]+>/g, "")
-    .replace(/[\u0000-\u001F\u007F]/g, "")
-    .trim();
+  const withoutControlChars = Array.from(text)
+    .filter((char) => {
+      const code = char.charCodeAt(0);
+      return !(code <= 0x1f || code === 0x7f);
+    })
+    .join("");
+
+  const escaped = withoutControlChars
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+
+  return escaped.trim();
 }
 
 export const POST = withAuth(async (request) => {
