@@ -1,4 +1,5 @@
-import { execFile, execSync } from "node:child_process";
+import { execFile } from "node:child_process";
+import { statfsSync } from "node:fs";
 import { mkdir, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -20,11 +21,12 @@ type MaybeExtractThumbnail = (opts: { ffmpegBin: string; outputPath: string; thu
 type ProcessOnePendingJobOptions = { runRenderCommand?: RenderCommandRunner; maybeExtractThumbnail?: MaybeExtractThumbnail; now?: () => Date; workerId?: string };
 
 function getFreeMb(targetPath: string): number {
-  const out = execSync(`df -Pk ${JSON.stringify(targetPath)}`, { encoding: "utf8" }).trim();
-  const cols = (out.split("\n").filter(Boolean).at(-1) ?? "").trim().split(/\s+/);
-  const available = Number.parseInt(cols.length >= 4 ? cols[3] : cols.at(-1) ?? "", 10);
-  if (!Number.isFinite(available) || available <= 0) throw new Error("disk free check failed");
-  return cols.length === 1 ? available : Math.floor(available / 1024);
+  const stats = statfsSync(targetPath);
+  const freeBytes = Number(stats.bavail) * Number(stats.bsize);
+  if (!Number.isFinite(freeBytes) || freeBytes <= 0) {
+    throw new Error("disk free check failed");
+  }
+  return Math.floor(freeBytes / 1048576);
 }
 
 async function claim(workerId: string, config: ReturnType<typeof getHyperFramesRenderConfig>): Promise<HyperFrameRenderJob | null> {
