@@ -16,6 +16,9 @@ export default async function AdminAnalyticsPage() {
           <article className="rounded-2xl border p-4">AI generations: {summary?.metrics.aiGenerationsCount ?? "-"}</article>
           <article className="rounded-2xl border p-4">First AI conversion: {summary?.metrics.firstAiGenerationConversionPercent ?? "-"}%</article>
           <article className="rounded-2xl border p-4">Feedback submissions: {summary?.metrics.feedbackSubmissionsCount ?? "-"}</article>
+          <article className="rounded-2xl border p-4">Export actions: {summary?.metrics.exportsActionsCount ?? "-"}</article>
+          <article className="rounded-2xl border p-4">HyperFrames attempts: {summary?.metrics.hyperframesRenderAttemptsCount ?? "-"}</article>
+          <article className="rounded-2xl border p-4">HyperFrames completed: {summary?.metrics.hyperframesRenderCompletionsCount ?? "-"}</article>
         </div>
       </div>
     </AdminShell>
