@@ -11,33 +11,13 @@ export const HYPERFRAME_MIN_DURATION_SECONDS = 3;
 export const HYPERFRAME_MAX_DURATION_SECONDS = 60;
 export const HYPERFRAME_MAX_TEXT_LENGTH = 1200;
 
-export type HyperFrameCompositionRequest = {
-  subtitles?: HyperFrameSubtitle[];
-  burnedInCaptions?: boolean;
-  productId: string;
-  platform: HyperFramePlatform;
-  aspectRatio: HyperFrameAspectRatio;
-  durationSeconds: number;
-  caption?: string;
-  script?: string;
-  watermark?: HyperFrameWatermarkInput;
-};
-
-export const hyperFrameWatermarkPositions = [
-  "top-left",
-  "top-right",
-  "bottom-left",
-  "bottom-right",
-  "center",
-] as const;
-
+export const hyperFrameWatermarkPositions = ["top-left", "top-right", "bottom-left", "bottom-right", "center"] as const;
 export type HyperFrameWatermarkPosition = (typeof hyperFrameWatermarkPositions)[number];
 
 export type HyperFrameWatermarkInput = {
   text?: string;
   logoUrl?: string;
   position?: HyperFrameWatermarkPosition;
-  voiceover?: HyperframesVoiceoverMetadata;
 };
 
 export type HyperFrameBrandKit = {
@@ -46,6 +26,19 @@ export type HyperFrameBrandKit = {
   logoUrl?: string | null;
   watermarkText?: string | null;
   defaultCTA?: string | null;
+};
+
+export type HyperFrameCompositionRequest = {
+  productId: string;
+  platform: HyperFramePlatform;
+  aspectRatio: HyperFrameAspectRatio;
+  durationSeconds: number;
+  caption?: string;
+  script?: string;
+  subtitles?: HyperFrameSubtitle[];
+  burnedInCaptions?: boolean;
+  watermark?: HyperFrameWatermarkInput;
+  voiceover?: HyperframesVoiceoverMetadata;
 };
 
 export type HyperFrameCompositionProduct = {
@@ -70,6 +63,6 @@ export type HyperFrameCompositionResult = {
     hasAffiliateDisclosure: boolean;
     watermarkEnabled: boolean;
     watermarkPosition: HyperFrameWatermarkPosition | null;
-    voiceover: HyperFrameCompositionRequest["voiceover"] | null;
+    voiceover: HyperframesVoiceoverMetadata | null;
   };
 };

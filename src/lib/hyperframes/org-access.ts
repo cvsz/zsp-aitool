@@ -1,7 +1,8 @@
 import { OrgRole, type Prisma } from "@prisma/client";
+
 import { prisma } from "@/lib/prisma";
 
-export type HyperFramesScope = { userId: string; orgId?: string | null; role?: OrgRole | null };
+export type HyperFramesScope = { userId: string; orgId: string | null; role: OrgRole | null };
 
 export async function resolveScope(userId: string, orgId?: string | null): Promise<HyperFramesScope | null> {
   if (!orgId) return { userId, orgId: null, role: null };
@@ -10,9 +11,14 @@ export async function resolveScope(userId: string, orgId?: string | null): Promi
   return { userId, orgId, role: membership.role };
 }
 
+export function scopedRenderJobWhere(scope: HyperFramesScope, extra: Prisma.HyperFrameRenderJobWhereInput = {}): Prisma.HyperFrameRenderJobWhereInput {
+  return scope.orgId
+    ? { ...extra, orgId: scope.orgId, deletedAt: null }
+    : { ...extra, userId: scope.userId, orgId: null, deletedAt: null };
+}
+
 export function historyWhere(scope: HyperFramesScope): Prisma.HyperFrameRenderJobWhereInput {
-  if (scope.orgId) return { orgId: scope.orgId, deletedAt: null };
-  return { userId: scope.userId, orgId: null, deletedAt: null };
+  return scopedRenderJobWhere(scope);
 }
 
 export function canManage(scope: HyperFramesScope): boolean {

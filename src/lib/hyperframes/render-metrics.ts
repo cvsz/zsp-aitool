@@ -1,10 +1,6 @@
-import { RenderJobStatus } from "@prisma/client";
-
-import { prisma } from "@/lib/prisma";
-import { getHyperFramesRenderConfig } from "@/lib/hyperframes/render-config";
-import { getHyperFramesOperatorStatus } from "@/lib/hyperframes/operator-status";
-import { statfsSync } from "node:fs";
 import { execSync } from "node:child_process";
+import { statfsSync } from "node:fs";
+import { RenderJobStatus } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { getHyperFramesRenderConfig } from "@/lib/hyperframes/render-config";
@@ -17,64 +13,38 @@ export type HyperFramesRenderMetrics = {
   completedLast24h: number;
   failedLast24h: number;
   freeDiskMb: number | null;
+  diskFreeMb: number | null;
   serviceActive: boolean | null;
 };
 
 export function isHyperFramesMetricsEnabled(): boolean {
   return process.env.HYPERFRAMES_METRICS_ENABLED === "true";
 }
-
-export async function getHyperFramesRenderMetrics(): Promise<HyperFramesRenderMetrics> {
-  const config = getHyperFramesRenderConfig();
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
-
-  const [pending, running, completedTotal, failedTotal, completedLast24h, failedLast24h, operatorStatus] = await Promise.all([
-  diskFreeMb: number | null;
-  serviceActive: boolean | null;
-};
-
-export function isRenderMetricsEnabled(): boolean {
-  return process.env.HYPERFRAMES_METRICS_ENABLED === "true";
-}
+export const isRenderMetricsEnabled = isHyperFramesMetricsEnabled;
 
 export function hasRenderMetricsAccess(input: { email?: string | null; internalToken?: string | null }): boolean {
-  const internalToken = process.env.HYPERFRAMES_INTERNAL_TOKEN;
-  if (internalToken && input.internalToken && input.internalToken === internalToken) {
-    return true;
-  }
-
+  const expected = process.env.HYPERFRAMES_INTERNAL_TOKEN;
+  if (expected && input.internalToken === expected) return true;
   const email = (input.email ?? "").trim().toLowerCase();
   if (!email) return false;
-
-  const allowlist = (process.env.HYPERFRAMES_OPERATOR_EMAILS ?? "")
-    .split(",")
-    .map((value) => value.trim().toLowerCase())
-    .filter(Boolean);
-
-  return allowlist.includes(email);
+  return (process.env.HYPERFRAMES_OPERATOR_EMAILS ?? "").split(",").map((value) => value.trim().toLowerCase()).filter(Boolean).includes(email);
 }
 
 function getDiskFreeMb(pathname: string): number | null {
   try {
     const stats = statfsSync(pathname);
     return Math.floor((Number(stats.bavail) * Number(stats.bsize)) / (1024 * 1024));
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 }
 
 function getServiceActive(): boolean | null {
-  try {
-    return execSync("systemctl is-active zsp-hyperframes-worker", { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim() === "active";
-  } catch {
-    return null;
-  }
+  try { return execSync("systemctl is-active zsp-hyperframes-worker", { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim() === "active"; }
+  catch { return null; }
 }
 
-export async function getRenderMetrics(): Promise<HyperFramesRenderMetrics> {
+export async function getHyperFramesRenderMetrics(): Promise<HyperFramesRenderMetrics> {
   const config = getHyperFramesRenderConfig();
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
-
   const [pending, running, completedTotal, failedTotal, completedLast24h, failedLast24h] = await Promise.all([
     prisma.hyperFrameRenderJob.count({ where: { status: RenderJobStatus.PENDING, deletedAt: null } }),
     prisma.hyperFrameRenderJob.count({ where: { status: RenderJobStatus.RUNNING, deletedAt: null } }),
@@ -82,24 +52,15 @@ export async function getRenderMetrics(): Promise<HyperFramesRenderMetrics> {
     prisma.hyperFrameRenderJob.count({ where: { status: RenderJobStatus.FAILED, deletedAt: null } }),
     prisma.hyperFrameRenderJob.count({ where: { status: RenderJobStatus.COMPLETED, completedAt: { gte: since }, deletedAt: null } }),
     prisma.hyperFrameRenderJob.count({ where: { status: RenderJobStatus.FAILED, failedAt: { gte: since }, deletedAt: null } }),
-    getHyperFramesOperatorStatus(),
   ]);
-
-  return {
-    pending,
-    running,
-    completedTotal,
-    failedTotal,
-    completedLast24h,
-    failedLast24h,
-    freeDiskMb: operatorStatus.diskFreeMb,
-    serviceActive: operatorStatus.serviceActive,
-  };
+  const diskFreeMb = getDiskFreeMb(config.outputDir);
+  return { pending, running, completedTotal, failedTotal, completedLast24h, failedLast24h, freeDiskMb: diskFreeMb, diskFreeMb, serviceActive: getServiceActive() };
 }
+export const getRenderMetrics = getHyperFramesRenderMetrics;
 
 export function toPrometheusMetrics(metrics: HyperFramesRenderMetrics): string {
   const serviceActive = metrics.serviceActive == null ? -1 : metrics.serviceActive ? 1 : 0;
-  const lines = [
+  return [
     "# HELP hyperframes_pending_jobs Current number of pending HyperFrames jobs",
     "# TYPE hyperframes_pending_jobs gauge",
     `hyperframes_pending_jobs ${metrics.pending}`,
@@ -124,11 +85,6 @@ export function toPrometheusMetrics(metrics: HyperFramesRenderMetrics): string {
     "# HELP hyperframes_service_active Systemd worker active status (1=true,0=false,-1=unknown)",
     "# TYPE hyperframes_service_active gauge",
     `hyperframes_service_active ${serviceActive}`,
-  ];
-
-  return `${lines.join("\n")}\n`;
-}
-    diskFreeMb: getDiskFreeMb(config.outputDir),
-    serviceActive: getServiceActive(),
-  };
+    "",
+  ].join("\n");
 }
