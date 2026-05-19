@@ -50,7 +50,9 @@
     "hyperframes:worker:install-alert-timer": "bash scripts/hyperframes/install-worker-alert-timer.sh",
     "hyperframes:cleanup:install-timer": "bash scripts/hyperframes/install-cleanup-timer.sh",
     "hyperframes:cleanup:disable-timer": "bash scripts/hyperframes/disable-cleanup-timer.sh",
-    "hyperframes:cleanup:status": "bash scripts/hyperframes/cleanup-timer-status.sh"
+    "hyperframes:cleanup:status": "bash scripts/hyperframes/cleanup-timer-status.sh",
+    "post-launch:status-summary": "bash scripts/post-launch/status-summary.sh",
+    "post-launch:smoke-routes": "bash scripts/post-launch/smoke-routes.sh"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
@@ -78,6 +80,10 @@
     "typescript": "^5.5.4",
     "vitest": "^4.1.6"
   },
-  "prisma": { "seed": "tsx prisma/seed.ts" },
-  "overrides": { "postcss": "$postcss" }
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "overrides": {
+    "postcss": "$postcss"
+  }
 }
