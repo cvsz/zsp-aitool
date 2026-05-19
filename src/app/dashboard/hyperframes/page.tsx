@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { HyperFramesStatusGrid } from "@/components/hyperframes/HyperFramesStatusGrid";
 import { OperatorWarningBanner } from "@/components/hyperframes/OperatorWarningBanner";
+import { HyperframesTemplateBrowser } from "@/components/hyperframes/HyperframesTemplateBrowser";
+import type { HyperframesTemplatePreset } from "@/lib/hyperframes/template-marketplace";
 
 const ASPECT_RATIO_OPTIONS = ["16:9", "9:16", "1:1"] as const;
 const PLATFORM_OPTIONS = ["facebook", "instagram", "threads", "x", "blog"] as const;
@@ -44,6 +46,15 @@ export default function HyperFramesPage() {
     { label: "Duration", value: `${durationSeconds}s`, tone: "info" as const, hint: "จำกัดตาม policy ฝั่ง API" },
   ];
 
+
+  function applyTemplate(preset: HyperframesTemplatePreset) {
+    setPlatform(preset.defaultPlatform);
+    setAspectRatio(preset.defaultAspectRatio);
+    setDurationSeconds(preset.defaultDurationSeconds);
+    setCaption(preset.scriptSeed);
+    setMessage(`เลือก template: ${preset.title}`);
+  }
+
   async function enqueueRender() {
     setIsRendering(true);
     setMessage("");
@@ -70,6 +81,8 @@ export default function HyperFramesPage() {
 
       <OperatorWarningBanner items={["ต้องมี Affiliate disclosure ทุกครั้งก่อนนำคอนเทนต์ไปเผยแพร่", "ระบบไม่ execute arbitrary HTML และไม่เปิดเผย local render paths", "การควบคุม worker จริงให้ทำผ่าน production CLI/systemd เท่านั้น"]} />
       <HyperFramesStatusGrid cards={cards} />
+
+      <HyperframesTemplateBrowser onSelect={applyTemplate} />
 
       <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
         <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
