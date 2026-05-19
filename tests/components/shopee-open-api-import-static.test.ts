@@ -9,5 +9,13 @@ describe("Shopee Open API import copy", () => {
     expect(text).toMatch(/Shopee Open API \(official\)/);
     expect(text).toMatch(/ปิดไว้เป็นค่าเริ่มต้น/);
     expect(text).toMatch(/ไม่รองรับการดึงข้อมูลแบบ scraping/);
+    expect(text).toMatch(/Managed Seller \/ Mall Seller \/ KAM/);
+    expect(text).toMatch(/affiliate disclosure/);
+  });
+
+  it("never mentions storing seller passwords", () => {
+    const filePath = path.join(process.cwd(), "docs/runbooks/shopee-open-api-managed-seller-kam.md");
+    const text = fs.readFileSync(filePath, "utf8");
+    expect(text).toMatch(/Do not:[\s\S]*store seller passwords/);
   });
 });

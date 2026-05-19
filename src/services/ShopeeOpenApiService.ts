@@ -3,7 +3,7 @@ import { buildShopeeSignature, ShopeeSignatureUnsupportedError } from "@/lib/sho
 import { toSafeShopeeError, type HttpClient } from "@/services/shopee-open-api-client";
 
 export type ShopeeOpenApiStatusResult =
-  | { ok: true; code: "DISABLED" | "READY" | "FOUNDATION_ONLY"; data: ReturnType<typeof toShopeeOpenApiSafeStatus> }
+  | { ok: true; code: "DISABLED" | "FOUNDATION_ONLY" | "SANDBOX_READY" | "MISSING_CREDENTIALS" | "MANAGED_SELLER_BLOCKED" | "LIVE_READY"; data: ReturnType<typeof toShopeeOpenApiSafeStatus> }
   | { ok: false; code: "CONFIG_ERROR" | "UNSUPPORTED" | "CLIENT_ERROR"; message: string; details?: unknown };
 
 export class ShopeeOpenApiService {
@@ -14,6 +14,7 @@ export class ShopeeOpenApiService {
       const config = loadShopeeOpenApiConfig(this.dependencies.env);
       const safeStatus = toShopeeOpenApiSafeStatus(config);
       if (!config.enabled) return { ok: true, code: "DISABLED", data: safeStatus };
+      if (config.eligibility === "blocked") return { ok: true, code: "MANAGED_SELLER_BLOCKED", data: safeStatus };
 
       try {
         buildShopeeSignature({ path: "/placeholder", timestamp: Math.floor(Date.now() / 1000) });
@@ -24,7 +25,12 @@ export class ShopeeOpenApiService {
         throw error;
       }
 
-      return { ok: true, code: "READY", data: safeStatus };
+      if (!safeStatus.configured || !safeStatus.hasPartnerKey || !safeStatus.hasWebhookSecret) {
+        return { ok: true, code: "MISSING_CREDENTIALS", data: safeStatus };
+      }
+
+      if (config.environment === "sandbox") return { ok: true, code: "SANDBOX_READY", data: safeStatus };
+      return { ok: true, code: config.foundationReady ? "LIVE_READY" : "FOUNDATION_ONLY", data: safeStatus };
     } catch (error) {
       if (error instanceof ShopeeOpenApiConfigError) {
         return { ok: false, code: "CONFIG_ERROR", message: error.message, details: { missingFields: error.missingFields } };

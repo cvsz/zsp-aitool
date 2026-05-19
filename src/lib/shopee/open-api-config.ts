@@ -3,6 +3,8 @@ export type ShopeeOpenApiEnvironment = "sandbox" | "live";
 export type ShopeeOpenApiRawEnv = {
   SHOPEE_OPEN_API_ENABLED?: string;
   SHOPEE_OPEN_API_ENV?: string;
+  SHOPEE_OPEN_API_FOUNDATION_READY?: string;
+  SHOPEE_OPEN_API_ELIGIBILITY?: string;
   SHOPEE_PARTNER_ID?: string;
   SHOPEE_PARTNER_KEY?: string;
   SHOPEE_API_BASE_URL?: string;
@@ -14,6 +16,8 @@ export type ShopeeOpenApiRawEnv = {
 export type ShopeeOpenApiConfig = {
   enabled: boolean;
   environment: ShopeeOpenApiEnvironment;
+  foundationReady: boolean;
+  eligibility: "unknown" | "blocked" | "eligible";
   partnerId: string | null;
   partnerKey: string | null;
   apiBaseUrl: string | null;
@@ -55,10 +59,15 @@ function normalizeValue(raw: string | undefined): string | null {
 export function loadShopeeOpenApiConfig(env: ShopeeOpenApiRawEnv = process.env as ShopeeOpenApiRawEnv): ShopeeOpenApiConfig {
   const enabled = normalizeBoolean(env.SHOPEE_OPEN_API_ENABLED);
   const environment = normalizeEnvironment(env.SHOPEE_OPEN_API_ENV);
+  const foundationReady = normalizeBoolean(env.SHOPEE_OPEN_API_FOUNDATION_READY);
+  const eligibilityRaw = env.SHOPEE_OPEN_API_ELIGIBILITY?.trim().toLowerCase();
+  const eligibility = eligibilityRaw === "eligible" || eligibilityRaw === "blocked" ? eligibilityRaw : "unknown";
 
   const config: ShopeeOpenApiConfig = {
     enabled,
     environment,
+    foundationReady,
+    eligibility,
     partnerId: normalizeValue(env.SHOPEE_PARTNER_ID),
     partnerKey: normalizeValue(env.SHOPEE_PARTNER_KEY),
     apiBaseUrl: normalizeValue(env.SHOPEE_API_BASE_URL),
@@ -81,6 +90,8 @@ export function toShopeeOpenApiSafeStatus(config: ShopeeOpenApiConfig) {
   return {
     enabled: config.enabled,
     environment: config.environment,
+    foundationReady: config.foundationReady,
+    eligibility: config.eligibility,
     configured: Boolean(config.partnerId && config.apiBaseUrl && config.authBaseUrl && config.redirectUrl),
     setupRequired: !config.enabled || !config.partnerId || !config.apiBaseUrl || !config.authBaseUrl || !config.redirectUrl,
     docsRequired: true,

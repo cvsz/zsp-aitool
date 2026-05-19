@@ -16,6 +16,12 @@ Primary repo reference:
 
 ```text
 docs/reference/shopee-open-api-developer-guide-v2.1.md
+
+Official reference checklist (must exist before enabling live API calls):
+
+- Shopee Open Platform developer console docs for your region (auth, scope, callback, webhook, and go-live policy)
+- Endpoint-level official request/response references stored under `docs/reference/` in this repo
+- Internal setup runbook: `docs/runbooks/shopee-open-api-integration.md`
 ```
 
 Original uploaded PDF title:
@@ -121,6 +127,7 @@ Before enabling real Open API calls:
 - [ ] Signature/auth algorithm confirmed from official docs
 - [ ] zsp-aitool tests mock all Shopee API calls
 - [ ] User review-before-save remains enforced
+- [ ] No seller password is collected or stored anywhere in zsp-aitool
 
 ## Current recommended next prompt
 
