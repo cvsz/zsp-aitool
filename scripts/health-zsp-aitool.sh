@@ -182,6 +182,22 @@ PY
   fi
 fi
 
+
+# 9) read-only UserSetting schema drift check when DB is reachable
+if [[ -z "$DATABASE_URL_VALUE" ]]; then
+  skip "DATABASE_URL not set; skipping UserSetting schema drift check"
+else
+  if [[ -n "$db_host" ]] && (timeout 2 bash -c "</dev/tcp/$db_host/$db_port" >/dev/null 2>&1); then
+    if npm run db:schema-drift-check >/dev/null 2>&1; then
+      ok "UserSetting schema drift check passed"
+    else
+      fail "UserSetting schema drift check failed (schema drift or check error)"
+    fi
+  else
+    skip "Database ${db_host:-unknown}:${db_port:-unknown} unreachable; skipping UserSetting schema drift check"
+  fi
+fi
+
 if (( FAILURES > 0 )); then
   echo "[FAIL] Health check completed with $FAILURES failure(s) and $WARNINGS warning(s)."
   exit 1

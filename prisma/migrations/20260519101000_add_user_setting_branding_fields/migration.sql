@@ -1,0 +1,15 @@
+ALTER TABLE "UserSetting"
+  ADD COLUMN IF NOT EXISTS "brandColors" TEXT[] DEFAULT ARRAY[]::TEXT[],
+  ADD COLUMN IF NOT EXISTS "fontPreference" TEXT,
+  ADD COLUMN IF NOT EXISTS "logoUrl" TEXT,
+  ADD COLUMN IF NOT EXISTS "watermarkText" TEXT,
+  ADD COLUMN IF NOT EXISTS "defaultAspectRatio" TEXT,
+  ADD COLUMN IF NOT EXISTS "defaultCTA" TEXT;
+
+UPDATE "UserSetting"
+SET "brandColors" = ARRAY[]::TEXT[]
+WHERE "brandColors" IS NULL;
+
+ALTER TABLE "UserSetting"
+  ALTER COLUMN "brandColors" SET DEFAULT ARRAY[]::TEXT[],
+  ALTER COLUMN "brandColors" SET NOT NULL;
