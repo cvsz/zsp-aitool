@@ -1,18 +1,50 @@
 "use client";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+
+type ImportMethod = "manual" | "url" | "extension" | "ocr" | "json";
 
 export function ProductImportForm() {
+  const [method, setMethod] = useState<ImportMethod>("url");
   const [url, setUrl] = useState("");
   const [json, setJson] = useState('{"products":[]}');
+  const [review, setReview] = useState<string>("");
+  const [error, setError] = useState("");
 
-  return <div className="space-y-4">
-    <form onSubmit={async (e) => { e.preventDefault(); await fetch("/api/products/import-url", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ originalUrl: url }) }); }} className="space-y-2">
-      <input className="border p-2 w-full" type="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="Import URL" required />
-      <button className="border px-3 py-2" type="submit">Import URL</button>
-    </form>
-    <form onSubmit={async (e) => { e.preventDefault(); await fetch("/api/products/import-json", { method: "POST", headers: { "Content-Type": "application/json" }, body: json }); }} className="space-y-2">
-      <textarea className="border p-2 w-full min-h-28" value={json} onChange={(e) => setJson(e.target.value)} />
-      <button className="border px-3 py-2" type="submit">Import JSON</button>
-    </form>
+  const safeUrlHint = useMemo(() => "กรอกเฉพาะลิงก์สินค้าที่คุณเข้าถึงได้ตามปกติจากหน้าเว็บที่มองเห็นได้", []);
+
+  return <div className="space-y-4 rounded-xl border bg-white p-4">
+    <h2 className="text-lg font-semibold">นำเข้าสินค้า</h2>
+    <p className="text-sm text-slate-600">รองรับ Manual, URL, Extension Payload, OCR และ JSON โดยต้องให้ผู้ใช้ตรวจสอบและแก้ไขก่อนบันทึกเสมอ</p>
+    <p className="rounded-lg bg-amber-50 p-3 text-xs text-amber-800">ข้อกำหนดความปลอดภัย: ระบบไม่สนับสนุนการ bypass CAPTCHA, login wall, anti-bot หรือ private endpoints และไม่ทำ mass scraping</p>
+
+    <div className="flex flex-wrap gap-2">
+      {(["manual", "url", "extension", "ocr", "json"] as ImportMethod[]).map((m) => (
+        <button key={m} type="button" onClick={() => setMethod(m)} className={`rounded-lg border px-3 py-1.5 text-sm ${method === m ? "bg-slate-900 text-white" : "bg-white"}`}>
+          {m.toUpperCase()}
+        </button>
+      ))}
+    </div>
+
+    {method === "url" ? <form onSubmit={async (e) => { e.preventDefault(); setError(""); const res = await fetch("/api/products/import-url", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ originalUrl: url }) }); if (!res.ok) setError("นำเข้า URL ไม่สำเร็จ กรุณาตรวจสอบลิงก์อีกครั้ง"); else setReview(`นำเข้า URL สำเร็จ: ${url}`); }} className="space-y-2">
+      <input className="border p-2 w-full rounded" type="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="วาง URL สินค้า" required />
+      <p className="text-xs text-slate-500">{safeUrlHint}</p>
+      <button className="border px-3 py-2 rounded" type="submit">นำเข้า URL</button>
+    </form> : null}
+
+    {method === "json" ? <form onSubmit={async (e) => { e.preventDefault(); setError(""); const res = await fetch("/api/products/import-json", { method: "POST", headers: { "Content-Type": "application/json" }, body: json }); if (!res.ok) setError("นำเข้า JSON ไม่สำเร็จ กรุณาตรวจสอบรูปแบบข้อมูล"); else setReview("นำเข้า JSON สำเร็จ"); }} className="space-y-2">
+      <textarea className="border p-2 w-full min-h-28 rounded" value={json} onChange={(e) => setJson(e.target.value)} />
+      <button className="border px-3 py-2 rounded" type="submit">นำเข้า JSON</button>
+    </form> : null}
+
+    {method === "manual" ? <p className="rounded border-dashed border p-3 text-sm">ใช้ฟอร์ม Manual ด้านบนเพื่อกรอกข้อมูลเอง</p> : null}
+    {method === "extension" ? <p className="rounded border-dashed border p-3 text-sm">รองรับข้อมูลจาก Chrome Extension หลังผู้ใช้กดยืนยันการส่งข้อมูล</p> : null}
+    {method === "ocr" ? <p className="rounded border-dashed border p-3 text-sm">ไปที่หน้า OCR เพื่ออัปโหลดภาพและตรวจทานข้อมูลก่อนบันทึก</p> : null}
+
+    <div className="rounded-lg border bg-slate-50 p-3">
+      <h3 className="font-medium">Review before save</h3>
+      <p className="text-sm text-slate-700">โปรดตรวจสอบชื่อสินค้า ราคา ลิงก์ และคำอธิบายก่อนกดบันทึก</p>
+      <p className="mt-2 text-xs text-slate-600">{review || "ยังไม่มีข้อมูลที่รอรีวิว"}</p>
+    </div>
+    {error ? <p className="text-sm text-red-600">{error}</p> : null}
   </div>;
 }
