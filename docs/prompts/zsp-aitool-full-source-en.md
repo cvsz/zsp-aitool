@@ -1,88 +1,185 @@
-ด้านล่างคือ **ชุด Prompt สำหรับสั่ง AI ให้สร้าง Full Source Code** ของระบบ ครบทั้งเว็บ, backend, database, AI content generator และ browser extension
+# ZSP-AITool Full Source Prompt Pack
+
+This is the English master prompt pack for generating, auditing, or extending `zsp-aitool` with an AI coding agent.
+
+Repository:
+
+```text
+https://github.com/cvsz/zsp-aitool.git
+```
+
+Current product scope:
+
+`zsp-aitool` is a Thai-first SaaS application for Shopee Affiliate workflows. It helps users save product data, manage affiliate links, generate AI promotional content, export content/products, run OCR extraction, find similar saved products, and create HyperFrames promotional video compositions and render jobs.
+
+Use this prompt pack when you need a full-source generation baseline, a module-by-module rebuild, or a strict implementation plan for new agents.
 
 ---
 
-## Prompt หลัก: Full Source Code ทั้งระบบ
+## Global Rules for Every Prompt
 
 ```text
-You are a senior full-stack engineer. Generate the complete production-ready source code for a SaaS web app and browser extension named “zsp-aitool”.
+You are working on cvsz/zsp-aitool.
 
-Project concept:
-zsp-aitool helps Shopee Affiliate users collect product information in one click and use AI to generate promotional content for Facebook, Instagram, Threads, X, HyperFrames, short comments, captions, blog posts, and SEO articles.
+Follow AGENTS.md, .faf, SECURITY.md, README.md, and CONTRIBUTING.md.
 
-Important compliance rules:
-- Do not bypass CAPTCHA, login walls, anti-bot systems, rate limits, or private user data.
-- Product collection must support official APIs where available, manual product URL import, and browser-extension-based extraction from pages the user is already viewing.
-- Do not store user passwords for Shopee.
-- Do not generate misleading claims, fake reviews, fake discounts, or spam content.
-- Affiliate links must be clearly marked and editable by the user.
+Hard constraints:
+- Do not bypass CAPTCHA.
+- Do not bypass login walls.
+- Do not bypass Shopee anti-bot systems.
+- Do not use private or undocumented Shopee endpoints.
+- Do not automate mass scraping.
+- Product import must rely on user-provided data, official APIs where configured, or visible page data captured by the browser extension after user confirmation.
+- Do not collect private user data from Shopee pages.
+- Do not generate fake reviews.
+- Do not invent product specifications.
+- Do not make unsupported medical, financial, legal, or exaggerated product claims.
+- AI-generated content must include affiliate disclosure where relevant.
+- The user must be able to review and edit extracted product data before saving.
+- Do not expose secrets, DATABASE_URL, tokens, stack traces, outputPath, /var/lib, or internal render directories.
+- Do not use dangerouslySetInnerHTML for user-controlled content.
+- Do not execute arbitrary user HTML.
+- Do not add UI buttons that directly start, stop, restart, enable, or disable systemd services.
+- Do not change production port 3001.
+- Do not change Cloudflare routes.
+- Do not upgrade Next.js or Prisma major versions unless explicitly requested.
+- Do not run npm audit fix --force.
+- Keep postbuild and scripts/fix-next-server-chunks.sh intact.
+- Use prisma migrate deploy, not prisma migrate dev, on production.
 
-Tech stack:
-- Frontend: Next.js with TypeScript
-- Styling: Tailwind CSS
-- Backend: Next.js API routes or Node.js service
-- Database: PostgreSQL
-- ORM: Prisma
-- Auth: email/password and OAuth-ready structure
-- AI provider: OpenAI-compatible API wrapper
-- OCR: OCR module with pluggable provider
-- Browser extension: Chrome Extension Manifest V3
-- Storage: local upload support for product images, with abstraction for S3-compatible storage
-- Testing: unit tests and integration test examples
-- Deployment: Docker Compose for local development
+Implementation rules:
+- Use clean modular architecture.
+- Put shared utilities in src/lib.
+- Put business logic in src/services.
+- Put validation schemas in src/schemas.
+- Put reusable UI components in src/components.
+- Put API routes under src/app/api.
+- Use Prisma for all database access.
+- Use Zod for all external input validation.
+- Use strict TypeScript.
+- Avoid implicit any unless clearly justified.
+- Keep API responses consistent.
+- Keep frontend and backend types aligned.
+- Generate complete files, not fragments.
+- Do not leave TODO comments in core features.
+- Preserve working code unless a change is necessary.
+- Add or update tests for every behavior change.
 
-Main features:
-1. User authentication
-2. Dashboard
-3. Product collection
-4. Product database
-5. AI content generator
-6. Multi-platform post generation
-7. Prompt template management
-8. Content history
-9. OCR extraction from images
-10. Similar product suggestions
-11. Browser extension for one-click product capture
-12. Affiliate link management
-13. Export content as TXT, CSV, and Markdown
-14. Admin-ready settings page
+Required verification for most changes:
+python3 -m json.tool package.json >/tmp/package-json-ok.json
+npm ci
+npm run prisma:generate
+npx prisma validate
+npm run typecheck
+npm run test
+npm run build
+npm run health
 
-Generate:
-- Complete folder structure
-- All important source files
-- Database schema
-- API routes
-- Frontend pages
-- Browser extension files
-- Environment variable example
-- Docker Compose file
-- README with setup instructions
-- Seed data
-- Error handling
-- Security notes
-- Basic tests
+For HyperFrames/operator changes, also run when available:
+npm run hyperframes:doctor
+npm run hyperframes:worker:once
+npm run hyperframes:cleanup-renders
+npm run hyperframes:queue-status
+npm run hyperframes:worker:watchdog
 
-Output format:
-1. Start with the project tree.
-2. Then provide each file with its path.
-3. Use clean, maintainable code.
-4. Do not omit files by saying “repeat similarly”.
-5. Use placeholder API keys only in .env.example.
-6. Make the app runnable locally.
+If PostgreSQL or systemd are unavailable in Codex/container, report those checks as WARN/SKIP. Do not mark them as PASS.
 ```
 
 ---
 
-## Prompt เสริม 1: Database + Prisma Schema
+## Master Prompt: Complete Production-Ready Source Code
+
+```text
+You are a senior full-stack engineer and security-minded SaaS architect.
+
+Generate the complete production-ready source code for a SaaS web app and browser extension named zsp-aitool.
+
+Project goal:
+zsp-aitool helps Shopee Affiliate users collect and save product information, manage affiliate links, generate AI promotional content, export content, run OCR extraction, find similar saved products, and create HyperFrames video compositions and render jobs.
+
+Default user-facing language:
+Thai. Code identifiers, file paths, API route names, database model names, and comments may remain English.
+
+Tech stack:
+- Next.js App Router
+- React
+- TypeScript
+- Tailwind CSS
+- PostgreSQL
+- Prisma
+- Zod
+- Next.js API routes
+- Chrome Extension Manifest V3
+- OpenAI-compatible AI provider abstraction
+- Pluggable OCR provider abstraction
+- Vitest
+- Testing Library
+- Docker Compose
+- HyperFrames render worker
+- systemd on the real production VM only
+
+Core features:
+1. User authentication
+2. Thai-first SaaS dashboard
+3. Product library
+4. Product import by manual form, URL, browser extension payload, screenshot OCR, and JSON
+5. Affiliate link management
+6. AI content generator
+7. Platform-specific post generation for Facebook, Instagram, Threads, X, blogs, SEO articles, captions, comment replies, and HyperFrames scripts
+8. Prompt template management
+9. Content history
+10. OCR extraction workflow
+11. Similar product recommendations from the user's saved products
+12. Export as CSV, TXT, and Markdown
+13. Chrome Extension Manifest V3 for one-click user-confirmed product collection
+14. HyperFrames Studio
+15. HyperFrames render queue, history, retry/cancel controls, secure downloads, thumbnails, shares, quotas, operator views, and watchdog tooling
+16. Admin panel foundation with gated read-only aggregate views
+17. Professional responsive app shell and operator-safe UI
+
+Generate:
+- Complete folder structure
+- package.json with valid scripts and no duplicate keys
+- .env.example
+- Dockerfile
+- docker-compose.yml
+- Prisma schema and seed file
+- API routes
+- Service classes
+- Validation schemas
+- Frontend pages and components
+- Chrome extension files
+- HyperFrames worker scripts and safety helpers
+- Admin foundation
+- Tests
+- README
+- Security notes
+- Production verification commands
+
+Output format:
+1. Start with the project tree.
+2. Then provide each file with its path.
+3. Use complete file contents.
+4. Do not say "repeat similarly".
+5. Do not omit core files.
+6. Use placeholder API keys only in .env.example.
+7. Make the app runnable locally.
+8. Include verification commands.
+```
+
+---
+
+## Prompt 1 — Database and Prisma Schema
 
 ```text
 Create the complete PostgreSQL + Prisma database schema for zsp-aitool.
 
-The system needs these entities:
+Entities:
 - User
+- Organization
+- OrgMembership
 - Product
 - ProductImage
-- ProductReviewSummary
 - AffiliateLink
 - ContentGeneration
 - ContentTemplate
@@ -92,249 +189,151 @@ The system needs these entities:
 - PlatformPost
 - UserSetting
 - APIUsageLog
+- HyperFrameScriptGeneration
+- HyperFrameRenderJob
+- HyperFrameRenderShare
+- HyperFrameSocialExportAuditEvent
 
 Requirements:
-- A user can save many products.
-- A product has title, price, currency, original URL, affiliate URL, shop name, rating, sold count, description, category, images, and raw extracted metadata.
-- Content generations must store platform, tone, language, prompt, AI output, status, token usage, and created date.
-- Support platforms: Facebook, Instagram, Threads, X, HyperFrames, Blog, SEO Article, Comment, Short Caption.
-- Store AI prompt templates separately so users can customize them.
-- OCR jobs should store image URL, extracted text, status, and error message.
-- Similar products should reference the source product and related product.
-- Include indexes for userId, productId, platform, createdAt, and product URL.
-- Include enums where appropriate.
-- Include soft delete fields where useful.
-- Generate the full schema.prisma file.
-- Also generate seed data for demo products, demo prompts, and demo content history.
+- User can own many products, content generations, prompt templates, OCR jobs, affiliate links, and render jobs.
+- Organization can own shared HyperFrames render jobs through orgId.
+- OrgMembership must enforce org role: VIEWER, EDITOR, ADMIN.
+- Product stores title, price, currency, originalUrl, affiliateUrl, shopName, rating, soldCount, description, category, rawMetadata, and soft delete.
+- ContentGeneration stores platform, tone, language, prompt, JSON output, token usage, status, and soft delete.
+- OCRJob stores image URL, extracted text, confidence, status, errorMessage, raw result, and user scope.
+- SimilarProduct links source product and related product with score and reason.
+- HyperFrameRenderJob stores status, userId, optional orgId, optional productId, compositionHtml, compositionMetadata, outputPath, outputUrl, outputSizeBytes, attempts, locks, timestamps, and soft delete.
+- outputPath may exist in the database for worker internals but must never be exposed through user-facing UI/API responses.
+- Include indexes for userId, orgId, productId, platform, status, createdAt, deletedAt, and originalUrl where appropriate.
+- Use enums for platform, tone, language, job status, plan tier, render status, and org role.
+- Include seed data for demo products, Thai prompt templates, user settings, and safe sample content history.
+
+Generate:
+- prisma/schema.prisma
+- prisma/seed.ts
+- migration guidance
+- production migration warning: use prisma migrate deploy only on production
 ```
 
 ---
 
-## Prompt เสริม 2: Backend API
+## Prompt 2 — Backend API and Services
 
 ```text
-Generate the complete backend API for zsp-aitool using Next.js API routes with TypeScript.
+Generate the complete backend API for zsp-aitool using Next.js App Router API routes with TypeScript.
 
-Required API modules:
+Required modules:
+- Auth APIs
+- Product APIs
+- AI generation and content history APIs
+- Prompt template APIs
+- OCR APIs
+- Export APIs
+- HyperFrames APIs
+- Admin overview API
 
-Auth:
-- POST /api/auth/register
-- POST /api/auth/login
-- POST /api/auth/logout
-- GET /api/auth/me
+Services:
+- ProductService
+- AIContentService
+- OCRService
+- ExportService
+- PromptTemplateService
+- TemplateRenderer
+- SimilarProductService
+- HyperFrames render/history/download services
+- AdminOverviewService
 
-Products:
-- POST /api/products/import-url
-- POST /api/products/save
-- GET /api/products
-- GET /api/products/:id
-- PATCH /api/products/:id
-- DELETE /api/products/:id
-
-AI Content:
-- POST /api/ai/generate
-- POST /api/ai/generate-batch
-- GET /api/content-history
-- GET /api/content-history/:id
-- DELETE /api/content-history/:id
-
-Prompt Templates:
-- GET /api/templates
-- POST /api/templates
-- PATCH /api/templates/:id
-- DELETE /api/templates/:id
-
-OCR:
-- POST /api/ocr/extract
-- GET /api/ocr/:id
-
-Affiliate:
-- POST /api/affiliate/build-link
-- PATCH /api/products/:id/affiliate-link
-
-Similar Products:
-- GET /api/products/:id/similar
-- POST /api/products/:id/similar-refresh
-
-Export:
-- GET /api/export/products.csv
-- GET /api/export/content.csv
-- GET /api/export/content.md
-
-Requirements:
-- Use Prisma for database access.
-- Validate all input with Zod.
-- Create reusable error handling.
-- Create reusable auth middleware.
-- Create service classes:
-  - ProductService
-  - AIContentService
-  - OCRService
-  - AffiliateService
-  - ExportService
-- AI provider must be abstracted so the user can switch model providers.
-- Do not hardcode API keys.
-- Include rate-limit placeholder middleware.
-- Include safe product extraction logic from user-submitted product metadata or extension payload.
-- Do not implement CAPTCHA bypass or hidden scraping.
-- Return consistent JSON responses.
-- Include example tests.
+Rules:
+- Use withAuth for protected APIs.
+- Scope user data by authenticated userId.
+- Scope org data by org membership.
+- Enforce org roles where applicable.
+- Validate all external input with Zod.
+- Return consistent success/failure JSON.
+- Do not expose outputPath, /var/lib, secrets, DATABASE_URL, or stack traces.
+- Use 404-style denial for cross-user or cross-org resource lookup where appropriate.
+- Do not call real AI/OCR/HyperFrames external tools in unit tests.
 ```
 
 ---
 
-## Prompt เสริม 3: AI Content Generator
+## Prompt 3 — AI Content Generator
 
 ```text
 Create the full AI content generation module for zsp-aitool.
 
-Goal:
-Generate affiliate promotional content from saved product data.
-
-Input:
-- product title
-- price
-- description
-- rating
-- review summary
-- key selling points
-- affiliate link
-- target platform
-- language
-- tone
-- content length
-- custom user prompt
-- hashtag preference
-- emoji preference
-- CTA preference
-
-Platforms:
-- Facebook
-- Instagram
-- Threads
-- X
-- HyperFrames
-- Blog
-- SEO Article
-- Short Caption
-- Comment Reply
-
-Content styles:
-- Friendly
-- Professional
-- Funny
-- Urgent
-- Luxury
-- Review-style
-- Problem-solution
-- Thai casual
-- Thai persuasive
-- Minimal
-
 Requirements:
-- Generate reusable prompt builder functions.
-- Create system prompts that prevent fake claims.
-- Do not invent product specifications not found in the product data.
-- If information is missing, write neutral marketing copy.
-- Include affiliate disclosure text.
-- Generate multiple variations.
+- Create AIProvider interface.
+- Create OpenAI-compatible provider.
+- Create MockAIProvider for tests/local development.
+- Create prompt builder functions.
+- Add safety rules to prevent fake claims and invented specs.
+- Add affiliate disclosure where relevant.
 - Support Thai and English.
-- Include hashtag generation.
-- Include short CTA generator.
-- Include title/headline generator.
+- Support multiple content variations.
 - Store every generation in the database.
-- Return structured JSON:
-  {
-    "platform": "",
-    "headline": "",
-    "caption": "",
-    "hashtags": [],
-    "cta": "",
-    "affiliateDisclosure": "",
-    "warnings": []
-  }
-
-Generate:
-- TypeScript types
-- Prompt builder
-- AI provider wrapper
-- generation service
-- API route
-- tests
+- Return structured JSON with headline, caption, hashtags, CTA, disclosure, and warnings.
+- Include tests that never call real AI APIs.
 ```
 
 ---
 
-## Prompt เสริม 4: Frontend Dashboard
+## Prompt 4 — Frontend Dashboard and Professional UI
 
 ```text
-Generate the complete frontend for zsp-aitool using Next.js, TypeScript, and Tailwind CSS.
+Generate the complete Thai-first frontend dashboard for zsp-aitool.
 
-Pages:
-1. Landing page
-2. Login page
-3. Register page
-4. Dashboard overview
-5. Product library
-6. Product detail page
-7. Add/import product page
-8. AI content generator page
-9. Content history page
-10. Prompt templates page
-11. OCR tools page
-12. Similar products page
-13. Settings page
+Required pages:
+- Landing page
+- Login
+- Register
+- Dashboard overview
+- Product library
+- Product detail
+- Add/import product
+- AI content generator
+- Content history
+- Prompt templates
+- OCR tools
+- Similar products
+- Settings
+- HyperFrames Studio
+- HyperFrames render history
+- HyperFrames batch render
+- HyperFrames ops
+- HyperFrames operator queue
+- Admin overview
+- Admin users
+- Admin products
+- Admin content
+- Admin renders
+- Admin system
+- Admin audit logs
+- Admin settings
 
 UI requirements:
-- Clean SaaS dashboard style
-- Thai language UI by default
-- Responsive mobile-first layout
-- Sidebar navigation on desktop
-- Bottom navigation or collapsible menu on mobile
-- Cards for products
-- Product image preview
-- Copy-to-clipboard buttons
-- Platform selector: Facebook, Instagram, Threads, X, HyperFrames, Blog, SEO
-- Tone selector
-- Language selector
-- AI generated content preview
-- Content variation tabs
-- Export buttons
-- Loading states
-- Empty states
-- Error states
-- Toast notifications
-- Confirmation modal for delete actions
-
-Components:
-- AppLayout
-- Sidebar
-- ProductCard
-- ProductForm
-- ProductImportForm
-- ContentGeneratorForm
-- GeneratedContentCard
-- PlatformBadge
-- PromptTemplateEditor
-- OCRUploadBox
-- SimilarProductCard
-- CopyButton
-- ExportButton
-- EmptyState
-- LoadingSpinner
-
-Generate all source files, reusable hooks, API client utilities, and example mock data for development.
+- Thai-first user-facing copy.
+- Professional SaaS layout.
+- Responsive desktop sidebar and mobile navigation.
+- Sticky header with current section label.
+- Dashboard KPI cards.
+- Quick action cards.
+- Loading states.
+- Empty states.
+- Error states.
+- Accessible focus states.
+- No raw JSON in normal dashboard UI.
+- No outputPath, /var/lib, DATABASE_URL, or secrets in UI.
+- No dangerouslySetInnerHTML for user-controlled content.
+- Use next/image for thumbnails.
 ```
 
 ---
 
-## Prompt เสริม 5: Chrome Extension Manifest V3
+## Prompt 5 — Chrome Extension Manifest V3
 
 ```text
 Generate a complete Chrome Extension Manifest V3 source code for zsp-aitool.
-
-Purpose:
-The extension lets a user collect product information from a Shopee product page they are currently viewing and send it to the zsp-aitool web app.
 
 Compliance:
 - Only extract visible page information from the page the user actively opens.
@@ -343,364 +342,208 @@ Compliance:
 - Ask for user confirmation before sending data to the web app.
 - Let users review and edit extracted data before saving.
 
-Extension features:
-1. Popup UI
-2. “Collect product” button
-3. Detect current product page
-4. Extract visible product data:
-   - title
-   - price
-   - image URLs
-   - rating if visible
-   - sold count if visible
-   - description if visible
-   - current page URL
-5. Allow manual editing in popup
-6. Send data to zsp-aitool API
-7. Store API endpoint and user token in extension settings
-8. Show success/error messages
-9. Quick button: generate Facebook post
-10. Quick button: generate Instagram caption
-11. Quick button: generate X post
-12. Quick button: generate Threads post
-
-Generate:
-- manifest.json
-- popup.html
-- popup.ts
-- popup.css
-- content-script.ts
-- background.ts
-- options.html
-- options.ts
-- shared types
-- API client
-- README setup instructions
-- Build config using Vite
+Files:
+- extension/package.json
+- extension/manifest.json
+- extension/vite.config.ts
+- extension/src/popup.html
+- extension/src/popup.ts
+- extension/src/popup.css
+- extension/src/content-script.ts
+- extension/src/background.ts
+- extension/src/options.html
+- extension/src/options.ts
+- extension/src/api-client.ts
+- extension/src/types.ts
+- extension/README.md
 ```
 
 ---
 
-## Prompt เสริม 6: Product Import Logic
+## Prompt 6 — Product Import, OCR, Similar Product, and Export
 
 ```text
-Create the product import and extraction module for zsp-aitool.
-
-Supported import methods:
-1. Manual form input
-2. Product URL input
-3. Browser extension payload
-4. Uploaded screenshot with OCR
-5. JSON import
-
-Important:
-Do not create code that bypasses Shopee protections.
-Do not use private endpoints.
-Do not automate mass scraping.
-Do not evade anti-bot systems.
-
-Required functionality:
-- Normalize product title
-- Normalize price
-- Extract currency
-- Store image URLs
-- Store original URL
-- Generate slug
-- Detect duplicate product by URL
-- Merge updated product data
-- Let user edit all fields before saving
-- Validate with Zod
-- Save raw metadata as JSON
-- Create import status:
-  - pending
-  - completed
-  - failed
-  - needs_review
-
-Generate:
-- TypeScript types
-- Zod schemas
-- ProductImportService
-- API routes
-- Frontend form
-- Extension payload handler
-- Unit tests
-```
-
----
-
-## Prompt เสริม 7: OCR Feature
-
-```text
-Generate the OCR feature for zsp-aitool.
-
-Goal:
-Allow users to upload a product screenshot and extract useful product information from visible text.
-
-Requirements:
-- Upload image
-- Store upload temporarily
-- Run OCR using a pluggable OCR provider
-- Extract possible:
-  - product title
-  - price
-  - discount
-  - rating
-  - sold count
-  - description snippets
-- Show extracted text to user
-- Let user confirm or edit before saving as product
-- Store OCR job status
-- Handle OCR errors gracefully
-- Do not claim OCR is always accurate
-- Include confidence score if provider supports it
-
-Generate:
-- OCRService
-- OCRProvider interface
-- MockOCRProvider for local development
-- API route
-- Upload component
-- OCR result review component
-- Database integration
-- Tests
-```
-
----
-
-## Prompt เสริม 8: Similar Product Recommendation
-
-```text
-Generate the similar product recommendation module for zsp-aitool.
-
-Goal:
-Recommend similar saved products from the user’s own product library.
-
-Requirements:
-- Compare products by:
-  - category
-  - title keywords
-  - price range
-  - description keywords
-  - tags
-- Do not fetch unauthorized external product data.
-- Recommend only from products already saved by the user unless an official API integration is configured.
-- Include score from 0 to 100.
-- Explain why each product is recommended.
-- Store recommendation result in database.
-- Add refresh button on product detail page.
-
-Generate:
-- SimilarProductService
-- Keyword extraction utility
-- Price similarity function
-- Category matching function
-- API route
-- UI component
-- Tests
-```
-
----
-
-## Prompt เสริม 9: Prompt Template System
-
-```text
-Generate a complete prompt template system for zsp-aitool.
-
-Users should be able to create and edit AI prompt presets.
-
-Template fields:
-- name
-- description
-- platform
-- tone
-- language
-- template body
-- variables
-- isDefault
-- isActive
-
-Supported variables:
-{{productTitle}}
-{{price}}
-{{description}}
-{{rating}}
-{{reviewSummary}}
-{{affiliateLink}}
-{{platform}}
-{{tone}}
-{{language}}
-{{ctaStyle}}
-{{hashtags}}
-
-Requirements:
-- Validate templates before saving
-- Preview prompt with sample product
-- Duplicate template
-- Restore default templates
-- Use default templates if user has none
-- Include Thai default templates for:
-  - Facebook promotional post
-  - Instagram caption
-  - Threads short post
-  - X post
-  - Blog article
-  - SEO article
-  - Comment reply
-
-Generate:
-- Prisma model if needed
-- Backend API
-- Frontend editor
-- Template renderer
-- Default seed templates
-- Tests
-```
-
----
-
-## Prompt เสริม 10: README + Deployment
-
-```text
-Create a complete README and deployment guide for zsp-aitool.
-
-Include:
-- Project overview
-- Feature list
-- Tech stack
-- Folder structure
-- Local development setup
-- Environment variables
-- Database setup
-- Prisma migration commands
-- Seed command
-- Running web app
-- Running Chrome extension
-- Building for production
-- Docker Compose setup
-- AI provider setup
-- OCR provider setup
-- Security notes
-- Affiliate compliance notes
-- Troubleshooting
-- Future roadmap
-
-Also generate:
-- .env.example
-- docker-compose.yml
-- Dockerfile
-- package.json scripts
-- GitHub Actions CI workflow
-```
-
----
-
-## Prompt แบบ One-shot สั้นกว่า สำหรับใช้ทันที
-
-```text
-Build a complete full-stack source code project named zsp-aitool.
-
-zsp-aitool is a Shopee Affiliate productivity tool that lets users save product data in one click and generate AI promotional content for Facebook, Instagram, Threads, X, HyperFrames, blog posts, SEO articles, captions, and comments.
-
-Use:
-- Next.js
-- TypeScript
-- Tailwind CSS
-- PostgreSQL
-- Prisma
-- Chrome Extension Manifest V3
-- OpenAI-compatible AI provider abstraction
-- OCR provider abstraction
-- Docker Compose
-
-Features:
-- Auth
-- Product library
-- Product import by manual form, URL, browser extension payload, screenshot OCR, and JSON
-- AI content generator
-- Platform-specific post generation
-- Prompt template editor
-- Content history
-- Similar product suggestions from saved products
-- Affiliate link management
-- Export CSV, TXT, Markdown
-- Thai UI by default
-- Responsive SaaS dashboard
-- Chrome extension popup for collecting visible product page data
-
-Compliance:
-- Do not bypass CAPTCHA, login walls, rate limits, or anti-bot protections.
-- Do not use private Shopee endpoints.
-- Do not collect private user data.
-- Use official API integration where available, otherwise rely on user-provided data or visible page content with user confirmation.
-- Do not generate fake reviews or unsupported product claims.
-
-Generate:
-1. Complete folder tree
-2. All source files
-3. Prisma schema
-4. API routes
-5. Frontend pages and components
-6. Chrome extension files
-7. AI prompt builder
-8. OCR module
-9. Similar product module
-10. Tests
-11. .env.example
-12. Docker files
-13. README
-
-Make the app runnable locally.
-Do not skip files.
-Do not use “TODO” for core features.
-Use clean, secure, maintainable code.
-```
-
----
-
-## Prompt สำหรับให้ AI แบ่งงานเป็นไฟล์ทีละชุด
-
-```text
-You will generate the zsp-aitool source code in multiple parts.
+Generate product import, OCR, similar product, and export modules for zsp-aitool.
 
 Rules:
-- First output only the folder structure and implementation plan.
-- Then wait for my command: “continue”.
-- On each continue, generate one complete module.
-- Never summarize code instead of writing it.
-- Every file must include its path.
-- Keep code consistent across modules.
-- Track already generated files.
-- Do not change architecture midway.
-
-Modules to generate in order:
-1. Project setup and configs
-2. Prisma schema and seed
-3. Auth system
-4. Product module
-5. AI content module
-6. Prompt template module
-7. OCR module
-8. Similar product module
-9. Export module
-10. Frontend dashboard
-11. Chrome extension
-12. Tests
-13. Docker and README
-
-Project:
-zsp-aitool is a Shopee Affiliate content automation tool with one-click product collection and AI-generated promotional content for Facebook, Instagram, Threads, X, blog, SEO articles, captions, and comments.
-
-Use Next.js, TypeScript, Tailwind CSS, PostgreSQL, Prisma, Chrome Extension Manifest V3, and OpenAI-compatible AI provider abstraction.
-
-Follow safe and compliant implementation:
-- No CAPTCHA bypass
-- No private endpoint scraping
-- No fake claims
-- No private user data collection
-- User must confirm extracted product data before saving
+- Normalize product title, price, currency, URLs, images, and metadata.
+- Detect duplicates within the same user scope.
+- Let users review and edit before saving.
+- Validate with Zod.
+- Store raw metadata safely.
+- Use pluggable OCR provider and MockOCRProvider.
+- Recommend similar products only from the authenticated user's saved product library unless official API integration is configured.
+- Export only authenticated user's data.
+- Protect CSV formula injection.
 ```
 
 ---
 
-ใช้ชุดนี้เรียงตามลำดับจะได้ผลดีที่สุด: เริ่มจาก **Prompt หลัก** แล้วใช้ **Prompt เสริม 1–10** เพื่อบังคับให้ AI เติมรายละเอียดแต่ละโมดูลจนเป็น source code ที่ครบและรันได้จริง.
+## Prompt 7 — HyperFrames Production-Safe Render System
+
+```text
+Generate the HyperFrames video composition and render system for zsp-aitool.
+
+Safety requirements:
+- Rendering disabled by default in Codex/CI/container unless tests mock the render path.
+- Production worker enablement must be explicit and operator-controlled.
+- Worker command must use vectorized bin + argv execution.
+- Do not shell-concatenate render commands.
+- Enforce max pending jobs, max running jobs, max attempts, retry backoff, disk checks, and stale running job detection.
+- Cleanup dry-run default.
+- Cleanup must never escape HYPERFRAMES_OUTPUT_DIR.
+- Artifact downloads must validate resolved path inside HYPERFRAMES_OUTPUT_DIR.
+- Block path traversal.
+- Block symlink escape.
+- Validate file is regular and content type/extension is allowed.
+- User-facing APIs and UI must never expose outputPath, /var/lib, or internal render work directories.
+- Operator UI is read-only/safe and must not directly control systemd.
+
+Tests:
+- disabled worker path
+- command vector builder
+- render smoke gates
+- queue limits
+- max attempts
+- artifact traversal block
+- symlink escape block
+- no outputPath in history payload
+- no /var/lib in UI
+- no dangerouslySetInnerHTML
+```
+
+---
+
+## Prompt 8 — Admin Panel Foundation
+
+```text
+Generate a professional admin panel foundation for zsp-aitool.
+
+Routes:
+- /dashboard/admin
+- /dashboard/admin/users
+- /dashboard/admin/products
+- /dashboard/admin/content
+- /dashboard/admin/renders
+- /dashboard/admin/system
+- /dashboard/admin/audit-logs
+- /dashboard/admin/settings
+
+API:
+- GET /api/admin/overview
+
+Rules:
+- Auth required.
+- Use role gating if available.
+- If role system is unclear, gate with ADMIN_PANEL_ENABLED=false by default.
+- Return aggregate-only data.
+- Do not expose raw user lists, emails, passwords, secrets, local paths, outputPath, or stack traces.
+- No dangerous admin actions.
+- No systemd controls in UI.
+- Use Thai-first UI copy.
+```
+
+---
+
+## Prompt 9 — Tests and Security Regression Suite
+
+```text
+Create or update the test suite for zsp-aitool.
+
+Coverage:
+- services
+- API routes
+- tenant isolation
+- org isolation
+- HyperFrames render safety
+- HyperFrames artifact downloads
+- HyperFrames worker guardrails
+- HyperFrames UI static safety
+- Admin UI/API static safety
+- Dashboard shell static safety
+- Final UI/Admin/HyperFrames audit
+
+Security regression coverage:
+- unauthenticated access
+- cross-user access
+- cross-org access
+- path traversal
+- symlink escape
+- outputPath leakage
+- /var/lib leakage
+- DATABASE_URL leakage
+- unsafe HTML execution
+- SSRF protection
+- CSV formula injection
+```
+
+---
+
+## Prompt 10 — Production Readiness and Deployment
+
+```text
+Create the final production readiness and deployment guide for zsp-aitool.
+
+Required production commands:
+cd ~/zsp-aitool
+git pull --rebase origin main
+python3 -m json.tool package.json >/tmp/package-json-ok.json
+npm ci
+npm run prisma:generate
+npx prisma validate
+npm run typecheck
+npm run test
+npm run build
+npm run health
+npm run hyperframes:queue-status
+npm run hyperframes:worker:watchdog
+
+If migrations are pending on production:
+npx prisma migrate deploy --schema prisma/schema.prisma
+npx prisma migrate status --schema prisma/schema.prisma
+
+Do not use prisma migrate dev on production.
+```
+
+---
+
+## Final Verification Prompt
+
+```text
+Perform final full-repo production readiness verification for cvsz/zsp-aitool.
+
+Run:
+git status --short
+git log --oneline -n 20
+python3 -m json.tool package.json >/tmp/package-json-ok.json
+npm ci
+npm run prisma:generate
+npx prisma validate
+npm run typecheck
+npm run test
+npm run build
+npm run health
+npm run hyperframes:doctor
+npm run hyperframes:worker:once
+npm run hyperframes:queue-status || true
+npm run hyperframes:worker:watchdog || true
+
+grep -RniE "dangerouslySetInnerHTML|DATABASE_URL|sk-[A-Za-z0-9]|/var/lib|outputPath" src app components scripts prisma tests docs 2>/dev/null || true
+grep -RniE "systemctl[[:space:]]+(start|stop|restart|enable|disable)" src/app src/components 2>/dev/null || true
+
+Report:
+- Overall verdict
+- Files reviewed
+- Files changed
+- Schema changes
+- Security/access behavior
+- Checklist table with PASS/WARN/FAIL
+- Commands run
+- Blocking issues
+- Environment-only warnings
+- Remaining risks
+- Commit hash
+- PR status
+- READY_TO_DEPLOY=true/false
+- READY_FOR_NEXT_PHASE=true/false
+```
