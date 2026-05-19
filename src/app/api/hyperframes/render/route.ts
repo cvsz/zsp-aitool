@@ -42,7 +42,7 @@ export const POST = withAuth(async (request) => {
 
   const payload = bodySchema.parse(await request.json());
   const scope = await resolveScope(request.auth.userId, payload.orgId);
-  if (!scope) return jsonError("FORBIDDEN", "Organization access denied", 403);
+  if (!scope) return jsonError("NOT_FOUND", "Render job not found", 404);
   if (scope.orgId && !canManage(scope)) return jsonError("FORBIDDEN", "Insufficient role", 403);
   if (!isTtsEnabled() && payload.voiceover?.source === "upload") return jsonError("VOICEOVER_DISABLED", "Voiceover uploads are disabled", 422);
 

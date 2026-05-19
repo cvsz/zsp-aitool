@@ -25,6 +25,7 @@ describe("hyperframes render history", () => {
     expect(res.status).toBe(200);
     expect(body.data.items).toHaveLength(2);
     expect(JSON.stringify(body)).not.toContain("outputPath");
+    expect(JSON.stringify(body)).not.toContain("ownerUserId");
     expect(body.data.items[0].downloadUrl).toContain("/download");
     expect(body.data.items[0].thumbnailUrl).toContain("/thumbnail");
   });

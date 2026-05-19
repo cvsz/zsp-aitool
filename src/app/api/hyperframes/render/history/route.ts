@@ -37,7 +37,7 @@ const safeThumbnailUrl = (job: { id: string; status: string; compositionMetadata
 export const GET = withAuth(async (request) => {
   const parsed = querySchema.parse(Object.fromEntries(new URL(request.url).searchParams.entries()));
   const scope = await resolveScope(request.auth.userId, parsed.orgId);
-  if (!scope) return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Organization access denied" } }, { status: 403 });
+  if (!scope) return NextResponse.json({ ok: false, error: { code: "NOT_FOUND", message: "Render job not found" } }, { status: 404 });
 
   const config = getHyperFramesRenderConfig();
   const jobs = await prisma.hyperFrameRenderJob.findMany({
@@ -59,7 +59,6 @@ export const GET = withAuth(async (request) => {
         return {
           id: job.id,
           orgId: job.orgId,
-          ownerUserId: job.userId,
           status: job.status,
           attempts: job.attempts,
           durationSeconds: job.durationSeconds,

@@ -12,7 +12,7 @@ export const GET = withAuth(async (request, context: { params: Promise<{ id: str
   const { id } = await context.params;
   const orgId = new URL(request.url).searchParams.get("orgId");
   const scope = await resolveScope(request.auth.userId, orgId);
-  if (!scope) return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Organization access denied" } }, { status: 403 });
+  if (!scope) return NextResponse.json({ ok: false, error: { code: "NOT_FOUND", message: "Render job not found" } }, { status: 404 });
 
   const job = await prisma.hyperFrameRenderJob.findFirst({ where: scopedRenderJobWhere(scope, { id }) });
   if (!job) return NextResponse.json({ ok: false, error: { code: "NOT_FOUND", message: "Render job not found" } }, { status: 404 });
