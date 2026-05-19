@@ -10,10 +10,16 @@ type OpsStatus = { pending: number; running: number; staleRunning: number; compl
 export default function HyperFramesOpsPage() {
   const [status, setStatus] = useState<OpsStatus | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
-  useEffect(() => { fetch("/api/hyperframes/render/status").then((res) => res.json()).then((body) => body?.ok ? setStatus(body.data as OpsStatus) : setErrorMessage(body?.error?.message ?? "ไม่สามารถโหลดสถานะ")).catch(() => setErrorMessage("ไม่สามารถโหลดสถานะ")); }, []);
+
+  useEffect(() => {
+    fetch("/api/hyperframes/render/status", { cache: "no-store" })
+      .then((res) => res.json())
+      .then((body) => body?.ok ? setStatus(body.data as OpsStatus) : setErrorMessage(body?.error?.message ?? "ไม่สามารถโหลดสถานะ"))
+      .catch(() => setErrorMessage("ไม่สามารถโหลดสถานะ"));
+  }, []);
 
   const warnings = useMemo(() => {
-    if (!status) return [] as string[];
+    if (!status) return ["UI นี้เป็น read-only/safe ไม่มีการควบคุม systemd โดยตรง"];
     const items: string[] = ["UI นี้เป็น read-only/safe ไม่มีการควบคุม systemd โดยตรง"];
     if (!status.renderEnabled) items.push("ระบบเรนเดอร์ถูกปิดตามนโยบายความปลอดภัย");
     if (status.pending >= status.maxPendingJobs) items.push("คิว pending แตะเพดาน");
@@ -24,15 +30,38 @@ export default function HyperFramesOpsPage() {
   }, [status]);
 
   const cards = status ? [
-    { label: "Pending", value: String(status.pending) },
-    { label: "Running", value: String(status.running) },
-    { label: "Stale Running", value: String(status.staleRunning) },
-    { label: "Completed 24h", value: String(status.completedLast24h) },
-    { label: "Failed 24h", value: String(status.failedLast24h) },
-    { label: "Free Disk (MB)", value: status.diskFreeMb === null ? "n/a" : String(status.diskFreeMb) },
-    { label: "Worker Status", value: status.serviceActive === null ? "unknown" : status.serviceActive ? "active" : "inactive" },
-    { label: "Watchdog/Enable", value: status.serviceEnabled === null ? "unknown" : status.serviceEnabled ? "enabled" : "disabled" },
+    { label: "Pending", value: String(status.pending), tone: status.pending >= status.maxPendingJobs ? "danger" as const : "info" as const, hint: `limit ${status.maxPendingJobs}` },
+    { label: "Running", value: String(status.running), tone: status.running >= status.maxRunningJobs ? "warning" as const : "success" as const, hint: `limit ${status.maxRunningJobs}` },
+    { label: "Stale Running", value: String(status.staleRunning), tone: status.staleRunning > 0 ? "danger" as const : "success" as const },
+    { label: "Completed 24h", value: String(status.completedLast24h), tone: "success" as const },
+    { label: "Failed 24h", value: String(status.failedLast24h), tone: status.failedLast24h > 0 ? "warning" as const : "success" as const },
+    { label: "Free Disk (MB)", value: status.diskFreeMb === null ? "n/a" : String(status.diskFreeMb), tone: status.diskFreeMb !== null && status.diskFreeMb < 2048 ? "danger" as const : "info" as const },
+    { label: "Worker Status", value: status.serviceActive === null ? "unknown" : status.serviceActive ? "active" : "inactive", tone: status.serviceActive ? "success" as const : "warning" as const },
+    { label: "Service Enabled", value: status.serviceEnabled === null ? "unknown" : status.serviceEnabled ? "enabled" : "disabled", tone: status.serviceEnabled ? "success" as const : "info" as const },
   ] : [];
 
-  return <main className="space-y-4 p-6"><h1 className="text-2xl font-bold">HyperFrames Ops</h1><p className="text-sm text-slate-600">สำหรับ operator/admin เพื่อตรวจสอบสุขภาพคิวอย่างปลอดภัย</p><div className="text-sm"><Link href="/dashboard/hyperframes/ops/queue" className="text-indigo-700 underline">ดู Operator Queue</Link></div>{errorMessage ? <p className="rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">{errorMessage}</p> : null}{status ? <HyperFramesStatusGrid cards={cards} /> : null}<OperatorWarningBanner items={warnings} /></main>;
+  return (
+    <main className="space-y-6">
+      <header className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">HyperFrames Operator</p>
+        <h1 className="mt-2 text-3xl font-bold text-slate-950">HyperFrames Ops</h1>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">ตรวจสอบสุขภาพคิว, worker, watchdog และ disk อย่างปลอดภัย หน้าเว็บนี้ไม่สั่ง start/stop/enable/disable systemd</p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Link href="/dashboard/hyperframes/ops/queue" className="rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white">ดู Operator Queue</Link>
+          <Link href="/dashboard/hyperframes/renders" className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700">ประวัติเรนเดอร์</Link>
+        </div>
+      </header>
+      {errorMessage ? <p className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">{errorMessage}</p> : null}
+      {status ? <HyperFramesStatusGrid cards={cards} /> : <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-6 text-sm text-slate-500">กำลังโหลดสถานะ operator...</div>}
+      <OperatorWarningBanner items={warnings} />
+      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h2 className="text-lg font-bold text-slate-950">แนวทางปฏิบัติ</h2>
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
+          <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-600"><b className="text-slate-950">Monitor</b><br />ดู pending/running/stale และ disk ก่อนเปิด real render เพิ่ม</div>
+          <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-600"><b className="text-slate-950">Recover</b><br />ใช้ CLI ที่มี confirmation gate สำหรับ stale jobs เท่านั้น</div>
+          <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-600"><b className="text-slate-950">Rollback</b><br />ควบคุม systemd บน production VM ผ่านคำสั่ง operator ไม่ใช่ UI</div>
+        </div>
+      </section>
+    </main>
+  );
 }
