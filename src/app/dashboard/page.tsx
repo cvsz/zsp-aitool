@@ -25,19 +25,20 @@ type Overview = {
 };
 
 const onboardingChecklist = [
-  "เพิ่มสินค้าเข้าคลังอย่างน้อย 1 รายการ",
-  "ตั้งค่าลิงก์ Affiliate ให้ถูกต้องก่อนเผยแพร่",
-  "สร้างคอนเทนต์ AI จากสินค้าที่ต้องการโปรโมต",
-  "ตรวจสอบข้อความ Affiliate Disclosure ทุกโพสต์",
-  "ทดสอบ Export เป็น CSV, TXT หรือ Markdown",
-  "เช็กสถานะ HyperFrames ก่อนเริ่มเรนเดอร์จริง",
+  "1) เพิ่มสินค้าเข้าคลังอย่างน้อย 1 รายการ",
+  "2) ตั้งค่าลิงก์ Affiliate ให้ถูกต้องก่อนเผยแพร่",
+  "3) สร้างคอนเทนต์ AI จากสินค้าที่ต้องการโปรโมต",
+  "4) คัดลอกหรือ Export คอนเทนต์ที่ตรวจทานแล้ว",
+  "5) (ตัวเลือก) เปิด HyperFrames เพื่อสร้างวิดีโอโปรโมต",
+  "6) ตรวจสอบข้อความ Affiliate Disclosure ทุกโพสต์",
 ];
 
 const quickActions = [
   { title: "เพิ่มสินค้า", href: "/dashboard/products/new", description: "บันทึกสินค้าใหม่เข้าคลัง" },
   { title: "สร้างคอนเทนต์ AI", href: "/dashboard/generator", description: "สร้างโพสต์ตามแพลตฟอร์ม" },
-  { title: "เปิด OCR", href: "/dashboard/ocr", description: "ดึงข้อมูลจากภาพและตรวจทาน" },
+  { title: "คัดลอก/Export คอนเทนต์", href: "/dashboard/content-history", description: "ส่งออก CSV, TXT หรือ Markdown" },
   { title: "เปิด HyperFrames Studio", href: "/dashboard/hyperframes", description: "สร้างวิดีโอโปรโมตสินค้า" },
+  { title: "เปิด OCR", href: "/dashboard/ocr", description: "ดึงข้อมูลจากภาพและตรวจทาน" },
   { title: "ดูประวัติเรนเดอร์", href: "/dashboard/hyperframes/renders", description: "ติดตามผลเรนเดอร์ล่าสุด" },
   { title: "จัดการ Prompt Templates", href: "/dashboard/templates", description: "บริหารเทมเพลตสำหรับหลายช่องทาง" },
 ];
@@ -89,8 +90,11 @@ export default function Page() {
             <Link href="/dashboard/generator" className="rounded-2xl border border-white/20 bg-white/5 px-4 py-3 text-sm font-medium text-white transition hover:bg-white/10">
               สร้างคอนเทนต์ AI
             </Link>
+            <Link href="/dashboard/content-history" className="rounded-2xl border border-white/20 bg-white/5 px-4 py-3 text-sm font-medium text-white transition hover:bg-white/10">
+              คัดลอกหรือ Export คอนเทนต์
+            </Link>
             <Link href="/dashboard/hyperframes" className="rounded-2xl border border-white/20 bg-white/5 px-4 py-3 text-sm font-medium text-white transition hover:bg-white/10">
-              เปิด HyperFrames Studio
+              เปิด HyperFrames Studio (ตัวเลือก)
             </Link>
           </div>
         </CardContent>
