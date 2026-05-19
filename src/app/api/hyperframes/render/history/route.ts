@@ -35,7 +35,14 @@ const safeThumbnailUrl = (job: { id: string; status: string; compositionMetadata
 };
 
 export const GET = withAuth(async (request) => {
-  const parsed = querySchema.parse(Object.fromEntries(new URL(request.url).searchParams.entries()));
+  const parsedQuery = querySchema.safeParse(Object.fromEntries(new URL(request.url).searchParams.entries()));
+  if (!parsedQuery.success) {
+    return NextResponse.json(
+      { ok: false, error: { code: "INVALID_QUERY", message: "Invalid query parameters", details: parsedQuery.error.flatten() } },
+      { status: 422 },
+    );
+  }
+  const parsed = parsedQuery.data;
   const scope = await resolveScope(request.auth.userId, parsed.orgId);
   if (!scope) return NextResponse.json({ ok: false, error: { code: "NOT_FOUND", message: "Render job not found" } }, { status: 404 });
 

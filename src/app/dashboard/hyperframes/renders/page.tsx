@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { RenderJobCard, type RenderHistoryItem } from "@/components/hyperframes/RenderJobCard";
 
 type HistoryResponse = { ok: boolean; data?: { items: RenderHistoryItem[]; pageInfo: { hasMore: boolean; nextCursor: string | null }; scope?: { orgId: string | null; role: string | null } }; error?: { message: string } };
@@ -11,7 +11,7 @@ export default function HyperFramesRendersPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
     setError("");
     const params = new URLSearchParams();
@@ -21,9 +21,22 @@ export default function HyperFramesRendersPage() {
     if (!data.ok) setError(data.error?.message ?? "โหลดประวัติไม่สำเร็จ");
     else setItems(data.data?.items ?? []);
     setLoading(false);
-  }
+  }, [orgId]);
 
-  useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    void load();
+    let pollCount = 0;
+    const maxPolls = 10;
+    const timer = window.setInterval(() => {
+      pollCount += 1;
+      if (pollCount > maxPolls) {
+        window.clearInterval(timer);
+        return;
+      }
+      void load();
+    }, 10000);
+    return () => window.clearInterval(timer);
+  }, [load]);
 
   async function mutate(id: string, action: "cancel" | "retry") {
     const params = orgId.trim() ? `?orgId=${encodeURIComponent(orgId.trim())}` : "";

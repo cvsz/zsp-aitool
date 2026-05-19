@@ -87,8 +87,12 @@ describe("hyperframes render api", () => {
     expect(mocks.createMock).toHaveBeenCalled();
   });
 
-  it("rejects arbitrary compositionHtml payload", async () => {
-    await expect(createJob(new Request("http://localhost/api/hyperframes/render", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ productId: "p1", platform: "facebook", aspectRatio: "16:9", durationSeconds: 10, caption: "ok", compositionHtml: "<script>alert(1)</script>" }) }) as never)).rejects.toThrowError(/Unrecognized key/);
+  it("rejects arbitrary compositionHtml payload with 422 contract error", async () => {
+    const res = await createJob(new Request("http://localhost/api/hyperframes/render", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ productId: "p1", platform: "facebook", aspectRatio: "16:9", durationSeconds: 10, caption: "ok", compositionHtml: "<script>alert(1)</script>" }) }) as never);
+    const body = await res.json();
+    expect(res.status).toBe(422);
+    expect(body.ok).toBe(false);
+    expect(body.error.code).toBe("INVALID_BODY");
   });
 
   it("rejects uploaded voiceover while TTS is disabled", async () => {

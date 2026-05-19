@@ -80,7 +80,8 @@ describe("hyperframes security regression suite", () => {
     expect(built.compositionHtml).toContain("&lt;img src=x onerror=1&gt;");
 
     vi.spyOn(auth, "getSessionFromRequest").mockReturnValueOnce({ userId: "u1", email: "u1@a.com" });
-    await expect(createRender(new Request("http://localhost/api/hyperframes/render", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ productId: "p1", platform: "facebook", aspectRatio: "9:16", durationSeconds: 10, compositionHtml: "<script>alert(1)</script>" }) }) as never)).rejects.toThrowError(/Unrecognized key/);
+    const res = await createRender(new Request("http://localhost/api/hyperframes/render", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ productId: "p1", platform: "facebook", aspectRatio: "9:16", durationSeconds: 10, compositionHtml: "<script>alert(1)</script>" }) }) as never);
+    expect(res.status).toBe(422);
   });
 
   it("blocks SSRF-style private network asset ingestion", async () => {

@@ -40,7 +40,11 @@ export const POST = withAuth(async (request) => {
   const config = getHyperFramesRenderConfig();
   if (!config.enabled) return jsonError("RENDER_DISABLED", "HyperFrames render disabled", 503);
 
-  const payload = bodySchema.parse(await request.json());
+  const parsedBody = bodySchema.safeParse(await request.json());
+  if (!parsedBody.success) {
+    return jsonError("INVALID_BODY", "Invalid request body", 422, { validation: parsedBody.error.flatten() });
+  }
+  const payload = parsedBody.data;
   const scope = await resolveScope(request.auth.userId, payload.orgId);
   if (!scope) return jsonError("NOT_FOUND", "Render job not found", 404);
   if (scope.orgId && !canManage(scope)) return jsonError("FORBIDDEN", "Insufficient role", 403);
