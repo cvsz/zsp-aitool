@@ -60,9 +60,27 @@ model User {
   settings           UserSetting?
   apiUsageLogs       APIUsageLog[]
   hyperFrameSocialExportAuditEvents HyperFrameSocialExportAuditEvent[]
+  feedbackSubmissions FeedbackSubmission[]
   orgMemberships     OrgMembership[]
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
+}
+
+model FeedbackSubmission {
+  id        String   @id @default(cuid())
+  userId    String
+  rating    Int
+  category  String
+  message   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([createdAt])
+  @@index([deletedAt])
 }
 
 enum OrgRole {

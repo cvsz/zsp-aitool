@@ -14,6 +14,7 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Toast } from "@/components/ui/Toast";
 import { useApi } from "@/hooks/use-api";
 import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 
 type Overview = {
   productCount?: number;
@@ -52,6 +53,7 @@ function healthTone(health: Overview["hyperframesHealth"]) {
 export default function Page() {
   const { data, loading, error, refetch } = useApi<Overview>("/api/dashboard/overview");
   const { toast, showToast } = useToast();
+  const [feedback, setFeedback] = useState("");
   const recent = data?.recentActivity ?? [];
 
   return (
@@ -153,6 +155,26 @@ export default function Page() {
               ))}
             </div>
           </div>
+
+
+
+          <Card>
+            <CardHeader>
+              <CardTitle>ส่งความเห็นเพื่อพัฒนา Onboarding</CardTitle>
+              <CardDescription>เก็บเฉพาะคะแนนและข้อความเชิงผลิตภัณฑ์ ไม่เก็บข้อมูลลับหรือเนื้อหาส่วนตัว</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <textarea value={feedback} onChange={(e) => setFeedback(e.target.value)} className="w-full rounded-xl border p-3 text-sm" rows={4} placeholder="บอกทีมว่าอะไรช่วยให้คุณเริ่มใช้งานได้เร็วขึ้น (อย่างน้อย 10 ตัวอักษร)" />
+              <Button onClick={async () => {
+                const trimmed = feedback.trim();
+                if (trimmed.length < 10) { showToast("กรุณากรอกอย่างน้อย 10 ตัวอักษร", "error"); return; }
+                const response = await fetch('/api/feedback', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ rating: 5, category: 'onboarding', message: trimmed }) });
+                if (!response.ok) { showToast("ส่งความเห็นไม่สำเร็จ", "error"); return; }
+                setFeedback("");
+                showToast("ขอบคุณสำหรับความคิดเห็น", "success");
+              }}>ส่งความเห็น</Button>
+            </CardContent>
+          </Card>
 
           <div>
             <h2 className="mb-3 text-lg font-semibold text-slate-900">กิจกรรมล่าสุด</h2>
