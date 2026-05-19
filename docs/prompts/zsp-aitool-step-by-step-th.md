@@ -1,124 +1,199 @@
-ได้ครับ ด้านล่างคือ **ชุดคำสั่งตามลำดับ** สำหรับค่อย ๆ สั่ง AI Coding Agent ให้สร้าง Full Source Code แบบเป็นขั้นตอน ไม่มั่วโครงสร้าง และลดปัญหาโค้ดขาดไฟล์
+# ZSP-AITool Step-by-Step Prompt Pack (TH)
+
+ไฟล์นี้คือชุด prompt ภาษาไทยสำหรับสั่ง AI Coding Agent ให้สร้าง ตรวจสอบ หรือขยายโปรเจกต์ `zsp-aitool` แบบเป็นขั้นตอน โดยคุม architecture, security, HyperFrames safety, admin/operator UI และ production readiness ให้ไม่หลุดโครงสร้าง
+
+Repository:
+
+```text
+https://github.com/cvsz/zsp-aitool.git
+```
+
+`zsp-aitool` คือ Thai-first SaaS สำหรับ Shopee Affiliate workflow: บันทึกสินค้า, จัดการ affiliate link, สร้างคอนเทนต์ AI, OCR, export, similar products, Chrome Extension MV3, HyperFrames Studio/render history/secure downloads/operator tools และ admin foundation
 
 ---
 
-# ชุดคำสั่งสร้าง Full Source Code ตามลำดับ
-
-## คำสั่งที่ 0: ตั้งกติกาหลักของโปรเจกต์
-
-ใช้คำสั่งนี้ก่อนเริ่มทุกอย่าง
+## กติกาหลัก ใช้ก่อนทุกคำสั่ง
 
 ```text
-คุณคือ Senior Full-Stack Engineer และ Software Architect
+คุณกำลังทำงานใน repo cvsz/zsp-aitool
 
-ฉันต้องการสร้างโปรเจกต์ชื่อ zsp-aitool
+ต้องอ่านและทำตาม:
+- AGENTS.md
+- .faf
+- SECURITY.md
+- README.md
+- CONTRIBUTING.md
 
-zsp-aitool คือระบบช่วยคนทำ Shopee Affiliate ให้สามารถ:
-1. เก็บข้อมูลสินค้า Shopee ได้ง่าย
-2. บันทึกสินค้าไว้ในฐานข้อมูล
-3. ใช้ AI สร้างโพสต์โปรโมตสำหรับ Facebook, Instagram, Threads, X
-4. สร้างบทความสั้น บทความ SEO แคปชัน และคอมเมนต์
-5. จัดการ Prompt Template
-6. ใช้ OCR อ่านข้อมูลสินค้าจากภาพ
-7. แนะนำสินค้าที่คล้ายกันจากสินค้าที่บันทึกไว้
-8. มี Chrome Extension สำหรับเก็บข้อมูลสินค้าจากหน้าที่ผู้ใช้เปิดอยู่
+กติกาความปลอดภัย:
+- ห้าม bypass CAPTCHA
+- ห้าม bypass login wall
+- ห้าม bypass Shopee anti-bot systems
+- ห้ามใช้ private/undocumented Shopee endpoints
+- ห้ามทำ mass scraping
+- Product import ต้องมาจาก user-provided data, official APIs where configured, หรือ visible page data ที่ browser extension เก็บหลังผู้ใช้กดยืนยันเท่านั้น
+- ห้ามเก็บ private user data จาก Shopee pages
+- ห้ามสร้าง fake reviews
+- ห้ามแต่ง product specs ที่ไม่มีในข้อมูลสินค้า
+- ห้ามทำ unsupported medical, financial, legal, exaggerated product claims
+- AI content ต้องใส่ affiliate disclosure เมื่อเกี่ยวข้อง
+- ผู้ใช้ต้องตรวจและแก้ไขข้อมูลสินค้าก่อนบันทึกได้
+- ห้าม expose secrets, DATABASE_URL, tokens, stack traces, outputPath, /var/lib, internal render paths
+- ห้ามใช้ dangerouslySetInnerHTML กับ user-controlled content
+- ห้าม execute arbitrary user HTML
+- ห้ามเพิ่มปุ่ม UI ที่ start/stop/restart/enable/disable systemd โดยตรง
+- ห้ามเปลี่ยน production port 3001
+- ห้ามเปลี่ยน Cloudflare routes
+- ห้าม upgrade Next.js หรือ Prisma major versions ถ้าไม่ได้สั่งชัดเจน
+- ห้าม npm audit fix --force
+- ต้องเก็บ postbuild และ scripts/fix-next-server-chunks.sh ไว้
+- Production ใช้ prisma migrate deploy เท่านั้น ห้าม prisma migrate dev
 
-Tech Stack:
-- Next.js
+กติกา architecture:
+- src/lib สำหรับ shared utilities
+- src/services สำหรับ business logic
+- src/schemas สำหรับ Zod schemas
+- src/components สำหรับ reusable UI
+- src/app/api สำหรับ API routes
+- ใช้ Prisma สำหรับ database access
+- ใช้ Zod validate external input
+- ใช้ strict TypeScript
+- หลีกเลี่ยง implicit any
+- API response ต้อง consistent
+- frontend/backend types ต้องตรงกัน
+- สร้างไฟล์แบบ complete file ไม่ใช่ fragment
+- ห้าม TODO ใน core features
+- เพิ่มหรืออัปเดต tests ทุกครั้งที่ behavior เปลี่ยน
+
+คำสั่ง verify หลัก:
+python3 -m json.tool package.json >/tmp/package-json-ok.json
+npm ci
+npm run prisma:generate
+npx prisma validate
+npm run typecheck
+npm run test
+npm run build
+npm run health
+
+ถ้าเกี่ยวกับ HyperFrames/operator ให้รันเพิ่มเมื่อ environment รองรับ:
+npm run hyperframes:doctor
+npm run hyperframes:worker:once
+npm run hyperframes:cleanup-renders
+npm run hyperframes:queue-status
+npm run hyperframes:worker:watchdog
+
+ถ้า PostgreSQL หรือ systemd ไม่มีใน Codex/container ให้รายงานเป็น WARN/SKIP ไม่ใช่ PASS
+```
+
+---
+
+# ลำดับคำสั่งหลัก
+
+## คำสั่งที่ 0 — ตั้ง Project Context
+
+```text
+คุณคือ Senior Full-Stack Engineer, Software Architect และ Security Reviewer
+
+โปรเจกต์คือ zsp-aitool: Thai-first SaaS สำหรับ Shopee Affiliate users
+
+ระบบต้องรองรับ:
+1. Authentication
+2. Product library
+3. Affiliate link management
+4. Product import: manual, URL, extension payload, OCR screenshot, JSON
+5. AI content generation
+6. Prompt templates
+7. Content history
+8. OCR workflow
+9. Similar products จากสินค้าที่ผู้ใช้บันทึกเอง
+10. Export CSV/TXT/Markdown
+11. Chrome Extension Manifest V3
+12. Thai-first dashboard UI
+13. HyperFrames Studio
+14. Render history, secure downloads, retry/cancel, thumbnails, shares, quotas
+15. Worker watchdog และ operator tooling
+16. Admin panel foundation แบบ gated/read-only aggregate
+17. Professional responsive UI
+
+Tech stack:
+- Next.js App Router
 - TypeScript
 - Tailwind CSS
 - PostgreSQL
 - Prisma
-- Next.js API Routes
-- Chrome Extension Manifest V3
-- OpenAI-compatible AI Provider
-- OCR Provider แบบเปลี่ยนได้
+- Zod
+- Vitest
+- Testing Library
+- Chrome Extension MV3
+- OpenAI-compatible AI provider abstraction
+- Pluggable OCR provider abstraction
 - Docker Compose
+- HyperFrames worker scripts
+- systemd เฉพาะ production VM จริง
 
-กติกาสำคัญ:
-- ห้ามใช้ private Shopee API
-- ห้าม bypass CAPTCHA
-- ห้าม bypass login wall
-- ห้าม scrape แบบหลบระบบป้องกัน
-- เก็บเฉพาะข้อมูลที่ผู้ใช้เห็นบนหน้าเว็บและกดยืนยันเอง
-- ห้ามสร้างรีวิวปลอม
-- ห้ามแต่งข้อมูลสินค้าเกินจริง
-- ต้องมี Affiliate disclosure ในคอนเทนต์
-- โค้ดต้องรัน local ได้จริง
+ให้ตอบด้วย:
+- architecture overview
+- module list
+- security/compliance policy
+- folder structure
+- implementation order
+- verification checklist
 
-จากนี้ให้สร้างโปรเจกต์แบบเป็นลำดับ
-ห้ามข้ามไฟล์สำคัญ
-ห้ามตอบว่า “ทำต่อเอง”
-ห้ามใช้ TODO ใน core feature
-ทุกไฟล์ต้องระบุ path ชัดเจน
+ยังไม่ต้องเขียน code
 ```
 
 ---
 
-## คำสั่งที่ 1: วาง Architecture และ Folder Structure
+## คำสั่งที่ 1 — Project Setup และ Configs
 
 ```text
-เริ่มจากออกแบบ Architecture ทั้งระบบของ zsp-aitool
+สร้างหรือปรับ project setup ของ zsp-aitool ให้ครบและ production-ready
 
-ให้สร้าง:
-1. ภาพรวมระบบ
-2. โมดูลหลักทั้งหมด
-3. Database design overview
-4. API overview
-5. Frontend pages overview
-6. Chrome Extension overview
-7. AI content generation flow
-8. OCR flow
-9. Product import flow
-10. Security and compliance notes
-11. Full folder structure
-
-ยังไม่ต้องเขียนโค้ดจริง
-ให้ตอบเป็นแผนและโครงสร้างไฟล์ก่อน
-```
-
----
-
-## คำสั่งที่ 2: สร้าง Project Setup
-
-```text
-สร้างไฟล์ setup เริ่มต้นของโปรเจกต์ zsp-aitool
-
-ให้สร้างไฟล์ต่อไปนี้แบบสมบูรณ์:
-
+ไฟล์ที่ต้องตรวจ/สร้าง:
 - package.json
+- package-lock.json
 - tsconfig.json
-- next.config.js
+- tsconfig.typecheck.json
+- next.config.js หรือ next.config.ts
 - tailwind.config.ts
 - postcss.config.js
 - .env.example
 - .gitignore
-- README.md เวอร์ชันเริ่มต้น
-- docker-compose.yml
 - Dockerfile
-- prisma folder เริ่มต้น
-- src folder เริ่มต้น
+- docker-compose.yml
+- README.md
+- AGENTS.md
+- SECURITY.md
+- CONTRIBUTING.md
+- .faf
 
-Requirements:
-- ใช้ Next.js + TypeScript + Tailwind CSS
-- รองรับ PostgreSQL
-- รองรับ Prisma
-- รองรับ Docker Compose
-- มี script สำหรับ dev, build, start, lint, prisma migrate, prisma seed
-- โครงสร้างต้องพร้อมต่อยอดโมดูลถัดไป
+Rules:
+- package.json ต้อง valid JSON
+- ห้าม duplicate scripts
+- ต้องมี postbuild: bash scripts/fix-next-server-chunks.sh
+- ห้าม npm audit fix --force
+- ห้าม upgrade Next.js/Prisma major version
+- .env.example ต้องไม่มี real secrets
+- Codex/container ต้องตั้ง HyperFrames render disabled by default
 
-ให้แสดง code ทุกไฟล์พร้อม path
+หลังแก้ให้รัน:
+python3 -m json.tool package.json >/tmp/package-json-ok.json
+npm ci
+npm run typecheck
+npm run test
+npm run build
 ```
 
 ---
 
-## คำสั่งที่ 3: สร้าง Prisma Schema และ Database Seed
+## คำสั่งที่ 2 — Prisma Schema และ Seed
 
 ```text
-สร้าง Prisma schema และ seed data สำหรับ zsp-aitool
+สร้าง/ตรวจ Prisma schema และ seed data สำหรับ zsp-aitool
 
-Models ที่ต้องมี:
+Models สำคัญ:
 - User
+- Organization
+- OrgMembership
 - Product
 - ProductImage
 - AffiliateLink
@@ -130,494 +205,237 @@ Models ที่ต้องมี:
 - PlatformPost
 - UserSetting
 - APIUsageLog
+- HyperFrameScriptGeneration
+- HyperFrameRenderJob
+- HyperFrameRenderShare
+- HyperFrameSocialExportAuditEvent
 
 Requirements:
-- User มีสินค้าได้หลายรายการ
-- Product มี title, price, currency, originalUrl, affiliateUrl, shopName, rating, soldCount, description, category, images, rawMetadata
-- ContentGeneration เก็บ platform, tone, language, prompt, output, tokenUsage, status
-- OCRJob เก็บ imageUrl, extractedText, status, errorMessage
-- SimilarProduct เชื่อม sourceProduct กับ relatedProduct
-- มี enum สำหรับ platform, tone, language, status
-- มี createdAt, updatedAt, deletedAt
-- มี indexes ที่เหมาะสม
-- มี seed data ภาษาไทยสำหรับ demo products, prompt templates, content history
+- User-scoped data ต้องมี userId
+- Org-scoped render jobs ต้องมี optional orgId และ membership/role checks
+- Org roles: VIEWER, EDITOR, ADMIN
+- Soft delete field สำหรับข้อมูล user-facing ที่เหมาะสม
+- Indexes สำหรับ userId, orgId, productId, platform, status, createdAt, deletedAt, originalUrl
+- outputPath อาจอยู่ใน DB สำหรับ worker internal เท่านั้น แต่ห้าม expose ผ่าน UI/API
+- seed data ภาษาไทยสำหรับ demo products, prompt templates, content history
 
-ให้สร้าง:
-- prisma/schema.prisma
-- prisma/seed.ts
-- คำสั่ง migration ที่ต้องใช้
+หลังแก้ให้รัน:
+npm run prisma:generate
+npx prisma validate
+npm run typecheck
+npm run test
+
+Production rule:
+ใช้ npx prisma migrate deploy --schema prisma/schema.prisma เท่านั้น ห้าม prisma migrate dev บน production
 ```
 
 ---
 
-## คำสั่งที่ 4: สร้าง Utility และ Shared Types
+## คำสั่งที่ 3 — Shared Utilities และ API Foundation
 
 ```text
-สร้าง shared utilities และ TypeScript types สำหรับ zsp-aitool
+สร้าง/ตรวจ shared utilities และ API foundation
 
-ให้สร้างไฟล์:
-- src/types/product.ts
-- src/types/content.ts
-- src/types/ai.ts
-- src/types/ocr.ts
-- src/types/api.ts
+ไฟล์/โมดูล:
 - src/lib/prisma.ts
 - src/lib/env.ts
 - src/lib/api-response.ts
 - src/lib/errors.ts
-- src/lib/validators.ts
-- src/lib/slug.ts
-- src/lib/format-price.ts
+- src/lib/auth.ts
+- src/lib/password.ts
 - src/lib/safe-json.ts
+- src/lib/url-safety.ts
+- src/lib/csv.ts
+- src/middleware/auth-middleware.ts
+- src/types/*
 
 Requirements:
-- มี type สำหรับ Product, Platform, ContentGeneration, AI response
-- มี helper สำหรับ success/error response
-- มี custom error class
-- มี env validation
-- มี Zod schema พื้นฐาน
-- ใช้ TypeScript strict mode
+- consistent success/failure response
+- reusable withAuth middleware
+- no stack trace exposure
+- env validation ไม่ leak secrets
+- URL safety/SSRF protections
+- CSV formula injection protection
+- strict TypeScript
+
+เพิ่ม tests สำหรับ safety helpers ถ้ายังไม่มี
 ```
 
 ---
 
-## คำสั่งที่ 5: สร้างระบบ Auth
+## คำสั่งที่ 4 — Authentication และ Isolation
 
 ```text
-สร้างระบบ Authentication สำหรับ zsp-aitool
+สร้าง/ตรวจ auth, tenant isolation และ org isolation
 
 Features:
 - Register
 - Login
 - Logout
-- Get current user
+- Me
 - Password hash
-- Session หรือ JWT auth
-- Auth middleware
+- Session/JWT handling
 - Protected API routes
+- User scoping
+- Org membership checks
+- Role checks: VIEWER, EDITOR, ADMIN
 
-ให้สร้างไฟล์:
-- src/lib/auth.ts
-- src/lib/password.ts
-- src/middleware/auth-middleware.ts
-- src/app/api/auth/register/route.ts
-- src/app/api/auth/login/route.ts
-- src/app/api/auth/logout/route.ts
-- src/app/api/auth/me/route.ts
-- src/hooks/useAuth.ts
-- src/components/auth/LoginForm.tsx
-- src/components/auth/RegisterForm.tsx
-- src/app/login/page.tsx
-- src/app/register/page.tsx
+Rules:
+- API user-facing ต้อง require auth เว้นแต่ intentionally public
+- Product/content/export/render/history ต้อง scoped ด้วย authenticated userId
+- Org-scoped data ต้องตรวจ membership
+- Cross-user/cross-org lookup ต้อง controlled denial แบบไม่ leak existence โดย prefer 404
+- ห้าม expose email/password/raw user private data ใน admin aggregate API
 
-Requirements:
-- Validate input ด้วย Zod
-- Password ต้อง hash
-- ห้ามเก็บ plain password
-- API response ต้องเป็นรูปแบบเดียวกัน
-- มี error handling
+เพิ่ม tests:
+- unauth blocked
+- cross-user blocked
+- cross-org blocked
+- viewer cannot mutate org jobs
+- admin/editor permission behavior
 ```
 
 ---
 
-## คำสั่งที่ 6: สร้าง Product Module
+## คำสั่งที่ 5 — Product, Import และ Affiliate Module
 
 ```text
-สร้าง Product Module สำหรับ zsp-aitool
+สร้าง/ตรวจ Product Module
 
 Features:
-- เพิ่มสินค้าด้วย manual form
-- import จาก URL
-- import จาก browser extension payload
-- import จาก JSON
-- แก้ไขสินค้า
-- ลบสินค้าแบบ soft delete
-- ดูรายการสินค้า
-- ดูรายละเอียดสินค้า
-- ตรวจ duplicate จาก originalUrl
-- จัดการรูปสินค้า
-- จัดการ affiliate link
+- Product list/detail/create/update/delete soft delete
+- Manual product form
+- URL import
+- Extension payload import
+- JSON import
+- Screenshot OCR handoff
+- Duplicate detection by originalUrl within same user scope
+- Affiliate link management
+- Product image handling
 
-ให้สร้าง:
+Compliance:
+- ห้าม scrape private endpoints
+- URL import ไม่ bypass anti-bot
+- Extension payload ต้องเป็น visible page data ที่ user confirm
+- ผู้ใช้ต้อง review/edit ก่อน save
+- Validate ด้วย Zod ทุก input
+
+Files:
 - src/services/ProductService.ts
 - src/schemas/product.schema.ts
-- src/app/api/products/route.ts
-- src/app/api/products/[id]/route.ts
-- src/app/api/products/import-url/route.ts
-- src/app/api/products/import-json/route.ts
-- src/app/api/products/extension-import/route.ts
-- src/app/api/products/[id]/affiliate-link/route.ts
-- src/components/products/ProductCard.tsx
-- src/components/products/ProductForm.tsx
-- src/components/products/ProductImportForm.tsx
-- src/components/products/ProductGrid.tsx
-- src/app/dashboard/products/page.tsx
-- src/app/dashboard/products/new/page.tsx
-- src/app/dashboard/products/[id]/page.tsx
+- src/app/api/products/**
+- src/components/products/**
+- src/app/dashboard/products/**
 
-Compliance:
-- ห้าม scrape private endpoint
-- URL import ให้เก็บ URL และให้ผู้ใช้กรอกหรือยืนยันข้อมูลเอง
-- Extension payload ต้องเป็นข้อมูลที่ผู้ใช้เห็นและส่งมาเอง
-- ต้อง validate ทุก input
-
-ให้เขียน source code ทุกไฟล์
+Tests:
+- product validation
+- duplicate URL
+- extension payload safety
+- user isolation
 ```
 
 ---
 
-## คำสั่งที่ 7: สร้าง AI Provider และ Prompt Builder
+## คำสั่งที่ 6 — AI Content และ Prompt Templates
 
 ```text
-สร้าง AI Provider abstraction และ Prompt Builder สำหรับ zsp-aitool
+สร้าง/ตรวจ AI content generation และ prompt template system
 
 Features:
-- รองรับ OpenAI-compatible API
-- แยก AIProvider interface
-- มี mock provider สำหรับ local development
-- สร้าง prompt ตาม platform
-- ป้องกันการแต่งข้อมูลสินค้าเกินจริง
-- บังคับใส่ affiliate disclosure
-- รองรับภาษาไทยและอังกฤษ
-- รองรับหลาย tone
-- รองรับหลาย content length
-- สร้างหลายเวอร์ชันได้
-
-ให้สร้าง:
-- src/services/ai/AIProvider.ts
-- src/services/ai/OpenAICompatibleProvider.ts
-- src/services/ai/MockAIProvider.ts
-- src/services/ai/PromptBuilder.ts
-- src/services/ai/ContentSafety.ts
-- src/services/AIContentService.ts
-- src/schemas/ai.schema.ts
-
-Output format จาก AI:
-{
-  "platform": "",
-  "headline": "",
-  "caption": "",
-  "hashtags": [],
-  "cta": "",
-  "affiliateDisclosure": "",
-  "warnings": []
-}
-
-Rules:
-- ห้ามสร้าง fake reviews
-- ห้ามอ้างสรรพคุณเกินจริง
-- ถ้าข้อมูลสินค้าไม่มี ให้เขียนแบบกลาง ๆ
-- ต้องบอกว่าเป็นลิงก์ Affiliate หรือโพสต์โปรโมต
-```
-
----
-
-## คำสั่งที่ 8: สร้าง AI Content API
-
-```text
-สร้าง API สำหรับ AI Content Generation
-
-Endpoints:
-- POST /api/ai/generate
-- POST /api/ai/generate-batch
-- GET /api/content-history
-- GET /api/content-history/[id]
-- DELETE /api/content-history/[id]
-
-Features:
-- เลือกสินค้า
-- เลือก platform
-- เลือก tone
-- เลือกภาษา
-- เลือกจำนวนเวอร์ชัน
-- ใส่ custom prompt เพิ่มได้
-- บันทึก generation history ลง database
-- เก็บ token usage ถ้ามี
-- คืนค่า structured JSON
-- รองรับ batch generation หลาย platform
-
-ให้สร้าง:
-- src/app/api/ai/generate/route.ts
-- src/app/api/ai/generate-batch/route.ts
-- src/app/api/content-history/route.ts
-- src/app/api/content-history/[id]/route.ts
-- src/components/ai/ContentGeneratorForm.tsx
-- src/components/ai/GeneratedContentCard.tsx
-- src/components/ai/PlatformSelector.tsx
-- src/components/ai/ToneSelector.tsx
-- src/app/dashboard/generator/page.tsx
-- src/app/dashboard/content-history/page.tsx
-
-Requirements:
-- ใช้ ProductService และ AIContentService
-- Validate input ด้วย Zod
-- มี loading, error, empty state
-- มี copy-to-clipboard
-```
-
----
-
-## คำสั่งที่ 9: สร้าง Prompt Template System
-
-```text
-สร้างระบบ Prompt Template สำหรับ zsp-aitool
-
-Features:
-- สร้าง template
-- แก้ไข template
-- ลบ template
-- duplicate template
-- restore default templates
-- preview template ด้วย sample product
-- ใช้ variables ใน template
-
-Variables:
-{{productTitle}}
-{{price}}
-{{description}}
-{{rating}}
-{{reviewSummary}}
-{{affiliateLink}}
-{{platform}}
-{{tone}}
-{{language}}
-{{ctaStyle}}
-{{hashtags}}
-
-ให้สร้าง:
-- src/services/PromptTemplateService.ts
-- src/services/TemplateRenderer.ts
-- src/schemas/template.schema.ts
-- src/app/api/templates/route.ts
-- src/app/api/templates/[id]/route.ts
-- src/app/api/templates/[id]/duplicate/route.ts
-- src/app/api/templates/restore-defaults/route.ts
-- src/components/templates/PromptTemplateEditor.tsx
-- src/components/templates/TemplatePreview.tsx
-- src/components/templates/TemplateList.tsx
-- src/app/dashboard/templates/page.tsx
-
-Default templates ภาษาไทย:
-- Facebook promotional post
-- Instagram caption
-- Threads short post
-- X post
-- Blog article
-- SEO article
-- Comment reply
-
-ให้เขียน source code ครบทุกไฟล์
-```
-
----
-
-## คำสั่งที่ 10: สร้าง OCR Module
-
-```text
-สร้าง OCR Module สำหรับ zsp-aitool
-
-Goal:
-ให้ผู้ใช้อัปโหลดภาพ screenshot สินค้า แล้วระบบ OCR อ่านข้อความจากภาพ จากนั้นให้ผู้ใช้ตรวจและแก้ไขก่อนบันทึกสินค้า
-
-Features:
-- Upload image
-- Run OCR
-- Extract title, price, discount, rating, sold count, description snippets
-- Show extracted text
-- Show confidence score ถ้ามี
-- ให้ผู้ใช้แก้ไขข้อมูลก่อน save
-- เก็บ OCR job ลง database
-- มี mock OCR provider สำหรับ local dev
-- รองรับการเปลี่ยน OCR provider ในอนาคต
-
-ให้สร้าง:
-- src/services/ocr/OCRProvider.ts
-- src/services/ocr/MockOCRProvider.ts
-- src/services/OCRService.ts
-- src/schemas/ocr.schema.ts
-- src/app/api/ocr/extract/route.ts
-- src/app/api/ocr/[id]/route.ts
-- src/components/ocr/OCRUploadBox.tsx
-- src/components/ocr/OCRResultReview.tsx
-- src/app/dashboard/ocr/page.tsx
-
-Rules:
-- ห้ามบอกว่า OCR ถูกต้อง 100%
-- ต้องให้ผู้ใช้ตรวจสอบข้อมูลก่อนบันทึกสินค้า
-- ต้อง handle error อย่างเหมาะสม
-```
-
----
-
-## คำสั่งที่ 11: สร้าง Similar Product Module
-
-```text
-สร้าง Similar Product Recommendation Module สำหรับ zsp-aitool
-
-Goal:
-แนะนำสินค้าที่คล้ายกันจากสินค้าที่ผู้ใช้บันทึกไว้เอง
-
-Features:
-- เปรียบเทียบจาก category
-- เปรียบเทียบจาก title keywords
-- เปรียบเทียบจาก description keywords
-- เปรียบเทียบจาก price range
-- คำนวณ score 0-100
-- อธิบายเหตุผลว่าทำไมถึงคล้ายกัน
-- บันทึกผล recommendation
-- ปุ่ม refresh recommendation
-
-ให้สร้าง:
-- src/services/SimilarProductService.ts
-- src/lib/keyword-extractor.ts
-- src/lib/price-similarity.ts
-- src/lib/category-matcher.ts
-- src/app/api/products/[id]/similar/route.ts
-- src/app/api/products/[id]/similar-refresh/route.ts
-- src/components/products/SimilarProductCard.tsx
-- src/app/dashboard/products/[id]/similar/page.tsx
-
-Rules:
-- แนะนำจาก product library ของ user เท่านั้น
-- ห้ามดึงข้อมูลสินค้าจากแหล่งภายนอกโดยไม่ได้รับอนุญาต
-- ถ้ายังไม่มีสินค้ามากพอ ให้แสดง empty state
-```
-
----
-
-## คำสั่งที่ 12: สร้าง Dashboard Layout และ UI หลัก
-
-```text
-สร้าง Dashboard UI หลักของ zsp-aitool
-
-Pages:
-- Landing page
-- Dashboard overview
-- Product library
-- Product detail
-- Add product
-- AI generator
+- OpenAI-compatible provider abstraction
+- MockAIProvider สำหรับ tests/local
+- PromptBuilder
+- ContentSafety
+- AIContentService
+- PromptTemplateService
+- TemplateRenderer
 - Content history
-- Prompt templates
-- OCR tools
-- Similar products
-- Settings
+- Batch generation
+- Template duplicate/restore defaults
 
-Components:
-- AppLayout
-- Sidebar
-- MobileNav
-- Header
-- StatCard
-- EmptyState
-- LoadingSpinner
-- CopyButton
-- ExportButton
-- ConfirmDialog
-- Toast
-- PlatformBadge
-- PageTitle
+Rules:
+- ห้ามเรียก real AI API ใน tests
+- ห้าม fake reviews
+- ห้าม invented specs
+- ถ้าข้อมูลสินค้าไม่พอ ให้เขียนแบบ neutral
+- ต้องใส่ affiliate disclosure เมื่อเกี่ยวข้อง
+- Store generation history
+- Structured JSON output
 
-Requirements:
-- UI ภาษาไทยเป็นหลัก
-- Responsive mobile-first
-- SaaS dashboard style
-- ใช้ Tailwind CSS
-- มี loading state
-- มี error state
-- มี empty state
-- มี toast notification
-- ทุกหน้าต้องเชื่อมกับ API client
+Platforms:
+- Facebook
+- Instagram
+- Threads
+- X
+- Blog
+- SEO Article
+- Short Caption
+- Comment Reply
+- HyperFrames Script
 
-ให้สร้าง:
-- src/app/page.tsx
-- src/app/dashboard/page.tsx
-- src/app/dashboard/layout.tsx
-- src/components/layout/*
-- src/components/ui/*
-- src/lib/api-client.ts
-- src/hooks/*
+Tests:
+- PromptBuilder
+- TemplateRenderer
+- AIContentService
+- content safety
 ```
 
 ---
 
-## คำสั่งที่ 13: สร้าง Export Module
+## คำสั่งที่ 7 — OCR, Similar Products และ Export
 
 ```text
-สร้าง Export Module สำหรับ zsp-aitool
+สร้าง/ตรวจ OCR, Similar Products และ Export modules
 
-Features:
-- Export products เป็น CSV
-- Export content history เป็น CSV
-- Export content เป็น Markdown
-- Export single generated content เป็น TXT
-- Filter by platform
-- Filter by date range
+OCR:
+- OCRProvider interface
+- MockOCRProvider
+- OCRService
+- OCR job status
+- extracted text review
+- confidence if available
+- ห้ามบอกว่า OCR ถูก 100%
 
-Endpoints:
-- GET /api/export/products.csv
-- GET /api/export/content.csv
-- GET /api/export/content.md
-- GET /api/export/content/[id].txt
+Similar products:
+- แนะนำจากสินค้าที่ user บันทึกเองเท่านั้น
+- score 0-100
+- reason explanation
+- refresh API
 
-ให้สร้าง:
-- src/services/ExportService.ts
-- src/lib/csv.ts
-- src/lib/markdown.ts
-- src/app/api/export/products.csv/route.ts
-- src/app/api/export/content.csv/route.ts
-- src/app/api/export/content.md/route.ts
-- src/app/api/export/content/[id].txt/route.ts
-- src/components/export/ExportPanel.tsx
+Export:
+- products CSV
+- content CSV
+- content Markdown
+- single content TXT
+- export เฉพาะ user data
+- CSV formula injection protection
 
-Requirements:
-- ต้องเช็ก user auth
-- export เฉพาะข้อมูลของ user ตัวเอง
-- handle empty data
+Tests:
+- OCR mock
+- similar product isolation
+- export security
 ```
 
 ---
 
-## คำสั่งที่ 14: สร้าง Chrome Extension
+## คำสั่งที่ 8 — Chrome Extension MV3
 
 ```text
-สร้าง Chrome Extension Manifest V3 สำหรับ zsp-aitool
+สร้าง/ตรวจ Chrome Extension Manifest V3 สำหรับ zsp-aitool
 
 Purpose:
-ให้ผู้ใช้เก็บข้อมูลสินค้าจากหน้า Shopee ที่กำลังเปิดอยู่ แล้วส่งเข้า zsp-aitool web app
+ให้ผู้ใช้เก็บข้อมูลสินค้าจากหน้า Shopee ที่กำลังเปิดอยู่ แล้วส่งเข้า zsp-aitool API หลัง user confirmation
 
 Compliance:
-- ดึงเฉพาะข้อมูลที่มองเห็นได้ในหน้าเว็บ
-- ห้ามใช้ private API
-- ห้าม bypass login หรือ CAPTCHA
+- ดึงเฉพาะ visible page data
+- ห้าม private API
+- ห้าม bypass login/CAPTCHA/rate limits
 - ห้ามเก็บ private user data
-- ต้องให้ผู้ใช้กดยืนยันก่อนส่งข้อมูล
-- ต้องให้ผู้ใช้แก้ไขข้อมูลก่อนบันทึก
+- ต้องให้ user review/edit ก่อนส่งหรือบันทึก
 
-Features:
-1. Popup UI
-2. Collect product button
-3. Detect current page URL
-4. Extract visible product data:
-   - title
-   - price
-   - image URLs
-   - rating ถ้าเห็น
-   - sold count ถ้าเห็น
-   - description ถ้าเห็น
-   - current page URL
-5. Manual edit in popup
-6. Send data to zsp-aitool API
-7. Settings page สำหรับ API endpoint และ token
-8. Success/error message
-9. Quick generate Facebook post
-10. Quick generate Instagram caption
-11. Quick generate X post
-12. Quick generate Threads post
-
-ให้สร้าง:
-- extension/manifest.json
+Files:
 - extension/package.json
+- extension/manifest.json
 - extension/vite.config.ts
 - extension/src/popup.html
 - extension/src/popup.ts
@@ -630,244 +448,302 @@ Features:
 - extension/src/types.ts
 - extension/README.md
 
-ให้เขียน source code ครบทุกไฟล์
+หลังแก้ให้รัน extension npm install/ci และ build ถ้ามี script
 ```
 
 ---
 
-## คำสั่งที่ 15: สร้าง Settings Page
+## คำสั่งที่ 9 — Dashboard UI และ Professional App Shell
 
 ```text
-สร้าง Settings Module สำหรับ zsp-aitool
+สร้าง/ตรวจ Thai-first professional dashboard UI
 
-Features:
-- ตั้งค่า AI Provider
-- ตั้งค่า API Key ผ่าน environment เท่านั้น ไม่โชว์ key จริง
-- ตั้งค่า default language
-- ตั้งค่า default tone
-- ตั้งค่า affiliate disclosure
-- ตั้งค่า default hashtag preference
-- ตั้งค่า default CTA style
-- ตั้งค่า OCR provider
-- ตั้งค่า profile เบื้องต้น
+Pages:
+- Landing
+- Login/Register
+- Dashboard overview
+- Product library/detail/new
+- AI Generator
+- Content History
+- Prompt Templates
+- OCR Tools
+- Similar Products
+- Settings
 
-ให้สร้าง:
-- src/services/UserSettingService.ts
-- src/schemas/settings.schema.ts
-- src/app/api/settings/route.ts
-- src/components/settings/SettingsForm.tsx
-- src/app/dashboard/settings/page.tsx
-
-Security:
-- ห้ามบันทึก secret API key ลง database แบบ plain text
-- ให้ใช้ env var สำหรับ provider key
-- UI แสดงเฉพาะสถานะว่า configured หรือ not configured
-```
-
----
-
-## คำสั่งที่ 16: สร้าง Tests
-
-```text
-สร้าง test suite สำหรับ zsp-aitool
-
-ให้สร้าง tests สำหรับ:
-- ProductService
-- AIContentService
-- PromptBuilder
-- TemplateRenderer
-- OCRService
-- SimilarProductService
-- ExportService
-- Auth validation
-- API route examples
-
-ใช้:
-- Vitest
-- Testing Library สำหรับ React component
-- Mock Prisma
-- Mock AI Provider
-- Mock OCR Provider
-
-ให้สร้าง:
-- vitest.config.ts
-- tests/setup.ts
-- tests/services/ProductService.test.ts
-- tests/services/AIContentService.test.ts
-- tests/services/PromptBuilder.test.ts
-- tests/services/TemplateRenderer.test.ts
-- tests/services/OCRService.test.ts
-- tests/services/SimilarProductService.test.ts
-- tests/services/ExportService.test.ts
-- tests/api/products.test.ts
-- tests/components/ProductCard.test.tsx
+Components:
+- AppLayout
+- Sidebar
+- Header
+- MobileNav
+- PageHeader
+- Card
+- StatCard
+- StatusBadge
+- ModuleCard
+- AlertBanner
+- EmptyState
+- LoadingSpinner
+- Toast
 
 Requirements:
-- Tests ต้องรันได้ด้วย npm run test
-- อย่าเรียก AI API จริง
-- อย่าเรียก OCR API จริง
+- Thai-first UI
+- responsive desktop/mobile
+- grouped navigation: Main, HyperFrames, Admin
+- no raw JSON in normal dashboard UI
+- no outputPath, /var/lib, DATABASE_URL, secrets
+- no dangerouslySetInnerHTML
+- accessible focus states
+
+Tests:
+- sidebar main modules
+- HyperFrames nav group
+- admin group
+- dashboard no raw JSON
+- no sensitive markers
 ```
 
 ---
 
-## คำสั่งที่ 17: ตรวจสอบความสมบูรณ์ของ Source Code
+## คำสั่งที่ 10 — HyperFrames Production-Safe System
 
 ```text
-ตรวจสอบ source code ทั้งหมดของ zsp-aitool
+สร้าง/ตรวจ HyperFrames render system แบบ production-safe
 
-ให้ตรวจ:
-1. ไฟล์ไหนยังขาด
-2. import path ไหนผิด
-3. type ไหนไม่ตรง
-4. Prisma model ตรงกับ service หรือไม่
-5. API routes ครบหรือไม่
-6. Frontend เรียก API ถูกหรือไม่
-7. Extension ส่ง payload ตรง backend schema หรือไม่
-8. env vars ครบหรือไม่
-9. docker-compose ใช้งานได้หรือไม่
-10. test scripts ครบหรือไม่
-11. มี TODO ใน core feature หรือไม่
-12. มี hardcoded API key หรือไม่
-13. มีโค้ดที่เสี่ยงผิด compliance หรือไม่
+Features:
+- HyperFrames Studio
+- script generation
+- script-to-composition
+- render enqueue
+- batch render
+- render history
+- retry/cancel
+- secure download
+- thumbnail
+- share token
+- quota/billing gates
+- operator queue
+- worker daemon
+- queue status
+- cleanup dry-run
+- stale recovery
+- watchdog
 
-จากนั้นให้แก้ไฟล์ที่ผิดทั้งหมด
-แสดงเฉพาะไฟล์ที่ต้องแก้ พร้อม code เต็มของไฟล์นั้น
+Safety:
+- Codex/container render disabled default
+- worker command ใช้ bin + argv vector ห้าม shell concatenation
+- max pending/running/attempts
+- retry backoff
+- disk checks
+- stale running detection
+- cleanup dry-run default
+- cleanup ห้าม escape HYPERFRAMES_OUTPUT_DIR
+- download ต้อง block traversal/symlink escape
+- no outputPath, /var/lib ใน UI/API
+- no arbitrary HTML execution
+- operator UI read-only/safe ไม่มี systemd controls
+
+Tests:
+- disabled worker path
+- command vector
+- smoke gates
+- queue limits
+- output path safety
+- secure downloads
+- no sensitive UI exposure
 ```
 
 ---
 
-## คำสั่งที่ 18: สร้าง README ฉบับสมบูรณ์
+## คำสั่งที่ 11 — Admin Panel Foundation
 
 ```text
-สร้าง README.md ฉบับสมบูรณ์สำหรับ zsp-aitool
+สร้าง/ตรวจ Admin Panel Foundation
 
-ต้องมี:
-- Project overview
-- Features
-- Tech stack
-- Folder structure
-- Local setup
-- Environment variables
-- Database setup
-- Prisma migration
-- Seed command
-- Run development server
-- Run tests
-- Run with Docker Compose
-- Chrome Extension setup
-- AI Provider setup
-- OCR Provider setup
-- Affiliate compliance notes
-- Security notes
-- Troubleshooting
-- Deployment guide
-- Future roadmap
+Routes:
+- /dashboard/admin
+- /dashboard/admin/users
+- /dashboard/admin/products
+- /dashboard/admin/content
+- /dashboard/admin/renders
+- /dashboard/admin/system
+- /dashboard/admin/audit-logs
+- /dashboard/admin/settings
 
-ภาษา README ใช้ภาษาอังกฤษ
-แต่เพิ่ม section อธิบายการใช้งานภาษาไทยด้วย
+API:
+- GET /api/admin/overview
+
+Rules:
+- auth required
+- ถ้ามี role system ให้ enforce admin/operator role
+- ถ้า role unclear ให้ gate ด้วย ADMIN_PANEL_ENABLED=false default
+- aggregate-only data
+- ห้าม expose raw user list/emails/passwords/secrets/local paths/outputPath/stack traces
+- no dangerous actions
+- no systemd controls in UI
+- Thai-first UI
+
+Components:
+- AdminShell
+- AdminMetricCard
+- AdminStatusPanel
+- AdminGuardNotice
+- AdminPlaceholderTable
+
+Tests:
+- admin pages use gated shell
+- admin API withAuth + gate
+- aggregate-only
+- no sensitive markers
 ```
 
 ---
 
-## คำสั่งที่ 19: สร้าง Production Checklist
+## คำสั่งที่ 12 — Final UI/Admin/HyperFrames Audit
 
 ```text
-สร้าง Production Readiness Checklist สำหรับ zsp-aitool
+ตรวจสอบ UI/Admin/HyperFrames ทั้งหมดหลัง merge
 
-ครอบคลุม:
-- Security
-- Authentication
-- Rate limiting
-- Input validation
-- Database backup
-- Logging
-- Error monitoring
-- AI cost control
-- OCR cost control
-- Affiliate compliance
-- Chrome Extension permission review
-- Privacy policy
-- Terms of service
-- Deployment
-- Scaling
-- Testing
-- CI/CD
+Scope:
+- src/app/dashboard/**
+- src/components/layout/**
+- src/components/ui/**
+- src/components/admin/**
+- src/components/hyperframes/**
+- src/app/api/admin/**
+- src/app/api/hyperframes/**
 
-ให้จัดเป็น checklist พร้อมสถานะ:
-- Required before launch
-- Recommended
-- Future improvement
+ตรวจ:
+- no raw JSON in dashboard
+- no outputPath in UI/API response shaping
+- no /var/lib in UI
+- no DATABASE_URL in UI/API response
+- no dangerouslySetInnerHTML
+- no direct systemctl controls in UI
+- admin pages gated
+- admin API withAuth + ADMIN_PANEL_ENABLED/role gate
+- HyperFrames operator UI read-only/safe
+- render thumbnails use next/image
+
+เพิ่ม/อัปเดต test:
+- tests/components/final-ui-admin-hyperframes-audit.test.ts
+
+รัน:
+npm run typecheck
+npm run test
+npm run build
+npm run health
 ```
 
 ---
 
-# ลำดับการใช้งานที่แนะนำ
-
-ให้ใช้ตามนี้:
+## คำสั่งที่ 13 — Final Full Repo Production Readiness
 
 ```text
-0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19
-```
+ทำ final full-repo production readiness verification สำหรับ cvsz/zsp-aitool
 
-ถ้าใช้กับ AI ที่ตอบยาวไม่ได้ เช่น ChatGPT, Claude, Gemini, Cursor Chat ให้เพิ่มคำนี้ท้ายทุกคำสั่ง:
+Review scope:
+- docs/governance
+- package/scripts
+- Prisma/schema/migrations
+- app/API safety
+- auth/tenant/org isolation
+- admin foundation
+- HyperFrames safety
+- UI readiness
+- tests/security regressions
 
-```text
-ถ้า response ยาวเกินไป ให้แบ่งเป็น Part 1, Part 2, Part 3 และรอคำว่า “continue” ก่อนสร้างส่วนต่อไป
-```
+Run:
+git status --short
+git log --oneline -n 20
+python3 -m json.tool package.json >/tmp/package-json-ok.json
+npm ci
+npm run prisma:generate
+npx prisma validate
+npm run typecheck
+npm run test
+npm run build
+npm run health
+npm run hyperframes:doctor
+npm run hyperframes:worker:once
+npm run hyperframes:queue-status || true
+npm run hyperframes:worker:watchdog || true
 
-ถ้าใช้กับ Cursor หรือ Codex ให้ใช้แบบนี้ท้าย prompt:
+grep -RniE "dangerouslySetInnerHTML|DATABASE_URL|sk-[A-Za-z0-9]|/var/lib|outputPath" src app components scripts prisma tests docs 2>/dev/null || true
+grep -RniE "systemctl[[:space:]]+(start|stop|restart|enable|disable)" src/app src/components 2>/dev/null || true
 
-```text
-Apply these changes directly to the codebase.
-Create missing files.
-Modify existing files if needed.
-Do not remove working code unless necessary.
-After editing, summarize changed files.
+Production VM checks:
+npx prisma migrate status --schema prisma/schema.prisma
+systemctl is-active zsp-aitool
+systemctl is-active zsp-hyperframes-worker
+systemctl is-enabled zsp-hyperframes-worker
+curl -I http://127.0.0.1:3001/dashboard
+curl -I http://127.0.0.1:3001/dashboard/hyperframes
+curl -I http://127.0.0.1:3001/dashboard/hyperframes/renders
+curl -I http://127.0.0.1:3001/dashboard/hyperframes/ops
+curl -I http://127.0.0.1:3001/dashboard/admin
+
+ถ้า production มี pending migrations:
+npx prisma migrate deploy --schema prisma/schema.prisma
+npx prisma migrate status --schema prisma/schema.prisma
+
+Final response:
+- Overall verdict
+- Checklist table PASS/WARN/FAIL
+- Files changed
+- Schema changes
+- Security/access behavior
+- Commands run
+- Blocking issues
+- Environment-only warnings
+- Remaining risks
+- Commit hash
+- READY_TO_DEPLOY=true/false
+- READY_FOR_NEXT_PHASE=true/false
 ```
 
 ---
 
 # Prompt คุมงานระหว่างทำ
 
-ใช้เมื่อ AI เริ่มหลุดหรือเขียนไม่ครบไฟล์:
+## เมื่อต้องการให้ AI ตรวจสิ่งที่เพิ่งทำ
 
 ```text
-หยุดก่อน แล้วตรวจสอบสิ่งที่คุณเพิ่งสร้าง
+หยุดก่อน แล้วตรวจสิ่งที่เพิ่งแก้
 
-กรุณาตรวจว่า:
-1. ไฟล์ครบตามที่สั่งหรือไม่
-2. มีไฟล์ไหนอ้างถึงแต่ยังไม่ได้สร้างหรือไม่
-3. import path ถูกต้องหรือไม่
-4. TypeScript type ตรงกันหรือไม่
-5. Prisma schema รองรับโค้ดที่เขียนหรือไม่
-6. API route ตรงกับ frontend หรือไม่
+ตรวจว่า:
+1. ไฟล์ครบตาม scope หรือไม่
+2. import path ถูกต้องหรือไม่
+3. TypeScript types ตรงหรือไม่
+4. Prisma schema รองรับ service หรือไม่
+5. API route ตรงกับ frontend หรือไม่
+6. tests ครอบ behavior หรือไม่
 7. มี TODO ใน core feature หรือไม่
+8. มี secrets/local path exposure หรือไม่
+9. มี outputPath หรือ /var/lib ใน UI/API response หรือไม่
+10. มี dangerouslySetInnerHTML หรือไม่
 
-จากนั้นแก้ไขให้ครบ
-ให้แสดงเฉพาะไฟล์ที่ต้องแก้ พร้อม path และ code เต็ม
+ถ้าพบปัญหา ให้แก้ด้วย patch ที่เล็กที่สุด แล้วรัน verification
 ```
 
----
-
-# Prompt สั่งให้ Generate ต่อ
+## เมื่อต้องการ continue
 
 ```text
 continue
 
-สร้าง module ถัดไปตามลำดับเดิม
+ทำ module ถัดไปตามลำดับเดิม
 อย่าข้ามไฟล์
 อย่าเปลี่ยน architecture
-ให้แสดง path และ code เต็มของทุกไฟล์
+สร้าง missing files
+แก้ existing files เมื่อจำเป็น
+หลังแก้ให้สรุป files changed และ tests run
 ```
 
----
-
-# Prompt สั่งให้สรุปสถานะโปรเจกต์
+## เมื่อต้องการสรุปสถานะ
 
 ```text
 สรุปสถานะโปรเจกต์ zsp-aitool ตอนนี้
 
-ให้ตอบเป็นตาราง:
+ตอบเป็นตาราง:
 - Module
 - Files generated
 - Completed features
@@ -880,4 +756,20 @@ continue
 
 ---
 
-ชุดนี้เหมาะที่สุดถ้าคุณต้องการให้ AI ค่อย ๆ สร้างโปรเจกต์ใหญ่แบบไม่หลุดโครงสร้าง และตรวจงานได้ทีละโมดูล.
+# ลำดับใช้งานที่แนะนำ
+
+```text
+0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13
+```
+
+สำหรับ repo ปัจจุบันที่มี source code แล้ว ให้เริ่มจาก:
+
+```text
+12 → 13
+```
+
+ถ้าต้องการ redesign ต่อ ให้ใช้:
+
+```text
+9 → 10 → 11 → 12 → 13
+```
