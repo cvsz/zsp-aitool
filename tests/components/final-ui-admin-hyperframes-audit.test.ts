@@ -98,4 +98,10 @@ describe("final UI admin HyperFrames audit", () => {
     expect(source).toContain("next/image");
     expect(source).not.toContain("<img");
   });
+
+  it("keeps product cards on next image instead of raw img", () => {
+    const source = readSource("src/components/products/ProductCard.tsx");
+    expect(source).toContain("next/image");
+    expect(source).not.toContain("<img");
+  });
 });

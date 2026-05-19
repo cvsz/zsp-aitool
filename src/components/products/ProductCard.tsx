@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import type { ProductRecord } from "@/services/ProductService";
 
 type ProductCardProps = { product: ProductRecord };
@@ -25,7 +26,14 @@ export function ProductCard({ product }: ProductCardProps) {
       </div>
 
       {hasImage ? (
-        <img src={product.images?.[0]?.url ?? ""} alt={product.title} className="mb-3 h-36 w-full rounded-lg border object-cover" />
+        <Image
+          src={product.images?.[0]?.url ?? ""}
+          alt={product.title || "รูปสินค้า"}
+          width={640}
+          height={360}
+          className="mb-3 h-36 w-full rounded-lg border object-cover"
+          unoptimized
+        />
       ) : (
         <div className="mb-3 flex h-36 w-full items-center justify-center rounded-lg border border-dashed text-sm text-slate-500">
           ยังไม่มีรูปสินค้า
