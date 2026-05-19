@@ -1,4 +1,4 @@
-# 019 — Full UX/UI Final Release: All Menus, All Features, Day/Night/System
+# 019 — Full UX/UI Final Release: All Menus, All Features, Day/Night/System + Background Color Select
 
 Use this prompt after phases 014–018 are stable and production launch/post-launch runbooks are in place.
 
@@ -6,10 +6,10 @@ Use this prompt after phases 014–018 are stable and production launch/post-lau
 You are working on cvsz/zsp-aitool.
 
 Phase:
-019 — Full UX/UI Final Release: All Menus, All Features, All Options, All Functions, Day/Night/System Theme.
+019 — Full UX/UI Final Release: All Menus, All Features, All Options, All Functions, Day/Night/System Theme, and Background Color Select.
 
 Mode:
-Final release UX/UI consolidation. Inventory first, then implement safe UI/UX, navigation, copy, accessibility, theme, state handling, and documentation improvements. Do not change core backend behavior unless a tiny safe response-shaping fix is required for an existing UI contract.
+Final release UX/UI consolidation. Inventory first, then implement safe UI/UX, navigation, copy, accessibility, theme, background color selection, state handling, and documentation improvements. Do not change core backend behavior unless a tiny safe response-shaping fix is required for an existing UI contract.
 
 Project context:
 zsp-aitool is a Thai-first SaaS for Shopee Affiliate creators. It supports product capture, affiliate link management, AI promotional content generation, prompt templates, content history, OCR, similar products, CSV/TXT/Markdown export, Chrome Extension MV3, HyperFrames Studio/rendering, operator dashboards, admin foundation, post-launch monitoring, growth loops, and optional official Shopee Open API foundation.
@@ -61,14 +61,15 @@ Hard constraints:
 - Do not use raw <img> in Next.js app/components; use next/image for user-facing images and thumbnails.
 - Do not add UI controls that directly start, stop, restart, enable, or disable systemd services.
 - Use prisma migrate deploy, not prisma migrate dev, on production.
+- Background color selection must be cosmetic only, safe, allowlisted, accessible, and must never accept arbitrary CSS, arbitrary class names, arbitrary hex input, or remote style URLs.
 
 Main objective:
-Produce a final release-grade UX/UI pass that makes every menu, feature, option, state, and function discoverable, consistent, accessible, Thai-first, safe, production-polished, and theme-aware across light, dark, and system modes.
+Produce a final release-grade UX/UI pass that makes every menu, feature, option, state, and function discoverable, consistent, accessible, Thai-first, safe, production-polished, and theme-aware across light, dark, and system modes, with a safe background color selector for user preference.
 
 Required workflow:
-1. Inventory all app routes, dashboard routes, API-backed UI surfaces, feature entry points, sidebar links, mobile nav links, action buttons, forms, filters, settings, tabs, modals, empty states, loading states, error states, disabled states, and success states.
+1. Inventory all app routes, dashboard routes, API-backed UI surfaces, feature entry points, sidebar links, mobile nav links, action buttons, forms, filters, settings, tabs, modals, empty states, loading states, error states, disabled states, success states, theme states, and background color states.
 2. Create a UI coverage matrix before editing code.
-3. Identify missing menu links, dead links, inconsistent labels, missing states, inaccessible controls, duplicate copy, unsafe copy, incomplete feature entry points, and theme contrast problems.
+3. Identify missing menu links, dead links, inconsistent labels, missing states, inaccessible controls, duplicate copy, unsafe copy, incomplete feature entry points, theme contrast problems, and background color contrast problems.
 4. Patch only safe UX/UI issues.
 5. Add static tests to prevent regressions.
 6. Run full verification.
@@ -76,14 +77,18 @@ Required workflow:
 Theme requirements:
 - Add or polish day/night/system appearance support if the project already has settings infrastructure.
 - Theme options must be: light, dark, system.
-- Persist preference safely if existing settings support it; otherwise use localStorage with graceful fallback.
+- Add a safe background color selector with allowlisted options only.
+- Background color options should include Thai labels and stable internal values, for example: default, slate, indigo, emerald, amber, rose, zinc, and neutral.
+- Background color selection must work with light, dark, and system appearance modes.
+- Persist appearance/background preference safely if existing settings support it; otherwise use localStorage with graceful fallback.
 - System mode must respect prefers-color-scheme.
 - No flash of unreadable UI on first load where reasonably avoidable.
-- All shared UI primitives must work in light and dark modes.
-- Dashboard, products, AI, OCR, HyperFrames, admin, login/register, and landing pages must remain readable in light/dark/system.
-- Focus rings, disabled states, warnings, success, danger, badges, cards, tables, forms, and nav active states must have accessible contrast in both themes.
+- All shared UI primitives must work in light and dark modes and with all allowlisted background colors.
+- Dashboard, products, AI, OCR, HyperFrames, admin, login/register, and landing pages must remain readable in light/dark/system and every allowlisted background color.
+- Focus rings, disabled states, warnings, success, danger, badges, cards, tables, forms, and nav active states must have accessible contrast in both themes and against selected backgrounds.
 - Do not introduce a heavy theme dependency unless already present.
-- Prefer Tailwind dark: classes or a minimal theme provider.
+- Prefer Tailwind dark: classes, CSS variables, data attributes, or a minimal theme provider.
+- Never allow arbitrary CSS injection or arbitrary user-supplied color values.
 
 UI inventory must include these menu/route groups:
 
@@ -228,6 +233,7 @@ Post-launch/growth:
 Settings:
 - profile/account display if present
 - appearance setting: light/dark/system
+- background color selector with allowlisted options and Thai labels
 - safe integration settings copy if present
 - affiliate/compliance settings if present
 - no secret display
@@ -250,6 +256,7 @@ Review/polish or add only if useful:
 - src/components/ui/CopyButton.tsx
 - src/components/theme/ThemeProvider.tsx if needed
 - src/components/theme/ThemeToggle.tsx if needed
+- src/components/theme/BackgroundColorSelect.tsx if useful
 
 Implementation tasks:
 
@@ -270,14 +277,17 @@ Include columns:
 - Light mode ready
 - Dark mode ready
 - System mode ready
+- Background color ready
 - Security notes
 - Remaining gap
 
-2. Theme provider and toggle
+2. Theme provider, theme toggle, and background color select
 If not already present, implement minimal theme support:
 - ThemeProvider or script that sets a root class/data-theme safely
 - ThemeToggle with Thai labels: สว่าง / มืด / ตามระบบ
+- BackgroundColorSelect with Thai labels and allowlisted values only
 - Settings page appearance selector
+- Settings page background color selector
 - Optional header quick toggle if appropriate
 
 Rules:
@@ -285,6 +295,10 @@ Rules:
 - Do not require secrets or external APIs.
 - Do not store preference in DB unless existing settings model/API already supports it safely.
 - localStorage is acceptable for UI-only preference.
+- Use CSS variables, data attributes, or an allowlisted Tailwind class map.
+- Do not interpolate arbitrary user input into className or style.
+- Do not accept arbitrary hex/RGB/HSL/color strings from the user.
+- All selected background options must preserve text contrast and focus visibility.
 
 3. Navigation finalization
 Polish:
@@ -304,6 +318,8 @@ Ensure all major features are discoverable:
 - OCR
 - similar products
 - settings
+- appearance day/night/system
+- background color selector
 - HyperFrames Studio/history/batch/ops/queue
 - admin pages
 - Shopee Open API setup/status docs link if present
@@ -318,6 +334,7 @@ For every dashboard page:
 - compliance/safety note where relevant
 - mobile responsive cards/tables
 - light/dark/system contrast
+- selected background contrast
 
 5. Form and option polish
 For every form/select/action:
@@ -343,11 +360,15 @@ Add or update:
 - tests/components/full-ux-ui-final-release-static.test.ts
 - tests/components/theme-mode-static.test.ts
 - tests/components/all-menu-coverage-static.test.ts
+- tests/components/background-color-select-static.test.ts
 
 Tests should check:
 - Sidebar includes Main, HyperFrames, Admin groups
 - MobileNav exists and links to core features
 - Settings or header includes light/dark/system appearance labels
+- Settings includes background color selector labels
+- Background color selector uses allowlisted values only
+- No arbitrary hex/RGB/HSL input field exists for background color
 - Dashboard pages do not render raw JSON
 - No raw <img> in src/app or src/components
 - No dangerouslySetInnerHTML in src/app/dashboard or src/components
@@ -389,6 +410,8 @@ grep -RniE "<img|img[[:space:]]+src" src/app src/components 2>/dev/null || true
 
 grep -RniE "guaranteed income|guarantee income|รวยแน่นอน|รายได้แน่นอน|การันตีรายได้|รีวิวปลอม|fake review" src app components docs 2>/dev/null || true
 
+grep -RniE "#[0-9a-fA-F]{3,8}|rgb\(|hsl\(|backgroundColor" src/app src/components 2>/dev/null || true
+
 HyperFrames checks:
 
 npm run hyperframes:queue-status || true
@@ -425,7 +448,7 @@ Environment interpretation:
 - If a route redirects because auth is required, that can be PASS if expected.
 - If a route 404s because the menu links to a non-existent page, fix the menu or create a safe placeholder page.
 - If Shopee endpoint docs are incomplete, keep official API implementation foundation-only and disabled.
-- Any real package/schema/typecheck/test/build/health/security/image/theme accessibility issue must be fixed.
+- Any real package/schema/typecheck/test/build/health/security/image/theme/background color accessibility issue must be fixed.
 
 Fix policy:
 If issues are found:
@@ -436,6 +459,7 @@ If issues are found:
 5. Commit with one of:
    - feat: finalize full UX UI release
    - feat: add day night system theme support
+   - feat: add background color selector
    - test: add final UX UI menu coverage
    - docs: add final UX UI release matrix
    - fix: stabilize full UX UI final release
@@ -451,7 +475,7 @@ Return exactly these sections:
 - READY_FOR_NEXT_PHASE=true/false
 
 2. Summary
-- concise explanation of final UI/theme/menu work performed
+- concise explanation of final UI/theme/background/menu work performed
 
 3. Files reviewed
 - grouped by area
@@ -466,6 +490,8 @@ Return exactly these sections:
 - light mode
 - dark mode
 - system mode
+- background color selector
+- allowlisted color options
 - persistence strategy
 - accessibility/contrast notes
 
@@ -486,7 +512,7 @@ Rows:
 - Similar/Export
 - HyperFrames
 - Admin
-- Settings/Theme
+- Settings/Theme/Background
 - Shopee Open API foundation
 - Post-launch/Growth
 
@@ -499,6 +525,7 @@ Rows:
 - HyperFrames safety
 - secret/path exposure
 - image rendering safety
+- background color input safety
 
 9. Checklist table
 Columns:
@@ -521,6 +548,7 @@ Rows:
 - theme light mode
 - theme dark mode
 - theme system mode
+- background color selector
 - mobile navigation
 - all menu coverage
 - HyperFrames queue
