@@ -10,10 +10,14 @@ export default async function ProductsPage() {
   const userId = await getAuthenticatedUserIdForServer();
   const products = await productService.list(userId);
   return (
-    <main className="p-6 space-y-4">
-      <div className="flex gap-3">
-        <Link className="border px-3 py-2" href="/dashboard/products/new">New Product</Link>
-      </div>
+    <main className="space-y-6 p-6">
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold">คลังสินค้า</h1>
+          <p className="text-sm text-slate-600">จัดการสินค้า ลิงก์แอฟฟิลิเอต และเริ่มสร้างคอนเทนต์ได้จากที่เดียว</p>
+        </div>
+        <Link className="rounded-lg border px-3 py-2 text-sm" href="/dashboard/products/new">เพิ่มสินค้าใหม่</Link>
+      </header>
       <ProductGrid products={products} />
     </main>
   );
