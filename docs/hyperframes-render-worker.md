@@ -660,3 +660,9 @@ Safety guarantees remain:
 - Path escape attempts are blocked.
 - Active `RUNNING` job outputs are skipped.
 - Symlink escapes are blocked via `realpath` root-prefix checks.
+
+## UI safety note (Phase 3)
+
+- Operator UI pages (`/dashboard/hyperframes/ops`, `/dashboard/hyperframes/ops/queue`) are read-only by default and intentionally avoid start/stop/enable/disable actions.
+- Do not control worker daemon state from dashboard UI in production. Use CLI/systemd on the production VM for daemon changes.
+- Render history downloads remain secure via API routes (`/api/hyperframes/render/:id/download`) with auth/scope checks; UI must not expose local filesystem paths.
