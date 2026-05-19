@@ -164,6 +164,12 @@ systemctl is-active zsp-hyperframes-worker
 
 ## Deployment Verification
 
+### Production launch checklist (recommended)
+
+Use the launch-focused runbook for smoke checks, migration policy, and rollback guidance:
+
+- `docs/runbooks/production-launch.md`
+
 ### Production server verification
 
 Run these on the actual production machine where `zsp-aitool`, PostgreSQL, and the optional HyperFrames worker service are running:
@@ -240,6 +246,7 @@ npm run health
 - `CONTRIBUTING.md` — contribution workflow and verification checklist
 - `.faf` — persistent project context metadata
 - `docs/hyperframes-render-worker.md` — HyperFrames worker and operator runbook
+- `docs/runbooks/production-launch.md` — production launch smoke + rollback checklist
 
 ## License
 
