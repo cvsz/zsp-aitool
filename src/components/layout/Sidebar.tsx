@@ -23,10 +23,16 @@ const menuGroups: { title: string; items: MenuItem[] }[] = [
     { label: "HyperFrames Ops", href: "/dashboard/hyperframes/ops" },
     { label: "Operator Queue", href: "/dashboard/hyperframes/ops/queue" },
   ]},
-  { title: "Admin", items: ["Admin Overview|/dashboard/admin", "Users|/dashboard/admin/users", "Products|/dashboard/admin/products", "Content|/dashboard/admin/content", "Renders|/dashboard/admin/renders", "System Health|/dashboard/admin/health", "Audit Logs|/dashboard/admin/audit", "Settings|/dashboard/admin/settings"].map((item) => {
-    const [label] = item.split("|");
-    return { label };
-  })},
+  { title: "Admin", items: [
+    { label: "Admin Overview", href: "/dashboard/admin" },
+    { label: "Users", href: "/dashboard/admin/users" },
+    { label: "Products", href: "/dashboard/admin/products" },
+    { label: "Content", href: "/dashboard/admin/content" },
+    { label: "Renders", href: "/dashboard/admin/renders" },
+    { label: "System Health", href: "/dashboard/admin/system" },
+    { label: "Audit Logs", href: "/dashboard/admin/audit-logs" },
+    { label: "Settings", href: "/dashboard/admin/settings" },
+  ]},
 ];
 
 export function Sidebar() {
