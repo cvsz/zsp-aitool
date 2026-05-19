@@ -7,6 +7,8 @@ describe("shopee open api config", () => {
     const safe = toShopeeOpenApiSafeStatus(config);
     expect(config.enabled).toBe(false);
     expect(safe.hasPartnerKey).toBe(false);
+    expect(safe.foundationReady).toBe(false);
+    expect(safe.eligibility).toBe("unknown");
   });
 
   it("throws controlled error only when enabled and missing required env", () => {
