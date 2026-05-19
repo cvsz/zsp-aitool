@@ -17,6 +17,8 @@ export function ProductImportForm() {
     <p className="text-sm text-slate-600">รองรับ Manual, URL, Extension Payload, OCR และ JSON โดยต้องให้ผู้ใช้ตรวจสอบและแก้ไขก่อนบันทึกเสมอ</p>
     <p className="rounded-lg bg-amber-50 p-3 text-xs text-amber-800">ข้อกำหนดความปลอดภัย: ระบบไม่สนับสนุนการ bypass CAPTCHA, login wall, anti-bot หรือ private endpoints และไม่ทำ mass scraping</p>
 
+    <p className="rounded-lg bg-blue-50 p-3 text-xs text-blue-800">Shopee Open API (official) เป็นตัวเลือกเสริม และปิดไว้เป็นค่าเริ่มต้นจนกว่าผู้ดูแลระบบจะตั้งค่า Sandbox/Live ตามเอกสารทางการครบถ้วน ระบบนี้ไม่รองรับการดึงข้อมูลแบบ scraping หรือ bypass ใด ๆ</p>
+
     <div className="flex flex-wrap gap-2">
       {(["manual", "url", "extension", "ocr", "json"] as ImportMethod[]).map((m) => (
         <button key={m} type="button" onClick={() => setMethod(m)} className={`rounded-lg border px-3 py-1.5 text-sm ${method === m ? "bg-slate-900 text-white" : "bg-white"}`}>
