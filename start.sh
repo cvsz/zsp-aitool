@@ -170,6 +170,7 @@ source_integrity_check() {
 
   [[ -f src/services/prompt-template-service.ts ]] || fail "Missing src/services/prompt-template-service.ts"
   [[ -f src/services/PromptTemplateService.ts ]] || fail "Missing compatibility shim src/services/PromptTemplateService.ts"
+  [[ -f docs/runbooks/shopee-affiliate-social-posting.md ]] || fail "Missing Shopee Affiliate social posting runbook"
 
   if ! grep -q '@/services/prompt-template-service' src/app/api/templates/route.ts; then
     fail "Template API route is not using lowercase prompt-template-service import"
@@ -181,6 +182,14 @@ source_integrity_check() {
 
   if ! grep -q 's.shopee.co.th' src/lib/shopee-affiliate-url-safety.ts; then
     fail "Shopee short-link host s.shopee.co.th is missing from allowlist"
+  fi
+
+  if ! grep -q 'Social posting workflow' src/components/shopee/ShopeeAffiliateRealDbDashboard.tsx; then
+    fail "Shopee social posting workflow UI guidance is missing"
+  fi
+
+  if ! grep -q 'SHOPEE_SOCIAL_POSTING_GUIDE_CONFIGURED=true' docs/runbooks/shopee-affiliate-social-posting.md; then
+    fail "Shopee social posting guide marker is missing from runbook"
   fi
 
   ok "Source integrity checks passed"
@@ -435,6 +444,7 @@ main() {
 [PASS] SHOPEE_AFFILIATE_AUTH_CONFIGURED=true
 [PASS] SHOPEE_AFFILIATE_REAL_DB_ROUTES_CONFIGURED=true
 [PASS] SHOPEE_THAI_DATAFEED_IMPORT_CONFIGURED=true
+[PASS] SHOPEE_SOCIAL_POSTING_GUIDE_CONFIGURED=true
 [PASS] GIT_CONFLICT_GUARD_CONFIGURED=true
 EOF
 }
