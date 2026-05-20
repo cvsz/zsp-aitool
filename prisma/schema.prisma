@@ -50,6 +50,7 @@ model User {
   products           Product[]
   contentGenerations ContentGeneration[]
   affiliateLinks     AffiliateLink[]
+  shopeeAffiliateSocialDrafts ShopeeAffiliateSocialDraft[]
   shopeeAffiliateIngestions ShopeeAffiliateIngestion[]
   contentTemplates   ContentTemplate[]
   promptPresets      PromptPreset[]
@@ -132,6 +133,7 @@ model Product {
   images             ProductImage[]
   affiliateLinks     AffiliateLink[]
   shopeeAffiliateIngestions ShopeeAffiliateIngestion[]
+  shopeeAffiliateSocialDrafts ShopeeAffiliateSocialDraft[]
   contentGenerations ContentGeneration[]
   sourceSimilarities SimilarProduct[]    @relation("SourceProduct")
   relatedSimilarTo   SimilarProduct[]    @relation("RelatedProduct")
@@ -175,6 +177,7 @@ model AffiliateLink {
   clickCount   Int      @default(0)
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   product      Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  shopeeAffiliateSocialDrafts ShopeeAffiliateSocialDraft[]
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   deletedAt    DateTime?
@@ -197,6 +200,23 @@ enum ShopeeAffiliateIngestionStatus {
   REJECTED
   IMPORTED
   FAILED
+}
+
+enum ShopeeAffiliateSocialChannel {
+  FACEBOOK
+  THREADS
+  X
+  INSTAGRAM
+  TIKTOK
+  YOUTUBE_SHORTS
+}
+
+enum ShopeeAffiliateSocialDraftStatus {
+  DRAFT
+  READY_FOR_REVIEW
+  COPIED
+  ARCHIVED
+  REJECTED
 }
 
 model ShopeeAffiliateIngestion {
@@ -222,11 +242,38 @@ model ShopeeAffiliateIngestion {
 
   user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   product           Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  socialDrafts      ShopeeAffiliateSocialDraft[]
 
   @@index([userId, status, createdAt])
   @@index([source, status])
   @@index([productId])
   @@index([deletedAt])
+}
+
+model ShopeeAffiliateSocialDraft {
+  id           String                           @id @default(cuid())
+  userId       String
+  ingestionId  String
+  productId    String?
+  affiliateLinkId String?
+  channel      ShopeeAffiliateSocialChannel
+  status       ShopeeAffiliateSocialDraftStatus @default(DRAFT)
+  version      Int                              @default(1)
+  content      String
+  copiedAt     DateTime?
+  archivedAt   DateTime?
+  rejectedAt   DateTime?
+  deletedAt    DateTime?
+  createdAt    DateTime                         @default(now())
+  updatedAt    DateTime                         @updatedAt
+
+  user         User                             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ingestion    ShopeeAffiliateIngestion         @relation(fields: [ingestionId], references: [id], onDelete: Cascade)
+  product      Product?                         @relation(fields: [productId], references: [id], onDelete: SetNull)
+  affiliateLink AffiliateLink?                  @relation(fields: [affiliateLinkId], references: [id], onDelete: SetNull)
+
+  @@index([userId, ingestionId, channel, createdAt])
+  @@index([userId, status, createdAt])
 }
 
 model ContentGeneration {
