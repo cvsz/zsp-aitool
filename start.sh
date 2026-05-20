@@ -180,6 +180,18 @@ source_integrity_check() {
     fail "Shopee Thai TSV datafeed parser is missing"
   fi
 
+  if ! grep -q 'SP_PRODUCT_FEED_ALL_GLOBAL_CATEGORY_FILENAME' src/services/ShopeeAffiliateIngestionService.ts; then
+    fail "SP Product Feed All Global Category parser marker is missing"
+  fi
+
+  if ! grep -q 'spGlobalCategoryFileName' src/components/shopee/ShopeeAffiliateRealDbDashboard.tsx; then
+    fail "SP global category file import UI is missing"
+  fi
+
+  if ! grep -q 'SHOPEE_SP_GLOBAL_CATEGORY_IMPORT_CONFIGURED=true' docs/runbooks/shopee-affiliate-social-posting.md; then
+    fail "SP global category import marker is missing from runbook"
+  fi
+
   if ! grep -q 's.shopee.co.th' src/lib/shopee-affiliate-url-safety.ts; then
     fail "Shopee short-link host s.shopee.co.th is missing from allowlist"
   fi
@@ -444,6 +456,7 @@ main() {
 [PASS] SHOPEE_AFFILIATE_AUTH_CONFIGURED=true
 [PASS] SHOPEE_AFFILIATE_REAL_DB_ROUTES_CONFIGURED=true
 [PASS] SHOPEE_THAI_DATAFEED_IMPORT_CONFIGURED=true
+[PASS] SHOPEE_SP_GLOBAL_CATEGORY_IMPORT_CONFIGURED=true
 [PASS] SHOPEE_SOCIAL_POSTING_GUIDE_CONFIGURED=true
 [PASS] GIT_CONFLICT_GUARD_CONFIGURED=true
 EOF
