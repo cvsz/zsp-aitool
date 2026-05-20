@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { withAuth } from "@/middleware/auth-middleware";
 import { manualAffiliateImportSchema } from "@/schemas/shopee-affiliate.schema";
-import { productService } from "@/services/ProductService";
 import { shopeeAffiliateIngestionService } from "@/services/ShopeeAffiliateIngestionService";
 
 export const POST = withAuth(async (request) => {
@@ -23,39 +22,21 @@ export const POST = withAuth(async (request) => {
     return NextResponse.json({ ok: false, error: { code: "UNSAFE_URL", message: queueDraft.errorSummary } }, { status: 422 });
   }
 
-  if (input.saveMode === "product") {
-    if (!input.productId) {
-      return NextResponse.json({ ok: false, error: { code: "MISSING_PRODUCT", message: "กรุณาเลือกสินค้าเพื่อผูก affiliate link" } }, { status: 422 });
-    }
-
-    try {
-      const updated = await productService.updateAffiliateLink(request.auth.userId, input.productId, input.affiliateUrl);
-      return NextResponse.json({ ok: true, data: { mode: "product", productId: updated.id, affiliateUrl: updated.affiliateUrl, productUrl: input.productUrl }, reviewRequired: true, queueStatus: queueDraft.status });
-    } catch {
-      return NextResponse.json({ ok: false, error: { code: "MISSING_PRODUCT", message: "ไม่พบสินค้าที่เลือก หรือคุณไม่มีสิทธิ์เข้าถึง" } }, { status: 404 });
-    }
-  }
-
-  const created = await productService.create(request.auth.userId, {
-    title: input.title ?? "Shopee Affiliate Import",
-    price: input.price ?? 0,
-    currency: "THB",
-    originalUrl: input.productUrl,
+  const created = await shopeeAffiliateIngestionService.createPending(request.auth.userId, {
     affiliateUrl: input.affiliateUrl,
-    images: [],
+    productUrl: input.productUrl,
+    campaignNote: input.campaignNote,
+    title: input.title ?? "Shopee Affiliate Import",
+    price: input.price,
+    productId: input.saveMode === "product" ? input.productId : undefined,
+    source: "manual",
   });
 
   return NextResponse.json({
     ok: true,
-    data: {
-      mode: "affiliate-link",
-      productId: created.id,
-      affiliateUrl: created.affiliateUrl,
-      productUrl: created.originalUrl,
-      campaignNote: input.campaignNote ?? null,
-    },
+    data: created,
     reviewRequired: true,
-    queueStatus: queueDraft.status,
+    queueStatus: created.status,
     disclosure: "โพสต์นี้มีลิงก์ Affiliate ผู้สร้างอาจได้รับค่าคอมมิชชันจากคำสั่งซื้อที่เข้าเงื่อนไข",
   }, { status: 201 });
 });
