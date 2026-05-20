@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 type IngestionItem = {
   id: string;
@@ -44,17 +44,20 @@ export function ShopeeAffiliateRealDbDashboard() {
 
   const filteredEndpoint = useMemo(() => status === "all" ? "/api/integrations/shopee/affiliate-ingestions" : `/api/integrations/shopee/affiliate-ingestions?status=${status}`, [status]);
 
-  async function refresh() {
+  const refresh = useCallback(async () => {
     setLoading(true);
-    const res = await fetch(filteredEndpoint);
-    const json = await res.json();
-    if (json?.ok && json.data) setPayload(json.data);
-    setLoading(false);
-  }
+    try {
+      const res = await fetch(filteredEndpoint);
+      const json = await res.json();
+      if (json?.ok && json.data) setPayload(json.data);
+    } finally {
+      setLoading(false);
+    }
+  }, [filteredEndpoint]);
 
   useEffect(() => {
     void refresh();
-  }, [filteredEndpoint]);
+  }, [refresh]);
 
   async function submitManual(e: FormEvent) {
     e.preventDefault();
