@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getUserHyperFramesPlan, getUserPlanUsage } from "@/lib/hyperframes/subscription-limits";
 import { HyperFramesQuotaService } from "@/services/HyperFramesQuotaService";
 import { BudgetService } from "@/services/BudgetService";
+import { env } from "@/lib/env";
 
 export type UsageSummary = {
   plan: PlanTier;
@@ -29,10 +30,12 @@ export type UsageSummary = {
     rbacEnabled: boolean;
     note: string;
   };
+  dailyAiOcrSpend: number;
+  dailyLimitUsd: number;
 };
 
 export async function getUserUsageSummary(userId: string): Promise<UsageSummary> {
-  const [user, products, aiGenerations, exportsCount, ocrJobs, renderJobs, quota, orgMemberships, dailyUsage] = await Promise.all([
+  const [user, products, aiGenerations, exportsCount, ocrJobs, renderJobs, quota, orgMemberships, dailyAiOcrSpend] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId }, select: { planTier: true } }),
     prisma.product.count({ where: { userId, deletedAt: null } }),
     prisma.contentGeneration.count({ where: { userId, deletedAt: null } }),
@@ -43,6 +46,8 @@ export async function getUserUsageSummary(userId: string): Promise<UsageSummary>
     prisma.orgMembership.count({ where: { userId } }),
     BudgetService.getDailyUsage(userId),
   ]);
+
+  const dailyUsage = dailyAiOcrSpend;
 
   const plan = user?.planTier ?? PlanTier.FREE;
   const hfPlan = await getUserHyperFramesPlan(userId);
@@ -72,6 +77,8 @@ export async function getUserUsageSummary(userId: string): Promise<UsageSummary>
       rbacEnabled: true,
       note: "ระบบ Workspace/Team เปิดใช้ตามสมาชิกองค์กรและสิทธิ์ VIEWER/EDITOR/ADMIN โดยไม่เปิดฟีเจอร์เรียกเก็บเงินจริงในหน้านี้",
     },
+    dailyAiOcrSpend,
+    dailyLimitUsd: env.AI_DAILY_BUDGET_USD,
   };
 }
 

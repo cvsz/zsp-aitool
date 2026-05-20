@@ -1,0 +1,93 @@
+{
+  "schemaVersion": "ecc.install.v1",
+  "installedAt": "2026-05-20T14:58:46.300Z",
+  "target": {
+    "id": "gemini-project",
+    "target": "gemini",
+    "kind": "project",
+    "root": "/home/zeazdev/zsp-aitool/.gemini",
+    "installStatePath": "/home/zeazdev/zsp-aitool/.gemini/ecc-install-state.json"
+  },
+  "request": {
+    "profile": "full",
+    "modules": [],
+    "includeComponents": [],
+    "excludeComponents": [],
+    "legacyLanguages": [],
+    "legacyMode": false
+  },
+  "resolution": {
+    "selectedModules": [
+      "platform-configs"
+    ],
+    "skippedModules": [
+      "rules-core",
+      "agents-core",
+      "commands-core",
+      "hooks-runtime",
+      "framework-language",
+      "database",
+      "workflow-quality",
+      "security",
+      "research-apis",
+      "business-content",
+      "operator-workflows",
+      "social-distribution",
+      "media-generation",
+      "orchestration",
+      "swift-apple",
+      "agentic-patterns",
+      "devops-infra",
+      "machine-learning",
+      "supply-chain-domain",
+      "document-processing"
+    ]
+  },
+  "source": {
+    "repoVersion": "2.0.0-rc.1",
+    "repoCommit": "1e8c7e7994223e0ff337d1626cd08e04a1ae67ed",
+    "manifestVersion": 1
+  },
+  "operations": [
+    {
+      "kind": "copy-file",
+      "moduleId": "platform-configs",
+      "sourcePath": "/home/zeazdev/ECC/.gemini/GEMINI.md",
+      "sourceRelativePath": ".gemini/GEMINI.md",
+      "destinationPath": "/home/zeazdev/zsp-aitool/.gemini/GEMINI.md",
+      "strategy": "sync-root-children",
+      "ownership": "managed",
+      "scaffoldOnly": false
+    },
+    {
+      "kind": "copy-file",
+      "moduleId": "platform-configs",
+      "sourcePath": "/home/zeazdev/ECC/mcp-configs/mcp-servers.json",
+      "sourceRelativePath": "mcp-configs/mcp-servers.json",
+      "destinationPath": "/home/zeazdev/zsp-aitool/.gemini/mcp-configs/mcp-servers.json",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": false
+    },
+    {
+      "kind": "copy-file",
+      "moduleId": "platform-configs",
+      "sourcePath": "/home/zeazdev/ECC/scripts/auto-update.js",
+      "sourceRelativePath": "scripts/auto-update.js",
+      "destinationPath": "/home/zeazdev/zsp-aitool/.gemini/scripts/auto-update.js",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": false
+    },
+    {
+      "kind": "copy-file",
+      "moduleId": "platform-configs",
+      "sourcePath": "/home/zeazdev/ECC/scripts/setup-package-manager.js",
+      "sourceRelativePath": "scripts/setup-package-manager.js",
+      "destinationPath": "/home/zeazdev/zsp-aitool/.gemini/scripts/setup-package-manager.js",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": false
+    }
+  ]
+}
