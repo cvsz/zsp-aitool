@@ -37,24 +37,87 @@ export interface PersistManualDraftInput {
 const FORMULA_PREFIX_RE = /^[\t\r\s]*[=+\-@]/;
 const MAX_CSV_ROWS = 1_000;
 const MAX_CSV_BYTES = 1_000_000;
-const SUPPORTED_COLUMNS = ["affiliate_url", "product_url", "title", "campaign", "source", "price"] as const;
+const SUPPORTED_COLUMNS = ["affiliate_url", "product_url", "title", "campaign", "category", "shop_name", "source", "price"] as const;
 
 type SupportedColumn = (typeof SUPPORTED_COLUMNS)[number];
 
-const THAI_DATAFEED_HEADER_MAP = new Map<string, SupportedColumn>([
+const DATAFEED_HEADER_MAP = new Map<string, SupportedColumn>([
   ["ชื่อข้อเสนอ", "title"],
   ["ชื่อสินค้า", "title"],
-  ["ชื่อร้านค้า", "title"],
+  ["ชื่อร้านค้า", "shop_name"],
   ["อัตราค่าคอมมิชชัน", "campaign"],
   ["ค่าคอมมิชชัน", "campaign"],
-  ["commission", "campaign"],
   ["ลิงก์ข้อเสนอ", "product_url"],
   ["ลิงก์สินค้า", "product_url"],
   ["ลิงก์ร้านค้า", "product_url"],
   ["ลิงก์สินค้า(สั้น)", "affiliate_url"],
   ["ลิงก์ร้านค้า(สั้น)", "affiliate_url"],
   ["ลิงก์สั้น", "affiliate_url"],
+  ["หมวดหมู่", "category"],
+  ["หมวดหมู่สากล", "category"],
+  ["affiliate url", "affiliate_url"],
+  ["affiliate_url", "affiliate_url"],
+  ["affiliate link", "affiliate_url"],
+  ["affiliate_link", "affiliate_url"],
+  ["tracking link", "affiliate_url"],
+  ["tracking_link", "affiliate_url"],
+  ["deeplink", "affiliate_url"],
+  ["deep link", "affiliate_url"],
+  ["short link", "affiliate_url"],
+  ["short_link", "affiliate_url"],
+  ["short url", "affiliate_url"],
+  ["short_url", "affiliate_url"],
+  ["product url", "product_url"],
+  ["product_url", "product_url"],
+  ["product link", "product_url"],
+  ["product_link", "product_url"],
+  ["offer url", "product_url"],
+  ["offer_url", "product_url"],
+  ["offer link", "product_url"],
+  ["offer_link", "product_url"],
+  ["shop url", "product_url"],
+  ["shop_url", "product_url"],
+  ["shop link", "product_url"],
+  ["shop_link", "product_url"],
+  ["landing page url", "product_url"],
+  ["landing_page_url", "product_url"],
+  ["landing page", "product_url"],
+  ["origin link", "product_url"],
+  ["origin_link", "product_url"],
+  ["offer name", "title"],
+  ["offer_name", "title"],
+  ["product name", "title"],
+  ["product_name", "title"],
+  ["item name", "title"],
+  ["item_name", "title"],
+  ["name", "title"],
+  ["title", "title"],
+  ["shop name", "shop_name"],
+  ["shop_name", "shop_name"],
+  ["seller name", "shop_name"],
+  ["seller_name", "shop_name"],
+  ["commission", "campaign"],
+  ["commission rate", "campaign"],
+  ["commission_rate", "campaign"],
+  ["commission %", "campaign"],
+  ["payout", "campaign"],
+  ["campaign", "campaign"],
+  ["global category", "category"],
+  ["global_category", "category"],
+  ["all global category", "category"],
+  ["category", "category"],
+  ["category name", "category"],
+  ["category_name", "category"],
+  ["main category", "category"],
+  ["main_category", "category"],
+  ["sp-product-feed-all-global-category.csv", "source"],
+  ["price", "price"],
+  ["sale price", "price"],
+  ["sale_price", "price"],
 ]);
+
+const THAI_DATAFEED_HEADER_MAP = DATAFEED_HEADER_MAP;
+const SP_PRODUCT_FEED_ALL_GLOBAL_CATEGORY_FILENAME = "SP-Product-Feed-All-Global-Category.csv";
 
 const sourceToDb: Record<ShopeeAffiliateIngestionSourceName, ShopeeAffiliateIngestionSource> = {
   manual: ShopeeAffiliateIngestionSource.MANUAL,
@@ -93,7 +156,7 @@ function normalizeHeader(header: string): string {
 function toCanonicalHeader(header: string): string {
   const normalized = normalizeHeader(header);
   const lower = normalized.toLowerCase();
-  return THAI_DATAFEED_HEADER_MAP.get(normalized) ?? THAI_DATAFEED_HEADER_MAP.get(lower) ?? lower;
+  return DATAFEED_HEADER_MAP.get(normalized) ?? DATAFEED_HEADER_MAP.get(lower) ?? lower;
 }
 
 function detectDelimiter(headerLine: string): "," | "\t" {
@@ -129,6 +192,19 @@ function toNumber(value: string | undefined): number | undefined {
   if (!value) return undefined;
   const parsed = Number(value.replace(/,/g, ""));
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
+}
+
+function firstNonEmpty(...values: Array<string | undefined>): string | undefined {
+  return values.find((value) => typeof value === "string" && value.trim().length > 0)?.trim();
+}
+
+function buildCampaignNote(entry: Record<string, string>): string | undefined {
+  const parts = [
+    firstNonEmpty(entry.campaign),
+    firstNonEmpty(entry.category) ? `หมวดหมู่: ${firstNonEmpty(entry.category)}` : undefined,
+    firstNonEmpty(entry.shop_name) ? `ร้านค้า: ${firstNonEmpty(entry.shop_name)}` : undefined,
+  ].filter((value): value is string => Boolean(value));
+  return parts.length ? parts.join(" · ") : undefined;
 }
 
 function toSafeIngestionRecord(record: {
@@ -350,17 +426,19 @@ export class ShopeeAffiliateIngestionService {
         return;
       }
       const entry = Object.fromEntries(headers.map((h, i) => [h, row[i] ?? ""]));
-      if (!entry.affiliate_url || !entry.product_url) {
+      const affiliateUrl = firstNonEmpty(entry.affiliate_url);
+      const productUrl = firstNonEmpty(entry.product_url);
+      if (!affiliateUrl || !productUrl) {
         rejectedRowIndexes.push(idx + 1);
         return;
       }
       queueItems.push(
         this.validateManualDraft(
           {
-            affiliateUrl: entry.affiliate_url,
-            productUrl: entry.product_url,
-            title: entry.title || undefined,
-            campaignNote: entry.campaign || undefined,
+            affiliateUrl,
+            productUrl,
+            title: firstNonEmpty(entry.title, entry.shop_name) || undefined,
+            campaignNote: buildCampaignNote(entry),
             price: toNumber(entry.price),
           },
           "csv"
@@ -393,4 +471,5 @@ export class ShopeeAffiliateIngestionService {
   }
 }
 
+export { SP_PRODUCT_FEED_ALL_GLOBAL_CATEGORY_FILENAME };
 export const shopeeAffiliateIngestionService = new ShopeeAffiliateIngestionService();
