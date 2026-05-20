@@ -78,6 +78,7 @@ export function ShopeeAffiliateRealDbDashboard() {
   const [manual, setManual] = useState({ affiliateUrl: "", productUrl: "", title: "", campaignNote: "", price: "" });
   const [csv, setCsv] = useState("affiliate_url,product_url,title,campaign,price\n");
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
+  const [importProductsFromCsv, setImportProductsFromCsv] = useState(true);
   const [socialChannel, setSocialChannel] = useState<SocialChannel>("facebook");
   const [draftsById, setDraftsById] = useState<Record<string, { draftId: string; content: string }>>({});
 
@@ -132,8 +133,8 @@ export function ShopeeAffiliateRealDbDashboard() {
     setSelectedFileName(file.name);
     setCsv(text);
     setMessage(isExpectedName
-      ? `โหลดไฟล์ ${spGlobalCategoryFileName} แล้ว กด Preview + Save CSV/TSV rows to DB เพื่อนำเข้าคิวตรวจทาน`
-      : `โหลดไฟล์ ${file.name} แล้ว ระบบยังจะ validate header/URL ก่อนบันทึก`);
+      ? `โหลดไฟล์ ${spGlobalCategoryFileName} แล้ว กด Save + Import Products to DB เพื่อสร้างสินค้า`
+      : `โหลดไฟล์ ${file.name} แล้ว ระบบจะ validate header/URL ก่อนสร้างสินค้า`);
   }
 
   async function submitCsv(e: FormEvent) {
@@ -142,11 +143,15 @@ export function ShopeeAffiliateRealDbDashboard() {
     const res = await fetch("/api/integrations/shopee/affiliate-csv-preview", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ csv }),
+      body: JSON.stringify({ csv, importProducts: importProductsFromCsv }),
     });
     const json = await res.json();
     if (json?.ok) {
-      setMessage(`บันทึก CSV ลงฐานข้อมูลจริงแล้ว ${json.data.createdIngestionCount} รายการ, rejected ${json.data.rejectedCount} รายการ`);
+      const imported = json.data.importedProductCount ?? 0;
+      const failed = json.data.importFailedCount ?? 0;
+      setMessage(importProductsFromCsv
+        ? `บันทึก CSV แล้ว ${json.data.createdIngestionCount} รายการ และสร้างสินค้า ${imported} รายการ, import failed ${failed}, rejected ${json.data.rejectedCount}`
+        : `บันทึก CSV ลง queue แล้ว ${json.data.createdIngestionCount} รายการ, rejected ${json.data.rejectedCount} รายการ`);
       await refresh();
     } else {
       setMessage(json?.error?.message ?? "ไม่สามารถ preview/import CSV ได้");
@@ -263,12 +268,16 @@ export function ShopeeAffiliateRealDbDashboard() {
           </div>
           <label className="block rounded-2xl border border-dashed border-orange-200 bg-orange-50 p-4 text-sm text-orange-950">
             <span className="font-semibold">Import {spGlobalCategoryFileName}</span>
-            <span className="mt-1 block text-xs">เลือกไฟล์ CSV จาก Shopee Product Feed แล้วระบบจะโหลดข้อมูลเข้า preview box โดยยังไม่บันทึกจนกดปุ่ม save</span>
+            <span className="mt-1 block text-xs">เลือกไฟล์ CSV จาก Shopee Product Feed แล้วระบบจะโหลดข้อมูลเข้า preview box โดยยังไม่สร้างสินค้าจนกดปุ่มด้านล่าง</span>
             <input className="mt-3 block w-full text-xs" type="file" accept=".csv,text/csv,.tsv,text/tab-separated-values" onChange={handleCsvFile} />
           </label>
           {selectedFileName ? <p className="text-xs text-slate-500">Selected: {selectedFileName}</p> : null}
+          <label className="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-950">
+            <input className="mt-1" type="checkbox" checked={importProductsFromCsv} onChange={(e) => setImportProductsFromCsv(e.target.checked)} />
+            <span><strong>สร้างสินค้าเข้าฐานข้อมูลทันทีหลัง validate</strong><br /><span className="text-xs">เปิดไว้เพื่อให้ปุ่มนี้ save queue + import เป็น Product/AffiliateLink เลย ปิดไว้ถ้าต้องการตรวจทานทีละรายการก่อน</span></span>
+          </label>
           <textarea className="min-h-52 w-full rounded-xl border p-2 font-mono text-xs" value={csv} onChange={(e) => setCsv(e.target.value)} />
-          <button className="rounded-xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white">Preview + Save CSV/TSV rows to DB</button>
+          <button className="rounded-xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white">{importProductsFromCsv ? "Preview + Save + Import Products to DB" : "Preview + Save CSV/TSV rows to Review Queue"}</button>
         </form>
       </section>
 
