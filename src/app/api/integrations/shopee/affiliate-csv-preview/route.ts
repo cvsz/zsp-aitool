@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { withAuth } from "@/middleware/auth-middleware";
 import { csvImportPreviewSchema } from "@/schemas/shopee-affiliate.schema";
 
+const SUPPORTED_COLUMNS = ["affiliate_url", "product_url", "title", "campaign", "source", "price"];
+
 function hasDangerousFormula(value: string): boolean {
   return /^[\s]*[=+\-@]/.test(value);
 }
@@ -21,6 +23,19 @@ export const POST = withAuth(async (request) => {
     return NextResponse.json({ ok: false, error: { code: "CSV_FORMULA_BLOCKED", message: "พบสูตรที่ไม่ปลอดภัยใน CSV" } }, { status: 422 });
   }
 
-  const headers = rows[0] ?? [];
-  return NextResponse.json({ ok: true, data: { headers, rowCount: Math.max(0, rows.length - 1), previewRows: rows.slice(1, 6) }, reviewRequired: true });
+  const headers = (rows[0] ?? []).map((h) => h.toLowerCase());
+  const detectedColumns = headers.filter((h) => SUPPORTED_COLUMNS.includes(h));
+
+  return NextResponse.json({
+    ok: true,
+    data: {
+      headers,
+      rowCount: Math.max(0, rows.length - 1),
+      previewRows: rows.slice(1, 6),
+      detectedColumns,
+      missingRecommendedColumns: ["affiliate_url", "product_url"].filter((key) => !detectedColumns.includes(key)),
+      columnMappingRequired: detectedColumns.length === 0,
+    },
+    reviewRequired: true,
+  });
 });

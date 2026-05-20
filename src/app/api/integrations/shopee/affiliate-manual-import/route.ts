@@ -12,10 +12,15 @@ export const POST = withAuth(async (request) => {
   const input = parsed.data;
   if (input.saveMode === "product") {
     if (!input.productId) {
-      return NextResponse.json({ ok: false, error: { code: "VALIDATION_ERROR", message: "กรุณาเลือกสินค้าเพื่อผูก affiliate link" } }, { status: 422 });
+      return NextResponse.json({ ok: false, error: { code: "MISSING_PRODUCT", message: "กรุณาเลือกสินค้าเพื่อผูก affiliate link" } }, { status: 422 });
     }
-    const updated = await productService.updateAffiliateLink(request.auth.userId, input.productId, input.affiliateUrl);
-    return NextResponse.json({ ok: true, data: { mode: "product", productId: updated.id, affiliateUrl: updated.affiliateUrl }, reviewRequired: true });
+
+    try {
+      const updated = await productService.updateAffiliateLink(request.auth.userId, input.productId, input.affiliateUrl);
+      return NextResponse.json({ ok: true, data: { mode: "product", productId: updated.id, affiliateUrl: updated.affiliateUrl, productUrl: input.productUrl }, reviewRequired: true });
+    } catch {
+      return NextResponse.json({ ok: false, error: { code: "MISSING_PRODUCT", message: "ไม่พบสินค้าที่เลือก หรือคุณไม่มีสิทธิ์เข้าถึง" } }, { status: 404 });
+    }
   }
 
   const created = await productService.create(request.auth.userId, {
@@ -26,5 +31,17 @@ export const POST = withAuth(async (request) => {
     affiliateUrl: input.affiliateUrl,
     images: [],
   });
-  return NextResponse.json({ ok: true, data: { mode: "affiliate-link", productId: created.id, affiliateUrl: created.affiliateUrl }, reviewRequired: true }, { status: 201 });
+
+  return NextResponse.json({
+    ok: true,
+    data: {
+      mode: "affiliate-link",
+      productId: created.id,
+      affiliateUrl: created.affiliateUrl,
+      productUrl: created.originalUrl,
+      campaignNote: input.campaignNote ?? null,
+    },
+    reviewRequired: true,
+    disclosure: "โพสต์นี้มีลิงก์ Affiliate ผู้สร้างอาจได้รับค่าคอมมิชชันจากคำสั่งซื้อที่เข้าเงื่อนไข",
+  }, { status: 201 });
 });

@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { isAllowedShopeeUrl } from "@/lib/shopee-url";
+import { isAllowedShopeeAffiliateUrl } from "@/lib/shopee-affiliate-url-safety";
 
-const shopeeUrlSchema = z.string().trim().url().refine((value) => isAllowedShopeeUrl(value), "ต้องเป็น Shopee URL ที่อนุญาตเท่านั้น");
+const shopeeUrlSchema = z.string().trim().url().refine((value) => isAllowedShopeeAffiliateUrl(value), "ต้องเป็น Shopee URL แบบ HTTPS ที่อนุญาตเท่านั้น");
 
 export const manualAffiliateImportSchema = z.object({
   affiliateUrl: shopeeUrlSchema,
@@ -10,6 +10,7 @@ export const manualAffiliateImportSchema = z.object({
   productId: z.string().trim().min(1).optional(),
   title: z.string().trim().min(1).max(300).optional(),
   price: z.number().finite().min(0).optional(),
+  campaignNote: z.string().trim().max(120).optional(),
 });
 
 export const csvImportPreviewSchema = z.object({
