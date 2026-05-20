@@ -10,7 +10,7 @@ export const POST = withAuth(async (request) => {
   }
 
   try {
-    const preview = shopeeAffiliateIngestionService.previewCsv(parsed.data.csv);
+    const { preview, created } = await shopeeAffiliateIngestionService.persistCsvPreview(request.auth.userId, parsed.data.csv);
     return NextResponse.json({
       ok: true,
       data: {
@@ -19,14 +19,16 @@ export const POST = withAuth(async (request) => {
         previewRows: preview.previewRows,
         detectedColumns: preview.detectedColumns,
         rejectedRowIndexes: preview.rejectedRowIndexes,
-        pendingReviewCount: preview.queueItems.filter((x) => x.status === "pending_review").length,
+        createdIngestionCount: created.length,
+        createdIngestions: created,
+        pendingReviewCount: created.filter((x) => x.status === "pending_review").length,
         rejectedCount: preview.queueItems.filter((x) => x.status === "rejected").length + preview.rejectedRowIndexes.length,
         missingRecommendedColumns: ["affiliate_url", "product_url"].filter((key) => !preview.detectedColumns.includes(key)),
         columnMappingRequired: preview.detectedColumns.length === 0,
       },
       reviewRequired: true,
       queueStatus: "pending_review",
-    });
+    }, { status: 201 });
   } catch (error) {
     const code = error instanceof Error ? error.message : "CSV_PREVIEW_FAILED";
     const message = code === "CSV_FILE_TOO_LARGE"
