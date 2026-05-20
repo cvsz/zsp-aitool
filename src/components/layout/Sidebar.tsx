@@ -14,6 +14,7 @@ const menuGroups: MenuGroup[] = [
       { label: "ภาพรวม", href: "/dashboard" },
       { label: "คลังสินค้า", href: "/dashboard/products" },
       { label: "เพิ่มสินค้า", href: "/dashboard/products/new" },
+      { label: "Shopee Affiliate", href: "/dashboard/shopee-affiliate", badge: "DB" },
       { label: "AI Generator", href: "/dashboard/generator" },
       { label: "ประวัติคอนเทนต์", href: "/dashboard/content-history" },
       { label: "Prompt Templates", href: "/dashboard/templates" },
