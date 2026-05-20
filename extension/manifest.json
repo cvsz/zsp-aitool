@@ -3,8 +3,8 @@
   "name": "ZSP AI Tool - Shopee Collector",
   "description": "Collect visible Shopee product data and send it to zsp-aitool with user review and confirmation.",
   "version": "0.1.0",
-  "permissions": ["storage", "activeTab", "scripting"],
-  "host_permissions": ["https://shopee.co.th/*", "https://*.shopee.co.th/*", "https://*/*"],
+  "permissions": ["storage", "activeTab"],
+  "host_permissions": ["https://shopee.co.th/*", "https://*.shopee.co.th/*"],
   "background": {
     "service_worker": "src/background.js",
     "type": "module"
