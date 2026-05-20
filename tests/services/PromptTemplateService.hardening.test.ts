@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PromptTemplateService } from "@/services/PromptTemplateService";
+import { PromptTemplateService } from "@/services/prompt-template-service";
 
 describe("PromptTemplateService hardening", () => {
   it("restoreDefaults preserves custom templates", () => {
