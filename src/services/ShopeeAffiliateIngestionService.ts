@@ -37,6 +37,24 @@ export interface PersistManualDraftInput {
 const FORMULA_PREFIX_RE = /^[\t\r\s]*[=+\-@]/;
 const MAX_CSV_ROWS = 1_000;
 const MAX_CSV_BYTES = 1_000_000;
+const SUPPORTED_COLUMNS = ["affiliate_url", "product_url", "title", "campaign", "source", "price"] as const;
+
+type SupportedColumn = (typeof SUPPORTED_COLUMNS)[number];
+
+const THAI_DATAFEED_HEADER_MAP = new Map<string, SupportedColumn>([
+  ["ชื่อข้อเสนอ", "title"],
+  ["ชื่อสินค้า", "title"],
+  ["ชื่อร้านค้า", "title"],
+  ["อัตราค่าคอมมิชชัน", "campaign"],
+  ["ค่าคอมมิชชัน", "campaign"],
+  ["commission", "campaign"],
+  ["ลิงก์ข้อเสนอ", "product_url"],
+  ["ลิงก์สินค้า", "product_url"],
+  ["ลิงก์ร้านค้า", "product_url"],
+  ["ลิงก์สินค้า(สั้น)", "affiliate_url"],
+  ["ลิงก์ร้านค้า(สั้น)", "affiliate_url"],
+  ["ลิงก์สั้น", "affiliate_url"],
+]);
 
 const sourceToDb: Record<ShopeeAffiliateIngestionSourceName, ShopeeAffiliateIngestionSource> = {
   manual: ShopeeAffiliateIngestionSource.MANUAL,
@@ -68,7 +86,21 @@ const statusFromDb: Record<ShopeeAffiliateIngestionStatus, ShopeeAffiliateQueueS
   FAILED: "failed",
 };
 
-function parseCsvLine(line: string): string[] {
+function normalizeHeader(header: string): string {
+  return header.trim().replace(/^\uFEFF/, "").replace(/^"|"$/g, "").trim();
+}
+
+function toCanonicalHeader(header: string): string {
+  const normalized = normalizeHeader(header);
+  const lower = normalized.toLowerCase();
+  return THAI_DATAFEED_HEADER_MAP.get(normalized) ?? THAI_DATAFEED_HEADER_MAP.get(lower) ?? lower;
+}
+
+function detectDelimiter(headerLine: string): "," | "\t" {
+  return headerLine.includes("\t") ? "\t" : ",";
+}
+
+function parseDelimitedLine(line: string, delimiter: "," | "\t"): string[] {
   const out: string[] = [];
   let current = "";
   let inQuotes = false;
@@ -82,7 +114,7 @@ function parseCsvLine(line: string): string[] {
       } else {
         inQuotes = !inQuotes;
       }
-    } else if (c === "," && !inQuotes) {
+    } else if (c === delimiter && !inQuotes) {
       out.push(current.trim());
       current = "";
     } else {
@@ -95,7 +127,7 @@ function parseCsvLine(line: string): string[] {
 
 function toNumber(value: string | undefined): number | undefined {
   if (!value) return undefined;
-  const parsed = Number(value);
+  const parsed = Number(value.replace(/,/g, ""));
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
 }
 
@@ -302,10 +334,11 @@ export class ShopeeAffiliateIngestionService {
     if (lines.length === 0) throw new Error("EMPTY_CSV");
     if (lines.length - 1 > MAX_CSV_ROWS) throw new Error("CSV_ROW_LIMIT_EXCEEDED");
 
-    const rows = lines.map(parseCsvLine);
-    const headers = (rows[0] ?? []).map((h) => h.toLowerCase());
-    const supported = ["affiliate_url", "product_url", "title", "campaign", "source", "price"];
-    const detectedColumns = headers.filter((h) => supported.includes(h));
+    const delimiter = detectDelimiter(lines[0] ?? "");
+    const rows = lines.map((line) => parseDelimitedLine(line, delimiter));
+    const rawHeaders = rows[0] ?? [];
+    const headers = rawHeaders.map(toCanonicalHeader);
+    const detectedColumns = [...new Set(headers.filter((header): header is SupportedColumn => SUPPORTED_COLUMNS.includes(header as SupportedColumn)))];
 
     const rejectedRowIndexes: number[] = [];
     const queueItems: IngestionQueuePayload[] = [];
