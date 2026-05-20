@@ -31,8 +31,42 @@ type ListPayload = {
   summary: Summary;
 };
 
+type SocialChannel = "facebook" | "threads" | "x" | "instagram" | "tiktok" | "youtube";
+
 const emptySummary: Summary = { pendingReview: 0, approved: 0, rejected: 0, imported: 0, failed: 0 };
 const affiliateDisclosure = "โพสต์นี้มีลิงก์ Affiliate ผู้สร้างอาจได้รับค่าคอมมิชชันจากคำสั่งซื้อที่เข้าเงื่อนไข โดยไม่มีค่าใช้จ่ายเพิ่มเติมสำหรับผู้ซื้อ";
+const shortAffiliateDisclosure = "ลิงก์นี้เป็นลิงก์ Affiliate";
+
+const socialChannelLabels: Record<SocialChannel, string> = {
+  facebook: "Facebook",
+  threads: "Threads",
+  x: "X",
+  instagram: "Instagram",
+  tiktok: "TikTok",
+  youtube: "YouTube Shorts",
+};
+
+function buildSocialPostDraft(item: IngestionItem, channel: SocialChannel) {
+  const title = item.title ?? "สินค้า/ร้านค้าที่เลือกจาก Shopee";
+  const link = item.affiliateUrl ?? item.productUrl ?? "";
+  const offer = item.campaignNote ? `\nโปรโมชัน/คอมมิชชัน: ${item.campaignNote}` : "";
+  const price = item.price && item.price > 0 ? `\nราคาอ้างอิง: ฿${item.price.toLocaleString("th-TH")}` : "";
+  const disclosure = channel === "x" ? shortAffiliateDisclosure : affiliateDisclosure;
+  const hashtags = channel === "instagram" || channel === "tiktok" || channel === "youtube"
+    ? "\n#ShopeeFinds #Affiliate #รีวิวสินค้า"
+    : "";
+
+  return [
+    `แนะนำ: ${title}`,
+    "เหมาะสำหรับคนที่กำลังมองหาตัวเลือกใน Shopee ลองเช็กรายละเอียด ราคา และเงื่อนไขล่าสุดก่อนสั่งซื้อ", 
+    offer,
+    price,
+    "",
+    disclosure,
+    link ? `ลิงก์: ${link}` : "ลิงก์: ตรวจสอบรายการก่อนแนบลิงก์",
+    hashtags,
+  ].filter(Boolean).join("\n");
+}
 
 export function ShopeeAffiliateRealDbDashboard() {
   const [payload, setPayload] = useState<ListPayload>({ items: [], summary: emptySummary });
@@ -42,6 +76,8 @@ export function ShopeeAffiliateRealDbDashboard() {
   const [message, setMessage] = useState<string | null>(null);
   const [manual, setManual] = useState({ affiliateUrl: "", productUrl: "", title: "", campaignNote: "", price: "" });
   const [csv, setCsv] = useState("affiliate_url,product_url,title,campaign,price\n");
+  const [socialChannel, setSocialChannel] = useState<SocialChannel>("facebook");
+  const [draftsById, setDraftsById] = useState<Record<string, string>>({});
 
   const filteredEndpoint = useMemo(() => status === "all" ? "/api/integrations/shopee/affiliate-ingestions" : `/api/integrations/shopee/affiliate-ingestions?status=${status}`, [status]);
 
@@ -117,6 +153,19 @@ export function ShopeeAffiliateRealDbDashboard() {
     await refresh();
   }
 
+  function createSocialDraft(item: IngestionItem) {
+    const draft = buildSocialPostDraft(item, socialChannel);
+    setDraftsById((current) => ({ ...current, [item.id]: draft }));
+    setMessage(`สร้าง draft สำหรับ ${socialChannelLabels[socialChannel]} แล้ว โปรดตรวจทานก่อนโพสต์จริง`);
+  }
+
+  async function copySocialDraft(item: IngestionItem) {
+    const draft = draftsById[item.id] ?? buildSocialPostDraft(item, socialChannel);
+    setDraftsById((current) => ({ ...current, [item.id]: draft }));
+    await navigator.clipboard.writeText(draft);
+    setMessage("คัดลอก social post draft แล้ว — ผู้ใช้ต้องตรวจทานและโพสต์เอง");
+  }
+
   return (
     <main className="space-y-6 p-6">
       <header className="flex flex-wrap items-start justify-between gap-3">
@@ -155,6 +204,10 @@ export function ShopeeAffiliateRealDbDashboard() {
           <div className="rounded-2xl border border-orange-200 bg-white p-4">
             <p className="font-semibold text-slate-950">Disclosure แนะนำ</p>
             <p className="mt-2 text-sm leading-6 text-slate-700">{affiliateDisclosure}</p>
+            <label className="mt-4 block text-xs font-semibold uppercase tracking-wide text-slate-500" htmlFor="social-channel">Social draft channel</label>
+            <select id="social-channel" className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-sm" value={socialChannel} onChange={(e) => setSocialChannel(e.target.value as SocialChannel)}>
+              {Object.entries(socialChannelLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            </select>
           </div>
         </div>
       </section>
@@ -220,11 +273,16 @@ export function ShopeeAffiliateRealDbDashboard() {
                   <p className="mt-1 break-all text-xs text-slate-500">Affiliate: {item.affiliateUrl}</p>
                   <p className="break-all text-xs text-slate-500">Product: {item.productUrl}</p>
                   {item.errorSummary ? <p className="mt-1 text-xs text-red-700">{item.errorSummary}</p> : null}
+                  {draftsById[item.id] ? (
+                    <textarea className="mt-3 min-h-40 w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs leading-5 text-slate-700" readOnly value={draftsById[item.id]} />
+                  ) : null}
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <button disabled={busyId === item.id || item.status !== "pending_review"} onClick={() => act(item.id, "approve")} className="rounded-lg border px-3 py-1.5 text-xs disabled:opacity-40">Approve</button>
                   <button disabled={busyId === item.id || item.status === "imported"} onClick={() => act(item.id, "reject")} className="rounded-lg border px-3 py-1.5 text-xs disabled:opacity-40">Reject</button>
                   <button disabled={busyId === item.id || item.status === "imported" || item.status === "rejected"} onClick={() => act(item.id, "import")} className="rounded-lg bg-slate-950 px-3 py-1.5 text-xs text-white disabled:opacity-40">Import Product</button>
+                  <button disabled={item.status === "rejected" || !item.affiliateUrl} onClick={() => createSocialDraft(item)} className="rounded-lg border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs font-semibold text-orange-900 disabled:opacity-40">Generate social draft</button>
+                  <button disabled={item.status === "rejected" || !item.affiliateUrl} onClick={() => copySocialDraft(item)} className="rounded-lg border px-3 py-1.5 text-xs disabled:opacity-40">Copy draft</button>
                 </div>
               </div>
             </article>
@@ -234,7 +292,7 @@ export function ShopeeAffiliateRealDbDashboard() {
 
       <section className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
         <p className="font-semibold">Compliance-safe automation</p>
-        <p className="mt-1">ไม่มี auto-login, ไม่เก็บ password/cookie/session/localStorage, ไม่ scrape private dashboard, ไม่ bypass CAPTCHA/anti-bot และไม่เรียก private endpoint</p>
+        <p className="mt-1">ไม่มี auto-login, ไม่เก็บ password/cookie/session/localStorage, ไม่ scrape private dashboard, ไม่ bypass CAPTCHA/anti-bot และไม่เรียก private endpoint ไม่มี auto-publish ไปยังโซเชียล ทุก draft ต้องให้ผู้ใช้ตรวจทานและโพสต์เอง</p>
       </section>
     </main>
   );
