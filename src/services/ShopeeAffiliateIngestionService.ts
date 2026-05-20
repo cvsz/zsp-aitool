@@ -1,4 +1,4 @@
-import { Prisma, ShopeeAffiliateIngestionSource, ShopeeAffiliateIngestionStatus } from "@prisma/client";
+import { Platform, Prisma, ShopeeAffiliateIngestionSource, ShopeeAffiliateIngestionStatus } from "@prisma/client";
 
 import { isAllowedShopeeAffiliateUrl } from "@/lib/shopee-affiliate-url-safety";
 import { prisma } from "@/lib/prisma";
@@ -216,6 +216,66 @@ export class ShopeeAffiliateIngestionService {
     if (updated.count === 0) throw new Error("INGESTION_NOT_FOUND");
     const record = await prisma.shopeeAffiliateIngestion.findFirstOrThrow({ where: { id, userId } });
     return toSafeIngestionRecord(record);
+  }
+
+  async importApproved(userId: string, id: string) {
+    const ingestion = await prisma.shopeeAffiliateIngestion.findFirst({
+      where: { id, userId, deletedAt: null },
+    });
+
+    if (!ingestion) throw new Error("INGESTION_NOT_FOUND");
+    if (!ingestion.affiliateUrl || !ingestion.productUrl) throw new Error("INGESTION_MISSING_URLS");
+    if (ingestion.status !== ShopeeAffiliateIngestionStatus.APPROVED && ingestion.status !== ShopeeAffiliateIngestionStatus.PENDING_REVIEW) {
+      throw new Error("INGESTION_NOT_IMPORTABLE");
+    }
+
+    const product = await prisma.product.upsert({
+      where: { userId_originalUrl: { userId, originalUrl: ingestion.productUrl } },
+      update: {
+        affiliateUrl: ingestion.affiliateUrl,
+        title: ingestion.title ?? undefined,
+        price: ingestion.price ?? undefined,
+        rawMetadata: {
+          source: "shopee_affiliate_ingestion",
+          ingestionId: ingestion.id,
+          campaignNote: ingestion.campaignNote,
+        },
+      },
+      create: {
+        userId,
+        title: ingestion.title ?? "Shopee Affiliate Import",
+        price: ingestion.price ?? new Prisma.Decimal(0),
+        currency: "THB",
+        originalUrl: ingestion.productUrl,
+        affiliateUrl: ingestion.affiliateUrl,
+        rawMetadata: {
+          source: "shopee_affiliate_ingestion",
+          ingestionId: ingestion.id,
+          campaignNote: ingestion.campaignNote,
+        },
+      },
+    });
+
+    await prisma.affiliateLink.upsert({
+      where: { id: `${ingestion.id}-affiliate-link` },
+      update: { affiliateUrl: ingestion.affiliateUrl, originalUrl: ingestion.productUrl, productId: product.id },
+      create: {
+        id: `${ingestion.id}-affiliate-link`,
+        userId,
+        productId: product.id,
+        platform: Platform.FACEBOOK,
+        originalUrl: ingestion.productUrl,
+        affiliateUrl: ingestion.affiliateUrl,
+        trackingCode: ingestion.campaignNote,
+      },
+    });
+
+    const updated = await prisma.shopeeAffiliateIngestion.update({
+      where: { id: ingestion.id },
+      data: { status: ShopeeAffiliateIngestionStatus.IMPORTED, productId: product.id, importedAt: new Date() },
+    });
+
+    return { ingestion: toSafeIngestionRecord(updated), productId: product.id };
   }
 
   async markImported(userId: string, id: string, productId: string) {
