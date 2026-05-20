@@ -20,6 +20,51 @@ Operator reference pages:
 
 zsp-aitool must not automate Shopee Affiliate Portal login or scrape private dashboard pages.
 
+## SP Product Feed All Global Category import
+
+The dashboard supports importing this operator-downloaded feed:
+
+```text
+SP-Product-Feed-All-Global-Category.csv
+```
+
+Safe flow:
+
+1. Download `SP-Product-Feed-All-Global-Category.csv` manually from the Shopee Affiliate Product Feed area.
+2. Open `/dashboard/shopee-affiliate`.
+3. Use the dedicated `Import SP-Product-Feed-All-Global-Category.csv` file input.
+4. The browser loads the file into the preview text box only.
+5. Click `Preview + Save CSV/TSV rows to DB` to validate and persist rows into the review queue.
+6. Review, approve, reject, or import rows from the real database queue.
+
+Supported global-category CSV header families map to zsp fields:
+
+| Product Feed header family | zsp field |
+| --- | --- |
+| affiliate url / affiliate link / tracking link / deeplink / short link / short url | affiliate_url |
+| product url / product link / offer url / shop url / landing page / origin link | product_url |
+| offer name / product name / item name / name / title | title |
+| commission / commission rate / payout / campaign | campaign |
+| global category / all global category / category / category name / main category | category |
+| shop name / seller name | shop_name |
+| price / sale price | price |
+
+Category and shop fields are preserved inside the campaign note, for example:
+
+```text
+12% · หมวดหมู่: Beauty · ร้านค้า: Example Shop
+```
+
+Limits and safeguards:
+
+- Maximum file size: 1 MB.
+- Maximum rows per import: 1,000.
+- CSV/TSV formula injection rows are rejected.
+- Rows missing affiliate URL or product URL are rejected.
+- URLs must pass the Shopee HTTPS allowlist.
+- The file is not uploaded until the user clicks save.
+- No cookie/session/password data is accepted.
+
 ## Social posting workflow
 
 Use this safe sequence for each post:
@@ -74,6 +119,7 @@ Allowed:
 
 - user-pasted affiliate links.
 - user-uploaded Product Feed CSV/TSV.
+- user-uploaded `SP-Product-Feed-All-Global-Category.csv`.
 - explicit user-triggered extension capture of visible page data.
 - real PostgreSQL review-before-save queue.
 - draft post generation.
@@ -109,7 +155,7 @@ Thai Shopee Product Feed headers map to zsp fields:
 | --- | --- |
 | ชื่อข้อเสนอ | title |
 | ชื่อสินค้า | title |
-| ชื่อร้านค้า | title |
+| ชื่อร้านค้า | shop_name |
 | อัตราค่าคอมมิชชัน | campaign |
 | ค่าคอมมิชชัน | campaign |
 | ลิงก์ข้อเสนอ | product_url |
@@ -118,6 +164,8 @@ Thai Shopee Product Feed headers map to zsp fields:
 | ลิงก์สินค้า(สั้น) | affiliate_url |
 | ลิงก์ร้านค้า(สั้น) | affiliate_url |
 | ลิงก์สั้น | affiliate_url |
+| หมวดหมู่ | category |
+| หมวดหมู่สากล | category |
 
 ## Production verification
 
@@ -134,5 +182,6 @@ Expected markers:
 FULL_PRODUCTION_START_COMPLETED=true
 SHOPEE_AFFILIATE_REAL_DB_ROUTES_CONFIGURED=true
 SHOPEE_THAI_DATAFEED_IMPORT_CONFIGURED=true
+SHOPEE_SP_GLOBAL_CATEGORY_IMPORT_CONFIGURED=true
 SHOPEE_SOCIAL_POSTING_GUIDE_CONFIGURED=true
 ```
