@@ -50,6 +50,7 @@ model User {
   products           Product[]
   contentGenerations ContentGeneration[]
   affiliateLinks     AffiliateLink[]
+  shopeeAffiliateIngestions ShopeeAffiliateIngestion[]
   contentTemplates   ContentTemplate[]
   promptPresets      PromptPreset[]
   ocrJobs            OCRJob[]
@@ -130,6 +131,7 @@ model Product {
   user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   images             ProductImage[]
   affiliateLinks     AffiliateLink[]
+  shopeeAffiliateIngestions ShopeeAffiliateIngestion[]
   contentGenerations ContentGeneration[]
   sourceSimilarities SimilarProduct[]    @relation("SourceProduct")
   relatedSimilarTo   SimilarProduct[]    @relation("RelatedProduct")
@@ -178,6 +180,51 @@ model AffiliateLink {
   deletedAt    DateTime?
 
   @@index([userId, platform])
+  @@index([productId])
+  @@index([deletedAt])
+}
+
+enum ShopeeAffiliateIngestionSource {
+  MANUAL
+  CSV
+  EXTENSION
+  OPEN_API_FUTURE
+}
+
+enum ShopeeAffiliateIngestionStatus {
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  IMPORTED
+  FAILED
+}
+
+model ShopeeAffiliateIngestion {
+  id                String   @id @default(cuid())
+  userId            String
+  productId         String?
+  source            ShopeeAffiliateIngestionSource
+  status            ShopeeAffiliateIngestionStatus @default(PENDING_REVIEW)
+  affiliateUrl      String?
+  productUrl        String?
+  title             String?
+  campaignNote      String?
+  price             Decimal? @db.Decimal(12, 2)
+  normalizedPayload Json?
+  errorSummary      String?
+  rowIndex          Int?
+  reviewedAt        DateTime?
+  importedAt        DateTime?
+  failedAt          DateTime?
+  deletedAt         DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product           Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([userId, status, createdAt])
+  @@index([source, status])
   @@index([productId])
   @@index([deletedAt])
 }
