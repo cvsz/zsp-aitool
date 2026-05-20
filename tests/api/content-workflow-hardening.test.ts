@@ -21,6 +21,13 @@ vi.mock("@/lib/auth", async () => {
 });
 vi.mock("@/lib/prisma", () => ({ prisma: { contentGeneration: { findMany: vi.fn(async (args: any) => [{ id: "cg1", userId: args.where.userId }]), findFirst: vi.fn(async (args: any) => args.where.userId === "owner" ? { id: "cg1", userId: "owner" } : null), updateMany: vi.fn(async (args: any) => ({ count: args.where.userId === "owner" ? 1 : 0 })) } } }));
 vi.mock("@/services/ProductService", () => ({ productService: { getById: vi.fn(async (userId: string, id: string) => { if (userId === "owner" && id === "p1") return { id: "p1", title: "P", price: 10, currency: "THB", affiliateUrl: "https://aff" }; throw new AppError("NOT_FOUND", "Product not found", 404); }) } }));
+vi.mock("@/services/BudgetService", () => ({
+  BudgetService: {
+    checkBudget: vi.fn().mockResolvedValue(undefined),
+    logUsage: vi.fn().mockResolvedValue(undefined),
+    getDailyUsage: vi.fn().mockResolvedValue(0),
+  },
+}));
 
 const mockedAuth = vi.mocked(getSessionFromRequest);
 

@@ -6,8 +6,8 @@ type QuotaInput = {
   maxRequestsPerMinute: number;
 };
 
-export const enforceUsageQuota = ({ request, namespace, maxRequestsPerMinute }: QuotaInput): RateLimitResult => {
+export const enforceUsageQuota = async ({ request, namespace, maxRequestsPerMinute }: QuotaInput): Promise<RateLimitResult> => {
   const windowMs = 60 * 1000;
   const key = createRateLimitKey(request, `usage:${namespace}`);
-  return applyRateLimit(key, maxRequestsPerMinute, windowMs);
+  return await applyRateLimit(key, maxRequestsPerMinute, windowMs);
 };

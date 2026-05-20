@@ -21,7 +21,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     const body = await request.json();
     const input = registerSchema.parse(body);
 
-    const ipBucket = applyRateLimit(createRateLimitKey(request, "auth:register:ip"), REGISTER_MAX_ATTEMPTS_PER_IP, REGISTER_WINDOW_MS);
+    const ipBucket = await applyRateLimit(createRateLimitKey(request, "auth:register:ip"), REGISTER_MAX_ATTEMPTS_PER_IP, REGISTER_WINDOW_MS);
     if (!ipBucket.allowed) {
       return NextResponse.json(failure("RATE_LIMITED", "Too many registration attempts. Please try again later."), { status: 429 });
     }

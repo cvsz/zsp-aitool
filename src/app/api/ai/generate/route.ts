@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { JobStatus } from "@prisma/client";
 import { MockAIProvider } from "@/services/ai/MockAIProvider";
 import { AIContentService } from "@/services/AIContentService";
 import { productService } from "@/services/ProductService";
+import { BudgetService } from "@/services/BudgetService";
 import { withAuth } from "@/middleware/auth-middleware";
 import { AppError } from "@/lib/errors";
 
@@ -17,6 +19,8 @@ const bodySchema = z.object({
 export const POST = withAuth(async (request) => {
   try {
     const payload = bodySchema.parse(await request.json());
+    await BudgetService.checkBudget(request.auth.userId);
+
     const product = await productService.getById(request.auth.userId, payload.productId);
     const service = new AIContentService(new MockAIProvider());
     const generationInput = {
@@ -38,6 +42,18 @@ export const POST = withAuth(async (request) => {
     const prompt = service.buildPrompt(generationInput);
     const outputs = await service.generate(generationInput);
 
+    // AI cost: 0.005 USD per version generated
+    const costPerVersion = 0.005;
+    const totalCost = costPerVersion * outputs.length;
+    await BudgetService.logUsage(
+      request.auth.userId,
+      "mock",
+      "/api/ai/generate",
+      totalCost,
+      JobStatus.COMPLETED,
+      { versions: outputs.length, productId: payload.productId }
+    );
+
     await Promise.all(outputs.map((item) => service.saveGenerationHistory({
       userId: request.auth.userId,
       productId: product.id,
@@ -54,3 +70,4 @@ export const POST = withAuth(async (request) => {
     return NextResponse.json({ ok: false, error: { code: "INTERNAL_ERROR", message: "Failed to generate content" } }, { status: 500 });
   }
 });
+

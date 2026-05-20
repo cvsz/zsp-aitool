@@ -20,12 +20,12 @@ export async function POST(request: Request): Promise<NextResponse> {
     const body = await request.json();
     const input = loginSchema.parse(body);
 
-    const ipBucket = applyRateLimit(createRateLimitKey(request, "auth:login:ip"), LOGIN_MAX_ATTEMPTS_PER_IP, LOGIN_WINDOW_MS);
+    const ipBucket = await applyRateLimit(createRateLimitKey(request, "auth:login:ip"), LOGIN_MAX_ATTEMPTS_PER_IP, LOGIN_WINDOW_MS);
     if (!ipBucket.allowed) {
       return NextResponse.json(failure("RATE_LIMITED", "Too many login attempts. Please try again later."), { status: 429 });
     }
 
-    const emailBucket = applyRateLimit(createRateLimitKey(request, "auth:login:email", input.email.toLowerCase()), LOGIN_MAX_ATTEMPTS_PER_EMAIL, LOGIN_WINDOW_MS);
+    const emailBucket = await applyRateLimit(createRateLimitKey(request, "auth:login:email", input.email.toLowerCase()), LOGIN_MAX_ATTEMPTS_PER_EMAIL, LOGIN_WINDOW_MS);
     if (!emailBucket.allowed) {
       return NextResponse.json(failure("RATE_LIMITED", "Too many login attempts for this account. Please try again later."), { status: 429 });
     }

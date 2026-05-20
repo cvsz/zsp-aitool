@@ -3,6 +3,7 @@ import { PlanTier } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getUserHyperFramesPlan, getUserPlanUsage } from "@/lib/hyperframes/subscription-limits";
 import { HyperFramesQuotaService } from "@/services/HyperFramesQuotaService";
+import { BudgetService } from "@/services/BudgetService";
 
 export type UsageSummary = {
   plan: PlanTier;
@@ -13,6 +14,7 @@ export type UsageSummary = {
     ocrJobs: number;
     hyperframesRenders: number;
     hyperframesStorageMb: number;
+    dailySpendUsd: number;
   };
   limits: {
     aiPerMinute: number;
@@ -20,6 +22,7 @@ export type UsageSummary = {
     hyperframesMonthlyRenders: number;
     hyperframesMonthlyRemaining: number;
     hyperframesStorageMb: number;
+    dailyBudgetUsd: number;
   };
   workspace: {
     memberships: number;
@@ -29,7 +32,7 @@ export type UsageSummary = {
 };
 
 export async function getUserUsageSummary(userId: string): Promise<UsageSummary> {
-  const [user, products, aiGenerations, exportsCount, ocrJobs, renderJobs, quota, orgMemberships] = await Promise.all([
+  const [user, products, aiGenerations, exportsCount, ocrJobs, renderJobs, quota, orgMemberships, dailyUsage] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId }, select: { planTier: true } }),
     prisma.product.count({ where: { userId, deletedAt: null } }),
     prisma.contentGeneration.count({ where: { userId, deletedAt: null } }),
@@ -38,6 +41,7 @@ export async function getUserUsageSummary(userId: string): Promise<UsageSummary>
     prisma.hyperFrameRenderJob.count({ where: { userId, deletedAt: null } }),
     HyperFramesQuotaService.getUserQuotaSummary(userId),
     prisma.orgMembership.count({ where: { userId } }),
+    BudgetService.getDailyUsage(userId),
   ]);
 
   const plan = user?.planTier ?? PlanTier.FREE;
@@ -53,6 +57,7 @@ export async function getUserUsageSummary(userId: string): Promise<UsageSummary>
       ocrJobs,
       hyperframesRenders: renderJobs,
       hyperframesStorageMb: quota.storageUsedMb,
+      dailySpendUsd: dailyUsage,
     },
     limits: {
       aiPerMinute: Number(process.env.AI_MAX_REQUESTS_PER_MINUTE ?? 30),
@@ -60,6 +65,7 @@ export async function getUserUsageSummary(userId: string): Promise<UsageSummary>
       hyperframesMonthlyRenders: hfUsage.limits.monthlyRenders,
       hyperframesMonthlyRemaining: hfUsage.monthlyRemaining,
       hyperframesStorageMb: quota.storageQuotaMb,
+      dailyBudgetUsd: Number(process.env.AI_DAILY_BUDGET_USD ?? 20),
     },
     workspace: {
       memberships: orgMemberships,
@@ -68,4 +74,5 @@ export async function getUserUsageSummary(userId: string): Promise<UsageSummary>
     },
   };
 }
+
 

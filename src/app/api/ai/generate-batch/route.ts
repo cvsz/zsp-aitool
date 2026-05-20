@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { JobStatus } from "@prisma/client";
 import { MockAIProvider } from "@/services/ai/MockAIProvider";
 import { AIContentService } from "@/services/AIContentService";
 import { productService } from "@/services/ProductService";
+import { BudgetService } from "@/services/BudgetService";
 import { withAuth } from "@/middleware/auth-middleware";
 import { AppError } from "@/lib/errors";
 
@@ -20,6 +22,8 @@ const bodySchema = z.object({
 export const POST = withAuth(async (request) => {
   try {
     const payload = bodySchema.parse(await request.json());
+    await BudgetService.checkBudget(request.auth.userId);
+
     const uniqueProductIds = Array.from(new Set([...(payload.productId ? [payload.productId] : []), ...(payload.productIds ?? [])]));
     const service = new AIContentService(new MockAIProvider());
 
@@ -47,6 +51,18 @@ export const POST = withAuth(async (request) => {
           };
           const prompt = service.buildPrompt(generationInput);
           const generated = await service.generate(generationInput);
+
+          // AI cost: 0.005 USD per version generated
+          const costPerVersion = 0.005;
+          const totalCost = costPerVersion * generated.length;
+          await BudgetService.logUsage(
+            request.auth.userId,
+            "mock",
+            "/api/ai/generate-batch",
+            totalCost,
+            JobStatus.COMPLETED,
+            { versions: generated.length, productId: product.id, platform }
+          );
 
           await Promise.all(generated.map((item) => service.saveGenerationHistory({
             userId: request.auth.userId,
@@ -78,3 +94,4 @@ export const POST = withAuth(async (request) => {
     return NextResponse.json({ ok: false, error: { code: "INTERNAL_ERROR", message: "Failed to batch generate content" } }, { status: 500 });
   }
 });
+

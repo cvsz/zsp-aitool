@@ -32,7 +32,64 @@ export const createRateLimitKey = (request: Request, namespace: string, subject?
   return `${namespace}:${keyHash(ip)}:${subject ?? "anon"}`;
 };
 
-export const applyRateLimit = (key: string, max: number, windowMs: number): RateLimitResult => {
+export const applyRateLimit = async (key: string, max: number, windowMs: number): Promise<RateLimitResult> => {
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+
+  if (url && token) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 1000);
+
+      const res = await fetch(`${url}/pipeline`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify([
+          ["INCR", key],
+          ["TTL", key],
+        ]),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (res.ok) {
+        const data = (await res.json()) as Array<{ error?: string; result: any }>;
+        const count = Number(data[0]?.result);
+        const ttl = Number(data[1]?.result);
+
+        if (!isNaN(count) && !isNaN(ttl)) {
+          // If the key was newly created (ttl was -1), set the expiration time.
+          if (ttl === -1) {
+            await fetch(`${url}/expire/${key}/${Math.ceil(windowMs / 1000)}`, {
+              method: "GET",
+              headers: { Authorization: `Bearer ${token}` },
+            });
+          }
+
+          const current = now();
+          const resetAt = ttl === -1 ? current + windowMs : current + ttl * 1000;
+          const remaining = Math.max(0, max - count);
+          const allowed = count <= max;
+
+          return {
+            allowed,
+            remaining,
+            resetAt,
+            retryAfterSeconds: Math.max(1, Math.ceil((resetAt - current) / 1000)),
+          };
+        }
+      }
+      throw new Error(`Upstash response failed with status ${res.status}`);
+    } catch (err: any) {
+      console.warn(`[WARN] Redis rate limiter failed; falling back to in-memory store. Error: ${err.message}`);
+    }
+  }
+
+  // Resilient fallback to memory Map store
   const current = now();
   const existing = store.get(key);
 
@@ -61,3 +118,4 @@ export const applyRateLimit = (key: string, max: number, windowMs: number): Rate
     retryAfterSeconds: Math.max(1, Math.ceil((existing.resetAt - current) / 1000)),
   };
 };
+

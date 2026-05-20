@@ -36,6 +36,14 @@ vi.mock("@/services/ProductService", () => ({
   },
 }));
 
+vi.mock("@/services/BudgetService", () => ({
+  BudgetService: {
+    checkBudget: vi.fn().mockResolvedValue(undefined),
+    logUsage: vi.fn().mockResolvedValue(undefined),
+    getDailyUsage: vi.fn().mockResolvedValue(0),
+  },
+}));
+
 const exportContentCsvSpy = vi.spyOn(ExportService.prototype, "exportContentCsv");
 
 const mockedGetSessionFromRequest = vi.mocked(getSessionFromRequest);
