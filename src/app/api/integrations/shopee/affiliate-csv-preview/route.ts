@@ -11,6 +11,12 @@ export const POST = withAuth(async (request) => {
 
   try {
     const { preview, created } = await shopeeAffiliateIngestionService.persistCsvPreview(request.auth.userId, parsed.data.csv);
+    const importResults = parsed.data.importProducts
+      ? await shopeeAffiliateIngestionService.importMany(request.auth.userId, created.map((item) => item.id))
+      : [];
+    const importedCount = importResults.filter((item) => item.ok).length;
+    const importFailedCount = importResults.length - importedCount;
+
     return NextResponse.json({
       ok: true,
       data: {
@@ -25,9 +31,13 @@ export const POST = withAuth(async (request) => {
         rejectedCount: preview.queueItems.filter((x) => x.status === "rejected").length + preview.rejectedRowIndexes.length,
         missingRecommendedColumns: ["affiliate_url", "product_url"].filter((key) => !preview.detectedColumns.includes(key)),
         columnMappingRequired: preview.detectedColumns.length === 0,
+        importRequested: parsed.data.importProducts,
+        importedProductCount: importedCount,
+        importFailedCount,
+        importResults,
       },
-      reviewRequired: true,
-      queueStatus: "pending_review",
+      reviewRequired: !parsed.data.importProducts,
+      queueStatus: parsed.data.importProducts ? "imported_or_failed" : "pending_review",
     }, { status: 201 });
   } catch (error) {
     const code = error instanceof Error ? error.message : "CSV_PREVIEW_FAILED";
