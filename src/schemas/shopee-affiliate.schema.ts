@@ -15,4 +15,5 @@ export const manualAffiliateImportSchema = z.object({
 
 export const csvImportPreviewSchema = z.object({
   csv: z.string().min(1).max(2_000_000),
+  importProducts: z.boolean().optional().default(false),
 });
