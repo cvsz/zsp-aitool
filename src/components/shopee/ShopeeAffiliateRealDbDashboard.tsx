@@ -32,6 +32,7 @@ type ListPayload = {
 };
 
 const emptySummary: Summary = { pendingReview: 0, approved: 0, rejected: 0, imported: 0, failed: 0 };
+const affiliateDisclosure = "โพสต์นี้มีลิงก์ Affiliate ผู้สร้างอาจได้รับค่าคอมมิชชันจากคำสั่งซื้อที่เข้าเงื่อนไข โดยไม่มีค่าใช้จ่ายเพิ่มเติมสำหรับผู้ซื้อ";
 
 export function ShopeeAffiliateRealDbDashboard() {
   const [payload, setPayload] = useState<ListPayload>({ items: [], summary: emptySummary });
@@ -122,9 +123,12 @@ export function ShopeeAffiliateRealDbDashboard() {
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-orange-600">Phase 034 · Real Database</p>
           <h1 className="text-2xl font-bold text-slate-950">Shopee Affiliate Import Dashboard</h1>
-          <p className="mt-1 max-w-3xl text-sm text-slate-600">อัปโหลด CSV หรือวาง URL เพื่อบันทึกลง PostgreSQL จริงแบบ pending review ก่อนนำเข้าเป็นสินค้า/affiliate link</p>
+          <p className="mt-1 max-w-3xl text-sm text-slate-600">อัปโหลด CSV/TSV หรือวาง URL เพื่อบันทึกลง PostgreSQL จริงแบบ pending review ก่อนนำเข้าเป็นสินค้า/affiliate link</p>
         </div>
-        <a className="rounded-xl border border-orange-200 bg-orange-50 px-4 py-2 text-sm font-semibold text-orange-900" href="https://affiliate.shopee.co.th/" target="_blank" rel="noreferrer">Open Shopee Affiliate Portal</a>
+        <div className="flex flex-wrap gap-2">
+          <a className="rounded-xl border border-orange-200 bg-orange-50 px-4 py-2 text-sm font-semibold text-orange-900" href="https://affiliate.shopee.co.th/" target="_blank" rel="noreferrer">Open Shopee Affiliate Portal</a>
+          <a className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700" href="/dashboard/templates">Create social post</a>
+        </div>
       </header>
 
       <section className="grid gap-3 md:grid-cols-5">
@@ -133,6 +137,26 @@ export function ShopeeAffiliateRealDbDashboard() {
         <Stat label="Imported" value={payload.summary.imported} />
         <Stat label="Rejected" value={payload.summary.rejected} />
         <Stat label="Failed" value={payload.summary.failed} />
+      </section>
+
+      <section className="rounded-2xl border border-orange-100 bg-orange-50 p-5 text-sm text-orange-950 shadow-sm">
+        <div className="grid gap-4 lg:grid-cols-[1.3fr_1fr]">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-orange-700">Social posting workflow</p>
+            <h2 className="mt-1 text-lg font-bold">โพสต์โปรโมตลิงก์ Affiliate แบบปลอดภัย</h2>
+            <ol className="mt-3 list-decimal space-y-1 pl-5 text-orange-950">
+              <li>เลือกสินค้าหรือร้านค้าจาก Product Feed ที่ import แล้ว</li>
+              <li>ตรวจว่า affiliate URL เป็นลิงก์ Shopee หรือ Shopee short link ที่ผ่าน allowlist</li>
+              <li>สร้างโพสต์ที่อธิบายประโยชน์สินค้าอย่างชัดเจน ไม่กล่าวอ้างเกินจริง</li>
+              <li>ใส่ disclosure ให้เห็นชัดก่อนเผยแพร่ใน Facebook, Threads, X, Instagram, TikTok หรือ YouTube</li>
+              <li>ให้ผู้ใช้ตรวจทานและกดโพสต์เอง หรือใช้ระบบโพสต์ที่ผ่าน official platform auth เท่านั้น</li>
+            </ol>
+          </div>
+          <div className="rounded-2xl border border-orange-200 bg-white p-4">
+            <p className="font-semibold text-slate-950">Disclosure แนะนำ</p>
+            <p className="mt-2 text-sm leading-6 text-slate-700">{affiliateDisclosure}</p>
+          </div>
+        </div>
       </section>
 
       {message ? <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700 shadow-sm">{message}</div> : null}
@@ -155,11 +179,11 @@ export function ShopeeAffiliateRealDbDashboard() {
 
         <form onSubmit={submitCsv} className="space-y-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div>
-            <h2 className="text-lg font-bold">Upload/Paste CSV</h2>
-            <p className="text-sm text-slate-600">รองรับ columns: affiliate_url, product_url, title, campaign, price และ block CSV formula injection</p>
+            <h2 className="text-lg font-bold">Upload/Paste CSV or TSV</h2>
+            <p className="text-sm text-slate-600">รองรับ Product Feed header ภาษาไทย เช่น ชื่อข้อเสนอ, อัตราค่าคอมมิชชัน, ลิงก์ข้อเสนอ, ลิงก์ร้านค้า(สั้น)</p>
           </div>
           <textarea className="min-h-52 w-full rounded-xl border p-2 font-mono text-xs" value={csv} onChange={(e) => setCsv(e.target.value)} />
-          <button className="rounded-xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white">Preview + Save CSV rows to DB</button>
+          <button className="rounded-xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white">Preview + Save CSV/TSV rows to DB</button>
         </form>
       </section>
 
