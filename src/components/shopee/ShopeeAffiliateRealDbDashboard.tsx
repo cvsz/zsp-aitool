@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 type IngestionItem = {
   id: string;
@@ -36,6 +36,7 @@ type SocialChannel = "facebook" | "threads" | "x" | "instagram" | "tiktok" | "yo
 const emptySummary: Summary = { pendingReview: 0, approved: 0, rejected: 0, imported: 0, failed: 0 };
 const affiliateDisclosure = "โพสต์นี้มีลิงก์ Affiliate ผู้สร้างอาจได้รับค่าคอมมิชชันจากคำสั่งซื้อที่เข้าเงื่อนไข โดยไม่มีค่าใช้จ่ายเพิ่มเติมสำหรับผู้ซื้อ";
 const shortAffiliateDisclosure = "ลิงก์นี้เป็นลิงก์ Affiliate";
+const spGlobalCategoryFileName = "SP-Product-Feed-All-Global-Category.csv";
 
 const socialChannelLabels: Record<SocialChannel, string> = {
   facebook: "Facebook",
@@ -58,7 +59,7 @@ function buildSocialPostDraft(item: IngestionItem, channel: SocialChannel) {
 
   return [
     `แนะนำ: ${title}`,
-    "เหมาะสำหรับคนที่กำลังมองหาตัวเลือกใน Shopee ลองเช็กรายละเอียด ราคา และเงื่อนไขล่าสุดก่อนสั่งซื้อ", 
+    "เหมาะสำหรับคนที่กำลังมองหาตัวเลือกใน Shopee ลองเช็กรายละเอียด ราคา และเงื่อนไขล่าสุดก่อนสั่งซื้อ",
     offer,
     price,
     "",
@@ -76,6 +77,7 @@ export function ShopeeAffiliateRealDbDashboard() {
   const [message, setMessage] = useState<string | null>(null);
   const [manual, setManual] = useState({ affiliateUrl: "", productUrl: "", title: "", campaignNote: "", price: "" });
   const [csv, setCsv] = useState("affiliate_url,product_url,title,campaign,price\n");
+  const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
   const [socialChannel, setSocialChannel] = useState<SocialChannel>("facebook");
   const [draftsById, setDraftsById] = useState<Record<string, { draftId: string; content: string }>>({});
 
@@ -120,6 +122,18 @@ export function ShopeeAffiliateRealDbDashboard() {
     } else {
       setMessage(json?.error?.message ?? "ไม่สามารถบันทึก URL ได้");
     }
+  }
+
+  async function handleCsvFile(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const isExpectedName = file.name === spGlobalCategoryFileName;
+    const text = await file.text();
+    setSelectedFileName(file.name);
+    setCsv(text);
+    setMessage(isExpectedName
+      ? `โหลดไฟล์ ${spGlobalCategoryFileName} แล้ว กด Preview + Save CSV/TSV rows to DB เพื่อนำเข้าคิวตรวจทาน`
+      : `โหลดไฟล์ ${file.name} แล้ว ระบบยังจะ validate header/URL ก่อนบันทึก`);
   }
 
   async function submitCsv(e: FormEvent) {
@@ -245,8 +259,14 @@ export function ShopeeAffiliateRealDbDashboard() {
         <form onSubmit={submitCsv} className="space-y-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div>
             <h2 className="text-lg font-bold">Upload/Paste CSV or TSV</h2>
-            <p className="text-sm text-slate-600">รองรับ Product Feed header ภาษาไทย เช่น ชื่อข้อเสนอ, อัตราค่าคอมมิชชัน, ลิงก์ข้อเสนอ, ลิงก์ร้านค้า(สั้น)</p>
+            <p className="text-sm text-slate-600">รองรับ Product Feed header ภาษาไทย และไฟล์ {spGlobalCategoryFileName}</p>
           </div>
+          <label className="block rounded-2xl border border-dashed border-orange-200 bg-orange-50 p-4 text-sm text-orange-950">
+            <span className="font-semibold">Import {spGlobalCategoryFileName}</span>
+            <span className="mt-1 block text-xs">เลือกไฟล์ CSV จาก Shopee Product Feed แล้วระบบจะโหลดข้อมูลเข้า preview box โดยยังไม่บันทึกจนกดปุ่ม save</span>
+            <input className="mt-3 block w-full text-xs" type="file" accept=".csv,text/csv,.tsv,text/tab-separated-values" onChange={handleCsvFile} />
+          </label>
+          {selectedFileName ? <p className="text-xs text-slate-500">Selected: {selectedFileName}</p> : null}
           <textarea className="min-h-52 w-full rounded-xl border p-2 font-mono text-xs" value={csv} onChange={(e) => setCsv(e.target.value)} />
           <button className="rounded-xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white">Preview + Save CSV/TSV rows to DB</button>
         </form>
