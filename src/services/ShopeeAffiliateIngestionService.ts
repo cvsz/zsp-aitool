@@ -386,6 +386,23 @@ export class ShopeeAffiliateIngestionService {
     return { ingestion: toSafeIngestionRecord(updated), productId: product.id };
   }
 
+  async importMany(userId: string, ids: string[]) {
+    const uniqueIds = [...new Set(ids.filter((id) => id.trim().length > 0))];
+    const results: Array<{ id: string; ok: true; productId: string } | { id: string; ok: false; code: string }> = [];
+
+    for (const id of uniqueIds) {
+      try {
+        const imported = await this.importApproved(userId, id);
+        results.push({ id, ok: true, productId: imported.productId });
+      } catch (error) {
+        const code = error instanceof Error ? error.message : "INGESTION_IMPORT_FAILED";
+        results.push({ id, ok: false, code });
+      }
+    }
+
+    return results;
+  }
+
   async markImported(userId: string, id: string, productId: string) {
     const updated = await prisma.shopeeAffiliateIngestion.updateMany({
       where: { id, userId, deletedAt: null },
