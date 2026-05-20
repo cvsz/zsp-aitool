@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { failure, success } from "@/lib/api-response";
 import { withAuth } from "@/middleware/auth-middleware";
 import { templatePayloadSchema, templatePreviewSchema } from "@/schemas/template.schema";
-import { PromptTemplateService } from "@/services/PromptTemplateService";
+import { PromptTemplateService } from "@/services/prompt-template-service";
 
 export const GET = withAuth(async (request) => NextResponse.json(success(PromptTemplateService.list(request.auth.userId))));
 
