@@ -25,5 +25,15 @@ describe("admin ux static", () => {
     expect(source).not.toContain("@gmail");
     expect(source).not.toContain("@yahoo");
     expect(source).not.toContain("DATABASE_URL");
+    expect(source).not.toContain("outputPath");
+    expect(source).not.toContain("/var/lib");
+    expect(source).not.toContain("systemctl start");
+  });
+
+  it("keeps audit logs in aggregate-only mode with runbook fallback", () => {
+    const auditPage = readFileSync("src/app/dashboard/admin/audit-logs/page.tsx", "utf8");
+    expect(auditPage).toContain("Aggregate Only");
+    expect(auditPage).toContain("admin-observability-ops-center");
+    expect(auditPage).not.toContain("stack");
   });
 });
