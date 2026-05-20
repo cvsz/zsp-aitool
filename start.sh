@@ -14,6 +14,7 @@ PUBLIC_BASE_URL="${PUBLIC_BASE_URL:-https://studio.zeaz.dev}"
 SCRIPT_START_UTC="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 JOURNAL_SINCE="${JOURNAL_SINCE:-$SCRIPT_START_UTC}"
 BENIGN_SYSTEMD_CGROUP_RE="Failed to kill control group .*ignoring: Invalid argument"
+DEFAULT_SHOPEE_AFFILIATE_AUTH_URL="https://affiliate.shopee.co.th/"
 
 log() { printf '\n[%s] %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*"; }
 ok() { printf '[OK] %s\n' "$*"; }
@@ -105,6 +106,38 @@ pull_latest() {
   run git pull --rebase origin main
   log "Git revision after pull"
   git log --oneline -n 5
+}
+
+validate_shopee_affiliate_auth_url() {
+  local value="$1"
+  if [[ "$value" =~ ^https://affiliate\.shopee\.co\.th(/.*)?$ ]]; then
+    return 0
+  fi
+  return 1
+}
+
+ensure_shopee_affiliate_auth_env() {
+  log "Checking Shopee Affiliate portal auth config"
+
+  if [[ ! -f .env ]]; then
+    warn ".env not found; cannot add SHOPEE_AFFILIATE_AUTH_URL"
+    return 0
+  fi
+
+  local current
+  current="$(awk -F= '/^SHOPEE_AFFILIATE_AUTH_URL=/{sub(/^SHOPEE_AFFILIATE_AUTH_URL=/,""); print; exit}' .env)"
+
+  if [[ -z "$current" ]]; then
+    printf '\n# Shopee Affiliate portal auth/setup helper (official user-facing portal only)\nSHOPEE_AFFILIATE_AUTH_URL=%s\n' "$DEFAULT_SHOPEE_AFFILIATE_AUTH_URL" >> .env
+    ok "Added SHOPEE_AFFILIATE_AUTH_URL to .env"
+    return 0
+  fi
+
+  if validate_shopee_affiliate_auth_url "$current"; then
+    ok "SHOPEE_AFFILIATE_AUTH_URL is allowlisted"
+  else
+    fail "SHOPEE_AFFILIATE_AUTH_URL must be https://affiliate.shopee.co.th/ or a same-host HTTPS path"
+  fi
 }
 
 validate_install_prisma() {
@@ -233,6 +266,7 @@ route_smoke() {
   expect_status "/dashboard/hyperframes/ops" "200 307"
   expect_status "/dashboard/hyperframes/ops/queue" "200 307"
   expect_status "/dashboard/admin" "200 307"
+  expect_status "/api/integrations/shopee/status" "200 401 403 307"
 
   log "Public route smoke"
   expect_public_status "/" "200 301 302 307 308 403"
@@ -288,6 +322,7 @@ main() {
   require_systemd_vm
   pull_latest
   cleanup_temp_files
+  ensure_shopee_affiliate_auth_env
   validate_install_prisma
   verify_before_restart
   restart_services
@@ -305,6 +340,7 @@ main() {
 [PASS] HEALTH_CHECKS_COMPLETED=true
 [PASS] DB_SCHEMA_DRIFT_CHECK_COMPLETED=true
 [PASS] HYPERFRAMES_QUEUE_WATCHDOG_COMPLETED=true
+[PASS] SHOPEE_AFFILIATE_AUTH_CONFIGURED=true
 EOF
 }
 
