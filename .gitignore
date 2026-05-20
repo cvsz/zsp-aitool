@@ -36,3 +36,5 @@ prisma/dev.db-journal
 *.tsbuildinfo
 .agent/
 .agent/
+.gemini/
+.codex/
