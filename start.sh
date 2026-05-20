@@ -15,6 +15,8 @@ SCRIPT_START_UTC="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 JOURNAL_SINCE="${JOURNAL_SINCE:-$SCRIPT_START_UTC}"
 BENIGN_SYSTEMD_CGROUP_RE="Failed to kill control group .*ignoring: Invalid argument"
 DEFAULT_SHOPEE_AFFILIATE_AUTH_URL="https://affiliate.shopee.co.th/"
+ZSP_AUTO_RESET_CONFLICTS="${ZSP_AUTO_RESET_CONFLICTS:-false}"
+RECOVERY_DIR="${RECOVERY_DIR:-${HOME}/zsp-recovery}"
 
 log() { printf '\n[%s] %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*"; }
 ok() { printf '[OK] %s\n' "$*"; }
@@ -100,12 +102,98 @@ cleanup_temp_files() {
   ok "Temporary cleanup completed"
 }
 
+backup_git_worktree() {
+  mkdir -p "$RECOVERY_DIR"
+  git status --short >"${RECOVERY_DIR}/zsp-status-${SCRIPT_START_UTC}.txt" || true
+  git diff >"${RECOVERY_DIR}/zsp-worktree-${SCRIPT_START_UTC}.patch" || true
+  git diff --cached >"${RECOVERY_DIR}/zsp-index-${SCRIPT_START_UTC}.patch" || true
+  ok "Backed up git state to ${RECOVERY_DIR}"
+}
+
+hard_reset_to_origin_main() {
+  warn "ZSP_AUTO_RESET_CONFLICTS=true; aborting merge/rebase and resetting worktree to origin/main"
+  backup_git_worktree
+  git rebase --abort >/dev/null 2>&1 || true
+  git merge --abort >/dev/null 2>&1 || true
+  rm -rf .git/rebase-merge .git/rebase-apply 2>/dev/null || true
+  run git fetch origin main
+  run git reset --hard origin/main
+  run git clean -fd
+}
+
+git_state_guard() {
+  log "Checking git merge/rebase state"
+
+  local unmerged
+  unmerged="$(git diff --name-only --diff-filter=U || true)"
+  local in_rebase=false
+  local in_merge=false
+  [[ -d .git/rebase-merge || -d .git/rebase-apply ]] && in_rebase=true
+  [[ -f .git/MERGE_HEAD ]] && in_merge=true
+
+  if [[ -n "$unmerged" || "$in_rebase" == "true" || "$in_merge" == "true" ]]; then
+    printf '%s\n' "$unmerged"
+    if [[ "$ZSP_AUTO_RESET_CONFLICTS" == "true" ]]; then
+      hard_reset_to_origin_main
+      return 0
+    fi
+
+    cat >&2 <<'EOF'
+[FAIL] Git has an unresolved merge/rebase conflict.
+
+Safe recovery commands:
+  cd ~/zsp-aitool
+  git rebase --abort || true
+  git merge --abort || true
+  git fetch origin main
+  git reset --hard origin/main
+  git clean -fd
+
+Or rerun this script with:
+  ZSP_AUTO_RESET_CONFLICTS=true bash start.sh
+EOF
+    exit 1
+  fi
+
+  ok "No unresolved git merge/rebase state"
+}
+
+source_integrity_check() {
+  log "Checking source integrity after pull"
+
+  local conflict_markers
+  conflict_markers="$(grep -RniE '<<<<<<<|=======|>>>>>>>' src tests prisma scripts 2>/dev/null || true)"
+  if [[ -n "$conflict_markers" ]]; then
+    printf '%s\n' "$conflict_markers"
+    fail "Source contains git conflict markers"
+  fi
+
+  [[ -f src/services/prompt-template-service.ts ]] || fail "Missing src/services/prompt-template-service.ts"
+  [[ -f src/services/PromptTemplateService.ts ]] || fail "Missing compatibility shim src/services/PromptTemplateService.ts"
+
+  if ! grep -q '@/services/prompt-template-service' src/app/api/templates/route.ts; then
+    fail "Template API route is not using lowercase prompt-template-service import"
+  fi
+
+  if ! grep -q 'THAI_DATAFEED_HEADER_MAP' src/services/ShopeeAffiliateIngestionService.ts; then
+    fail "Shopee Thai TSV datafeed parser is missing"
+  fi
+
+  if ! grep -q 's.shopee.co.th' src/lib/shopee-affiliate-url-safety.ts; then
+    fail "Shopee short-link host s.shopee.co.th is missing from allowlist"
+  fi
+
+  ok "Source integrity checks passed"
+}
+
 pull_latest() {
+  git_state_guard
   log "Git status before pull"
   git status --short || true
   run git pull --rebase origin main
   log "Git revision after pull"
   git log --oneline -n 5
+  source_integrity_check
 }
 
 validate_shopee_affiliate_auth_url() {
@@ -269,6 +357,7 @@ route_smoke() {
   expect_status "/dashboard/admin" "200 307"
   expect_status "/api/integrations/shopee/status" "200 401 403 307"
   expect_status "/api/integrations/shopee/affiliate-ingestions" "200 401 403 307"
+  expect_status "/api/templates" "200 401 403 307"
 
   log "Public route smoke"
   expect_public_status "/" "200 301 302 307 308 403"
@@ -345,6 +434,8 @@ main() {
 [PASS] HYPERFRAMES_QUEUE_WATCHDOG_COMPLETED=true
 [PASS] SHOPEE_AFFILIATE_AUTH_CONFIGURED=true
 [PASS] SHOPEE_AFFILIATE_REAL_DB_ROUTES_CONFIGURED=true
+[PASS] SHOPEE_THAI_DATAFEED_IMPORT_CONFIGURED=true
+[PASS] GIT_CONFLICT_GUARD_CONFIGURED=true
 EOF
 }
 
