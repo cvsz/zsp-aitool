@@ -190,3 +190,27 @@ npm run hyperframes:worker:watchdog
 6. Validate using the commands above.
 7. Document the remediation.
 8. Release or deploy the fix through the normal review process.
+
+
+## Abuse Prevention and Safe Error Handling
+
+- Rate-limit controls must return safe error envelopes without stack traces or internal paths.
+- User-facing errors must not include `DATABASE_URL`, API keys, tokens, `/var/lib`, or raw exception stacks.
+- Preserve abuse controls on OCR/AI/import routes and keep user-confirmation gates for product data ingestion.
+
+## Static Security Regression Checks
+
+Security static scan coverage is maintained by:
+
+- `tests/security/security-compliance-static-scans.test.ts`
+
+This regression test blocks:
+
+- secrets in UI files
+- `outputPath` or `/var/lib` exposure in user-facing app/components
+- direct systemd control actions in user-facing UI
+- raw `<img>` in Next app/components
+- `dangerouslySetInnerHTML` in app/components
+- guaranteed income/fake-review copy in user-facing surfaces
+
+Operational procedure details: `docs/runbooks/security-compliance-abuse-prevention.md`.
