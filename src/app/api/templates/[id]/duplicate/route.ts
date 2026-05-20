@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { failure, success } from "@/lib/api-response";
 import { withAuth } from "@/middleware/auth-middleware";
-import { PromptTemplateService } from "@/services/PromptTemplateService";
+import { PromptTemplateService } from "@/services/prompt-template-service";
 
 type Params = { params: Promise<{ id: string }> };
 
