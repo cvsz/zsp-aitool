@@ -254,6 +254,7 @@ route_smoke() {
   expect_status "/dashboard" "200 307"
   expect_status "/dashboard/products" "200 307"
   expect_status "/dashboard/products/new" "200 307"
+  expect_status "/dashboard/shopee-affiliate" "200 307"
   expect_status "/dashboard/generator" "200 307"
   expect_status "/dashboard/content-history" "200 307"
   expect_status "/dashboard/templates" "200 307"
@@ -267,11 +268,13 @@ route_smoke() {
   expect_status "/dashboard/hyperframes/ops/queue" "200 307"
   expect_status "/dashboard/admin" "200 307"
   expect_status "/api/integrations/shopee/status" "200 401 403 307"
+  expect_status "/api/integrations/shopee/affiliate-ingestions" "200 401 403 307"
 
   log "Public route smoke"
   expect_public_status "/" "200 301 302 307 308 403"
   expect_public_status "/dashboard" "200 301 302 307 308 403"
   expect_public_status "/dashboard/products" "200 301 302 307 308 403"
+  expect_public_status "/dashboard/shopee-affiliate" "200 301 302 307 308 403"
 }
 
 journal_drift_check() {
@@ -341,6 +344,7 @@ main() {
 [PASS] DB_SCHEMA_DRIFT_CHECK_COMPLETED=true
 [PASS] HYPERFRAMES_QUEUE_WATCHDOG_COMPLETED=true
 [PASS] SHOPEE_AFFILIATE_AUTH_CONFIGURED=true
+[PASS] SHOPEE_AFFILIATE_REAL_DB_ROUTES_CONFIGURED=true
 EOF
 }
 
