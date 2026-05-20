@@ -38,3 +38,8 @@ prisma/dev.db-journal
 .agent/
 .gemini/
 .codex/
+
+# Local AI agent workspace files
+.agent/
+.gemini/
+.codex/
