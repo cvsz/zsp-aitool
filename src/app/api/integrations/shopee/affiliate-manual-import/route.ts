@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { withAuth } from "@/middleware/auth-middleware";
 import { manualAffiliateImportSchema } from "@/schemas/shopee-affiliate.schema";
 import { productService } from "@/services/ProductService";
+import { shopeeAffiliateIngestionService } from "@/services/ShopeeAffiliateIngestionService";
 
 export const POST = withAuth(async (request) => {
   const parsed = manualAffiliateImportSchema.safeParse(await request.json());
@@ -10,6 +11,18 @@ export const POST = withAuth(async (request) => {
   }
 
   const input = parsed.data;
+  const queueDraft = shopeeAffiliateIngestionService.validateManualDraft({
+    affiliateUrl: input.affiliateUrl,
+    productUrl: input.productUrl,
+    campaignNote: input.campaignNote,
+    title: input.title,
+    price: input.price,
+  });
+
+  if (queueDraft.status === "rejected") {
+    return NextResponse.json({ ok: false, error: { code: "UNSAFE_URL", message: queueDraft.errorSummary } }, { status: 422 });
+  }
+
   if (input.saveMode === "product") {
     if (!input.productId) {
       return NextResponse.json({ ok: false, error: { code: "MISSING_PRODUCT", message: "กรุณาเลือกสินค้าเพื่อผูก affiliate link" } }, { status: 422 });
@@ -17,7 +30,7 @@ export const POST = withAuth(async (request) => {
 
     try {
       const updated = await productService.updateAffiliateLink(request.auth.userId, input.productId, input.affiliateUrl);
-      return NextResponse.json({ ok: true, data: { mode: "product", productId: updated.id, affiliateUrl: updated.affiliateUrl, productUrl: input.productUrl }, reviewRequired: true });
+      return NextResponse.json({ ok: true, data: { mode: "product", productId: updated.id, affiliateUrl: updated.affiliateUrl, productUrl: input.productUrl }, reviewRequired: true, queueStatus: queueDraft.status });
     } catch {
       return NextResponse.json({ ok: false, error: { code: "MISSING_PRODUCT", message: "ไม่พบสินค้าที่เลือก หรือคุณไม่มีสิทธิ์เข้าถึง" } }, { status: 404 });
     }
@@ -42,6 +55,7 @@ export const POST = withAuth(async (request) => {
       campaignNote: input.campaignNote ?? null,
     },
     reviewRequired: true,
+    queueStatus: queueDraft.status,
     disclosure: "โพสต์นี้มีลิงก์ Affiliate ผู้สร้างอาจได้รับค่าคอมมิชชันจากคำสั่งซื้อที่เข้าเงื่อนไข",
   }, { status: 201 });
 });
