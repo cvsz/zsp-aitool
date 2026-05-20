@@ -2,6 +2,7 @@ const ALLOWED_HOSTS = new Set([
   "affiliate.shopee.co.th",
   "shopee.co.th",
   "www.shopee.co.th",
+  "s.shopee.co.th",
   "shopee.link",
 ]);
 
