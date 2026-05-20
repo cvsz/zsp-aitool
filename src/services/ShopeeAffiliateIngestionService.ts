@@ -1,6 +1,9 @@
-import { isAllowedShopeeAffiliateUrl } from "@/lib/shopee-affiliate-url-safety";
+import { Prisma, ShopeeAffiliateIngestionSource, ShopeeAffiliateIngestionStatus } from "@prisma/client";
 
-export type ShopeeAffiliateIngestionSource = "manual" | "csv" | "extension" | "open_api_future";
+import { isAllowedShopeeAffiliateUrl } from "@/lib/shopee-affiliate-url-safety";
+import { prisma } from "@/lib/prisma";
+
+export type ShopeeAffiliateIngestionSourceName = "manual" | "csv" | "extension" | "open_api_future";
 export type ShopeeAffiliateQueueStatus = "pending_review" | "approved" | "rejected" | "imported" | "failed";
 
 export interface AffiliateDraftRecord {
@@ -9,19 +12,61 @@ export interface AffiliateDraftRecord {
   title?: string;
   campaignNote?: string;
   price?: number;
-  source: ShopeeAffiliateIngestionSource;
+  source: ShopeeAffiliateIngestionSourceName;
 }
 
 export interface IngestionQueuePayload {
-  source: ShopeeAffiliateIngestionSource;
+  source: ShopeeAffiliateIngestionSourceName;
   status: ShopeeAffiliateQueueStatus;
   payload: AffiliateDraftRecord;
   errorSummary: string | null;
+  rowIndex?: number;
+}
+
+export interface PersistManualDraftInput {
+  affiliateUrl: string;
+  productUrl: string;
+  title?: string;
+  campaignNote?: string;
+  price?: number;
+  productId?: string;
+  rowIndex?: number;
+  source?: ShopeeAffiliateIngestionSourceName;
 }
 
 const FORMULA_PREFIX_RE = /^[\t\r\s]*[=+\-@]/;
 const MAX_CSV_ROWS = 1_000;
 const MAX_CSV_BYTES = 1_000_000;
+
+const sourceToDb: Record<ShopeeAffiliateIngestionSourceName, ShopeeAffiliateIngestionSource> = {
+  manual: ShopeeAffiliateIngestionSource.MANUAL,
+  csv: ShopeeAffiliateIngestionSource.CSV,
+  extension: ShopeeAffiliateIngestionSource.EXTENSION,
+  open_api_future: ShopeeAffiliateIngestionSource.OPEN_API_FUTURE,
+};
+
+const sourceFromDb: Record<ShopeeAffiliateIngestionSource, ShopeeAffiliateIngestionSourceName> = {
+  MANUAL: "manual",
+  CSV: "csv",
+  EXTENSION: "extension",
+  OPEN_API_FUTURE: "open_api_future",
+};
+
+const statusToDb: Record<ShopeeAffiliateQueueStatus, ShopeeAffiliateIngestionStatus> = {
+  pending_review: ShopeeAffiliateIngestionStatus.PENDING_REVIEW,
+  approved: ShopeeAffiliateIngestionStatus.APPROVED,
+  rejected: ShopeeAffiliateIngestionStatus.REJECTED,
+  imported: ShopeeAffiliateIngestionStatus.IMPORTED,
+  failed: ShopeeAffiliateIngestionStatus.FAILED,
+};
+
+const statusFromDb: Record<ShopeeAffiliateIngestionStatus, ShopeeAffiliateQueueStatus> = {
+  PENDING_REVIEW: "pending_review",
+  APPROVED: "approved",
+  REJECTED: "rejected",
+  IMPORTED: "imported",
+  FAILED: "failed",
+};
 
 function parseCsvLine(line: string): string[] {
   const out: string[] = [];
@@ -48,13 +93,139 @@ function parseCsvLine(line: string): string[] {
   return out;
 }
 
+function toNumber(value: string | undefined): number | undefined {
+  if (!value) return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
+}
+
+function toSafeIngestionRecord(record: {
+  id: string;
+  source: ShopeeAffiliateIngestionSource;
+  status: ShopeeAffiliateIngestionStatus;
+  affiliateUrl: string | null;
+  productUrl: string | null;
+  title: string | null;
+  campaignNote: string | null;
+  price: Prisma.Decimal | null;
+  productId: string | null;
+  errorSummary: string | null;
+  rowIndex: number | null;
+  createdAt: Date;
+  updatedAt: Date;
+  reviewedAt: Date | null;
+  importedAt: Date | null;
+}) {
+  return {
+    id: record.id,
+    source: sourceFromDb[record.source],
+    status: statusFromDb[record.status],
+    affiliateUrl: record.affiliateUrl,
+    productUrl: record.productUrl,
+    title: record.title,
+    campaignNote: record.campaignNote,
+    price: record.price ? Number(record.price) : null,
+    productId: record.productId,
+    errorSummary: record.errorSummary,
+    rowIndex: record.rowIndex,
+    createdAt: record.createdAt.toISOString(),
+    updatedAt: record.updatedAt.toISOString(),
+    reviewedAt: record.reviewedAt?.toISOString() ?? null,
+    importedAt: record.importedAt?.toISOString() ?? null,
+  };
+}
+
 export class ShopeeAffiliateIngestionService {
-  validateManualDraft(input: Omit<AffiliateDraftRecord, "source">, source: ShopeeAffiliateIngestionSource = "manual"): IngestionQueuePayload {
+  validateManualDraft(input: Omit<AffiliateDraftRecord, "source">, source: ShopeeAffiliateIngestionSourceName = "manual"): IngestionQueuePayload {
     if (!isAllowedShopeeAffiliateUrl(input.affiliateUrl) || !isAllowedShopeeAffiliateUrl(input.productUrl)) {
       return { source, status: "rejected", payload: { ...input, source }, errorSummary: "URL ต้องเป็น Shopee HTTPS ที่อยู่ใน allowlist เท่านั้น" };
     }
 
     return { source, status: "pending_review", payload: { ...input, source }, errorSummary: null };
+  }
+
+  async createPending(userId: string, input: PersistManualDraftInput) {
+    const source = input.source ?? "manual";
+    const draft = this.validateManualDraft({
+      affiliateUrl: input.affiliateUrl,
+      productUrl: input.productUrl,
+      campaignNote: input.campaignNote,
+      title: input.title,
+      price: input.price,
+    }, source);
+
+    const created = await prisma.shopeeAffiliateIngestion.create({
+      data: {
+        userId,
+        productId: input.productId,
+        source: sourceToDb[source],
+        status: statusToDb[draft.status],
+        affiliateUrl: input.affiliateUrl,
+        productUrl: input.productUrl,
+        title: input.title,
+        campaignNote: input.campaignNote,
+        price: input.price == null ? undefined : new Prisma.Decimal(input.price),
+        normalizedPayload: draft.payload as unknown as Prisma.InputJsonValue,
+        errorSummary: draft.errorSummary,
+        rowIndex: input.rowIndex,
+      },
+    });
+
+    return toSafeIngestionRecord(created);
+  }
+
+  async list(userId: string, status?: ShopeeAffiliateQueueStatus) {
+    const rows = await prisma.shopeeAffiliateIngestion.findMany({
+      where: { userId, deletedAt: null, status: status ? statusToDb[status] : undefined },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    });
+    return rows.map(toSafeIngestionRecord);
+  }
+
+  async getSummary(userId: string) {
+    const grouped = await prisma.shopeeAffiliateIngestion.groupBy({
+      by: ["status"],
+      where: { userId, deletedAt: null },
+      _count: { _all: true },
+    });
+    return {
+      pendingReview: grouped.find((x) => x.status === "PENDING_REVIEW")?._count._all ?? 0,
+      approved: grouped.find((x) => x.status === "APPROVED")?._count._all ?? 0,
+      rejected: grouped.find((x) => x.status === "REJECTED")?._count._all ?? 0,
+      imported: grouped.find((x) => x.status === "IMPORTED")?._count._all ?? 0,
+      failed: grouped.find((x) => x.status === "FAILED")?._count._all ?? 0,
+    };
+  }
+
+  async approve(userId: string, id: string) {
+    const updated = await prisma.shopeeAffiliateIngestion.updateMany({
+      where: { id, userId, deletedAt: null, status: ShopeeAffiliateIngestionStatus.PENDING_REVIEW },
+      data: { status: ShopeeAffiliateIngestionStatus.APPROVED, reviewedAt: new Date() },
+    });
+    if (updated.count === 0) throw new Error("INGESTION_NOT_FOUND_OR_NOT_PENDING");
+    const record = await prisma.shopeeAffiliateIngestion.findFirstOrThrow({ where: { id, userId } });
+    return toSafeIngestionRecord(record);
+  }
+
+  async reject(userId: string, id: string, reason = "Rejected by user") {
+    const updated = await prisma.shopeeAffiliateIngestion.updateMany({
+      where: { id, userId, deletedAt: null },
+      data: { status: ShopeeAffiliateIngestionStatus.REJECTED, errorSummary: reason, reviewedAt: new Date() },
+    });
+    if (updated.count === 0) throw new Error("INGESTION_NOT_FOUND");
+    const record = await prisma.shopeeAffiliateIngestion.findFirstOrThrow({ where: { id, userId } });
+    return toSafeIngestionRecord(record);
+  }
+
+  async markImported(userId: string, id: string, productId: string) {
+    const updated = await prisma.shopeeAffiliateIngestion.updateMany({
+      where: { id, userId, deletedAt: null },
+      data: { status: ShopeeAffiliateIngestionStatus.IMPORTED, productId, importedAt: new Date() },
+    });
+    if (updated.count === 0) throw new Error("INGESTION_NOT_FOUND");
+    const record = await prisma.shopeeAffiliateIngestion.findFirstOrThrow({ where: { id, userId } });
+    return toSafeIngestionRecord(record);
   }
 
   previewCsv(csv: string): {
@@ -97,7 +268,7 @@ export class ShopeeAffiliateIngestionService {
             productUrl: entry.product_url,
             title: entry.title || undefined,
             campaignNote: entry.campaign || undefined,
-            price: entry.price ? Number(entry.price) : undefined,
+            price: toNumber(entry.price),
           },
           "csv"
         )
@@ -112,6 +283,20 @@ export class ShopeeAffiliateIngestionService {
       rejectedRowIndexes,
       queueItems,
     };
+  }
+
+  async persistCsvPreview(userId: string, csv: string) {
+    const preview = this.previewCsv(csv);
+    const created = await Promise.all(preview.queueItems.map((item, index) => this.createPending(userId, {
+      affiliateUrl: item.payload.affiliateUrl,
+      productUrl: item.payload.productUrl,
+      title: item.payload.title,
+      campaignNote: item.payload.campaignNote,
+      price: item.payload.price,
+      rowIndex: index + 1,
+      source: "csv",
+    })));
+    return { preview, created };
   }
 }
 
