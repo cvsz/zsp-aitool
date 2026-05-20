@@ -21,7 +21,13 @@ warn() { printf '[WARN] %s\n' "$*"; }
 fail() { printf '[FAIL] %s\n' "$*" >&2; exit 1; }
 
 run() {
-  log "RUN: $*"
+  local display=()
+  local arg
+  for arg in "$@"; do
+    display+=("$(printf '%q' "$arg")")
+  done
+  local IFS=' '
+  log "RUN: ${display[*]}"
   "$@"
 }
 
@@ -109,7 +115,13 @@ validate_install_prisma() {
   run npm run prisma:generate
   run npx prisma validate
 
-  run npx prisma migrate status --schema prisma/schema.prisma
+  log "Checking Prisma migration status before deploy"
+  if npx prisma migrate status --schema prisma/schema.prisma; then
+    ok "Prisma pre-deploy migration status is clean"
+  else
+    warn "Prisma pre-deploy status reported pending migrations or drift; continuing to production migrate deploy"
+  fi
+
   run npx prisma migrate deploy --schema prisma/schema.prisma
   run npx prisma migrate status --schema prisma/schema.prisma
 
