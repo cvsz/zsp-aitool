@@ -31,7 +31,7 @@ type ListPayload = {
   summary: Summary;
 };
 
-type SocialChannel = "facebook" | "threads" | "x" | "instagram" | "tiktok" | "youtube";
+type SocialChannel = "facebook" | "threads" | "x" | "instagram" | "tiktok" | "youtube_shorts";
 
 const emptySummary: Summary = { pendingReview: 0, approved: 0, rejected: 0, imported: 0, failed: 0 };
 const affiliateDisclosure = "โพสต์นี้มีลิงก์ Affiliate ผู้สร้างอาจได้รับค่าคอมมิชชันจากคำสั่งซื้อที่เข้าเงื่อนไข โดยไม่มีค่าใช้จ่ายเพิ่มเติมสำหรับผู้ซื้อ";
@@ -43,7 +43,7 @@ const socialChannelLabels: Record<SocialChannel, string> = {
   x: "X",
   instagram: "Instagram",
   tiktok: "TikTok",
-  youtube: "YouTube Shorts",
+  youtube_shorts: "YouTube Shorts",
 };
 
 function buildSocialPostDraft(item: IngestionItem, channel: SocialChannel) {
@@ -52,7 +52,7 @@ function buildSocialPostDraft(item: IngestionItem, channel: SocialChannel) {
   const offer = item.campaignNote ? `\nโปรโมชัน/คอมมิชชัน: ${item.campaignNote}` : "";
   const price = item.price && item.price > 0 ? `\nราคาอ้างอิง: ฿${item.price.toLocaleString("th-TH")}` : "";
   const disclosure = channel === "x" ? shortAffiliateDisclosure : affiliateDisclosure;
-  const hashtags = channel === "instagram" || channel === "tiktok" || channel === "youtube"
+  const hashtags = channel === "instagram" || channel === "tiktok" || channel === "youtube_shorts"
     ? "\n#ShopeeFinds #Affiliate #รีวิวสินค้า"
     : "";
 
@@ -77,7 +77,7 @@ export function ShopeeAffiliateRealDbDashboard() {
   const [manual, setManual] = useState({ affiliateUrl: "", productUrl: "", title: "", campaignNote: "", price: "" });
   const [csv, setCsv] = useState("affiliate_url,product_url,title,campaign,price\n");
   const [socialChannel, setSocialChannel] = useState<SocialChannel>("facebook");
-  const [draftsById, setDraftsById] = useState<Record<string, string>>({});
+  const [draftsById, setDraftsById] = useState<Record<string, { draftId: string; content: string }>>({});
 
   const filteredEndpoint = useMemo(() => status === "all" ? "/api/integrations/shopee/affiliate-ingestions" : `/api/integrations/shopee/affiliate-ingestions?status=${status}`, [status]);
 
@@ -153,16 +153,28 @@ export function ShopeeAffiliateRealDbDashboard() {
     await refresh();
   }
 
-  function createSocialDraft(item: IngestionItem) {
-    const draft = buildSocialPostDraft(item, socialChannel);
-    setDraftsById((current) => ({ ...current, [item.id]: draft }));
+  async function createSocialDraft(item: IngestionItem) {
+    const content = buildSocialPostDraft(item, socialChannel);
+    const res = await fetch(`/api/integrations/shopee/affiliate-ingestions/${item.id}/social-drafts`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ channel: socialChannel, content }) });
+    const json = await res.json();
+    if (!json?.ok) return setMessage(json?.error?.message ?? "ไม่สามารถสร้าง draft ได้");
+    setDraftsById((current) => ({ ...current, [item.id]: { draftId: json.data.id, content: json.data.content } }));
     setMessage(`สร้าง draft สำหรับ ${socialChannelLabels[socialChannel]} แล้ว โปรดตรวจทานก่อนโพสต์จริง`);
   }
 
+  async function saveSocialDraft(item: IngestionItem, content: string) {
+    const current = draftsById[item.id];
+    if (!current?.draftId) return;
+    await fetch(`/api/integrations/shopee/affiliate-ingestions/${item.id}/social-drafts`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ draftId: current.draftId, content }) });
+  }
+
   async function copySocialDraft(item: IngestionItem) {
-    const draft = draftsById[item.id] ?? buildSocialPostDraft(item, socialChannel);
-    setDraftsById((current) => ({ ...current, [item.id]: draft }));
+    const current = draftsById[item.id];
+    const draft = current?.content ?? buildSocialPostDraft(item, socialChannel);
     await navigator.clipboard.writeText(draft);
+    if (current?.draftId) {
+      await fetch("/api/integrations/shopee/affiliate-ingestions/social-drafts/copy", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ draftId: current.draftId }) });
+    }
     setMessage("คัดลอก social post draft แล้ว — ผู้ใช้ต้องตรวจทานและโพสต์เอง");
   }
 
@@ -274,7 +286,7 @@ export function ShopeeAffiliateRealDbDashboard() {
                   <p className="break-all text-xs text-slate-500">Product: {item.productUrl}</p>
                   {item.errorSummary ? <p className="mt-1 text-xs text-red-700">{item.errorSummary}</p> : null}
                   {draftsById[item.id] ? (
-                    <textarea className="mt-3 min-h-40 w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs leading-5 text-slate-700" readOnly value={draftsById[item.id]} />
+                    <textarea className="mt-3 min-h-40 w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs leading-5 text-slate-700" value={draftsById[item.id].content} onChange={(e) => setDraftsById((current) => ({ ...current, [item.id]: { ...(current[item.id] ?? { draftId: "", content: "" }), content: e.target.value } }))} onBlur={(e) => void saveSocialDraft(item, e.target.value)} />
                   ) : null}
                 </div>
                 <div className="flex flex-wrap gap-2">
