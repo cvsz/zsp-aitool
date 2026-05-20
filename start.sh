@@ -204,6 +204,19 @@ source_integrity_check() {
     fail "Shopee social posting guide marker is missing from runbook"
   fi
 
+
+  [[ -f src/lib/marqeta/config.ts ]] || fail "Missing src/lib/marqeta/config.ts"
+  [[ -f src/services/MarqetaCoreApiService.ts ]] || fail "Missing src/services/MarqetaCoreApiService.ts"
+  [[ -f src/app/api/integrations/marqeta/status/route.ts ]] || fail "Missing src/app/api/integrations/marqeta/status/route.ts"
+  [[ -f docs/runbooks/marqeta-core-api-sandbox-foundation.md ]] || fail "Missing docs/runbooks/marqeta-core-api-sandbox-foundation.md"
+  local marqeta_leak
+  marqeta_leak="$(rg -n "MARQETA_(APPLICATION_TOKEN|ADMIN_ACCESS_TOKEN)=.+" src docs tests 2>/dev/null || true)"
+  if [[ -n "$marqeta_leak" ]]; then
+    printf '%s
+' "$marqeta_leak"
+    fail "Potential Marqeta token leakage marker detected"
+  fi
+
   ok "Source integrity checks passed"
 }
 
@@ -459,6 +472,7 @@ main() {
 [PASS] SHOPEE_SP_GLOBAL_CATEGORY_IMPORT_CONFIGURED=true
 [PASS] SHOPEE_SOCIAL_POSTING_GUIDE_CONFIGURED=true
 [PASS] GIT_CONFLICT_GUARD_CONFIGURED=true
+[PASS] MARQETA_SANDBOX_FOUNDATION_CONFIGURED=true
 EOF
 }
 
