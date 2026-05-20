@@ -1,5 +1,8 @@
 export type ShopeeOpenApiEnvironment = "sandbox" | "live";
 
+const DEFAULT_SHOPEE_AFFILIATE_AUTH_URL = "https://affiliate.shopee.co.th/";
+const ALLOWED_AFFILIATE_AUTH_HOST = "affiliate.shopee.co.th";
+
 export type ShopeeOpenApiRawEnv = {
   SHOPEE_OPEN_API_ENABLED?: string;
   SHOPEE_OPEN_API_ENV?: string;
@@ -11,6 +14,7 @@ export type ShopeeOpenApiRawEnv = {
   SHOPEE_AUTH_BASE_URL?: string;
   SHOPEE_REDIRECT_URL?: string;
   SHOPEE_WEBHOOK_SECRET?: string;
+  SHOPEE_AFFILIATE_AUTH_URL?: string;
 };
 
 export type ShopeeOpenApiConfig = {
@@ -24,6 +28,7 @@ export type ShopeeOpenApiConfig = {
   authBaseUrl: string | null;
   redirectUrl: string | null;
   webhookSecret: string | null;
+  affiliateAuthUrl: string | null;
 };
 
 export class ShopeeOpenApiConfigError extends Error {
@@ -56,6 +61,20 @@ function normalizeValue(raw: string | undefined): string | null {
   return value ? value : null;
 }
 
+function normalizeAffiliateAuthUrl(raw: string | undefined): string | null {
+  const value = normalizeValue(raw) ?? DEFAULT_SHOPEE_AFFILIATE_AUTH_URL;
+  try {
+    const parsed = new URL(value);
+    if (parsed.protocol !== "https:" || parsed.hostname !== ALLOWED_AFFILIATE_AUTH_HOST) return null;
+    parsed.username = "";
+    parsed.password = "";
+    parsed.hash = "";
+    return parsed.toString();
+  } catch {
+    return null;
+  }
+}
+
 export function loadShopeeOpenApiConfig(env: ShopeeOpenApiRawEnv = process.env as ShopeeOpenApiRawEnv): ShopeeOpenApiConfig {
   const enabled = normalizeBoolean(env.SHOPEE_OPEN_API_ENABLED);
   const environment = normalizeEnvironment(env.SHOPEE_OPEN_API_ENV);
@@ -73,7 +92,8 @@ export function loadShopeeOpenApiConfig(env: ShopeeOpenApiRawEnv = process.env a
     apiBaseUrl: normalizeValue(env.SHOPEE_API_BASE_URL),
     authBaseUrl: normalizeValue(env.SHOPEE_AUTH_BASE_URL),
     redirectUrl: normalizeValue(env.SHOPEE_REDIRECT_URL),
-    webhookSecret: normalizeValue(env.SHOPEE_WEBHOOK_SECRET)
+    webhookSecret: normalizeValue(env.SHOPEE_WEBHOOK_SECRET),
+    affiliateAuthUrl: normalizeAffiliateAuthUrl(env.SHOPEE_AFFILIATE_AUTH_URL)
   };
 
   if (!enabled) return config;
@@ -99,6 +119,8 @@ export function toShopeeOpenApiSafeStatus(config: ShopeeOpenApiConfig) {
     hasPartnerKey: Boolean(config.partnerKey),
     hasWebhookSecret: Boolean(config.webhookSecret),
     authUrlAvailable: false,
-    callbackAvailable: false
+    callbackAvailable: false,
+    affiliateAuthUrl: config.affiliateAuthUrl,
+    affiliateAuthUrlAvailable: Boolean(config.affiliateAuthUrl)
   };
 }
