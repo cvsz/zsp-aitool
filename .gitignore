@@ -35,3 +35,4 @@ prisma/dev.db-journal
 /extension/.vite
 *.tsbuildinfo
 .agent/
+.agent/
