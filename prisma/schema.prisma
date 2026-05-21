@@ -41,6 +41,19 @@ enum JobStatus {
   FAILED
 }
 
+enum CsvImportJobStatus {
+  PENDING
+  RUNNING
+  CANCEL_REQUESTED
+  CANCELLED
+  COMPLETED
+  FAILED
+}
+
+enum CsvImportJobKind {
+  SHOPEE_PRODUCT_FEED
+}
+
 model User {
   id                 String              @id @default(cuid())
   email              String              @unique
@@ -64,6 +77,7 @@ model User {
   hyperFrameSocialExportAuditEvents HyperFrameSocialExportAuditEvent[]
   feedbackSubmissions FeedbackSubmission[]
   orgMemberships     OrgMembership[]
+  csvImportJobs      CsvImportJob[]
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
 }
@@ -274,6 +288,37 @@ model ShopeeAffiliateSocialDraft {
 
   @@index([userId, ingestionId, channel, createdAt])
   @@index([userId, status, createdAt])
+}
+
+
+model CsvImportJob {
+  id              String           @id @default(cuid())
+  userId          String
+  kind            CsvImportJobKind @default(SHOPEE_PRODUCT_FEED)
+  status          CsvImportJobStatus @default(PENDING)
+  sourceFileName  String
+  sourceFilePath  String
+  totalBytes      BigInt?
+  processedRows   Int              @default(0)
+  importedRows    Int              @default(0)
+  rejectedRows    Int              @default(0)
+  failedRows      Int              @default(0)
+  lastRowNumber   Int              @default(0)
+  retryOfJobId    String?
+  lastError       String?
+  sampleRejected  Json?
+  startedAt       DateTime?
+  completedAt     DateTime?
+  cancelledAt     DateTime?
+  failedAt        DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  deletedAt       DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status, createdAt])
+  @@index([status, createdAt])
 }
 
 model ContentGeneration {
