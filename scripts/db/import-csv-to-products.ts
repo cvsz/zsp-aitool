@@ -1,5 +1,6 @@
 #!/usr/bin/env tsx
-import { readFileSync, statSync } from "node:fs";
+import { createReadStream, statSync } from "node:fs";
+import readline from "node:readline";
 import path from "node:path";
 import { Platform, Prisma, PrismaClient } from "@prisma/client";
 import { isAllowedShopeeAffiliateUrl } from "../../src/lib/shopee-affiliate-url-safety";
@@ -15,6 +16,7 @@ type Options = {
   maxRows: number;
   maxBytes: number;
   platform: Platform;
+  reportEvery: number;
 };
 
 type ProductCsvRow = {
@@ -28,8 +30,18 @@ type ProductCsvRow = {
   sourceRowNumber: number;
 };
 
-const DEFAULT_MAX_ROWS = 10_000;
-const DEFAULT_MAX_BYTES = 25 * 1024 * 1024;
+type ImportStats = {
+  inputRows: number;
+  importableRows: number;
+  rejectedRows: number;
+  productsUpserted: number;
+  affiliateLinksUpserted: number;
+  sampleRejected: Array<{ sourceRowNumber: number; reason: string }>;
+};
+
+const DEFAULT_MAX_ROWS = 5_000_000;
+const DEFAULT_MAX_BYTES = 5 * 1024 * 1024 * 1024;
+const DEFAULT_REPORT_EVERY = 1_000;
 const FORMULA_PREFIX_RE = /^[\t\r\s]*[=+\-@]/;
 
 const HEADER_MAP = new Map<string, string>([
@@ -121,11 +133,13 @@ Options:
   --delimiter <value>     auto | comma | tab. Default: auto.
   --platform <value>      FACEBOOK | INSTAGRAM | THREADS | X. Default: FACEBOOK.
   --apply                 Execute import. Without this flag, dry-run only.
-  --max-rows <number>     Max data rows. Default: ${DEFAULT_MAX_ROWS}.
+  --max-rows <number>     Max data rows to scan/import. Default: ${DEFAULT_MAX_ROWS}.
   --max-bytes <number>    Max file size bytes. Default: ${DEFAULT_MAX_BYTES}.
+  --report-every <number> Progress interval. Default: ${DEFAULT_REPORT_EVERY}.
   --help                  Show this help.
 
 Notes:
+  - Streams large files; it does not read the full CSV into memory.
   - Imports into Product and AffiliateLink, not a staging table.
   - Upserts Product by unique (userId, originalUrl).
   - Rejects formula-injection rows.
@@ -142,6 +156,7 @@ function parseArgs(argv: string[]): Options {
     maxRows: DEFAULT_MAX_ROWS,
     maxBytes: DEFAULT_MAX_BYTES,
     platform: Platform.FACEBOOK,
+    reportEvery: DEFAULT_REPORT_EVERY,
   };
 
   for (let i = 0; i < argv.length; i += 1) {
@@ -190,6 +205,10 @@ function parseArgs(argv: string[]): Options {
         options.maxBytes = parsePositiveInteger(arg, requireValue(arg, next));
         i += 1;
         break;
+      case "--report-every":
+        options.reportEvery = parsePositiveInteger(arg, requireValue(arg, next));
+        i += 1;
+        break;
       default:
         throw new Error(`Unknown argument: ${arg}`);
     }
@@ -217,17 +236,15 @@ function normalizeHeader(header: string): string {
   return mapped.trim().toLowerCase().replace(/[^a-z0-9_]+/g, "_").replace(/^_+|_+$/g, "");
 }
 
-function detectDelimiter(text: string): string {
+function detectDelimiterFromHeader(line: string): string {
   let commaCount = 0;
   let tabCount = 0;
   let inQuotes = false;
-  for (let i = 0; i < Math.min(text.length, 8192); i += 1) {
-    const c = text[i];
+  for (let i = 0; i < line.length; i += 1) {
+    const c = line[i];
     if (c === '"') {
-      if (inQuotes && text[i + 1] === '"') i += 1;
+      if (inQuotes && line[i + 1] === '"') i += 1;
       else inQuotes = !inQuotes;
-    } else if (!inQuotes && (c === "\n" || c === "\r")) {
-      break;
     } else if (!inQuotes && c === ",") {
       commaCount += 1;
     } else if (!inQuotes && c === "\t") {
@@ -237,38 +254,30 @@ function detectDelimiter(text: string): string {
   return tabCount > commaCount ? "\t" : ",";
 }
 
-function parseDelimited(text: string, delimiter: string): string[][] {
-  const rows: string[][] = [];
-  let row: string[] = [];
+function parseDelimitedLine(line: string, delimiter: string): string[] {
+  const out: string[] = [];
   let current = "";
   let inQuotes = false;
 
-  for (let i = 0; i < text.length; i += 1) {
-    const c = text[i];
+  for (let i = 0; i < line.length; i += 1) {
+    const c = line[i];
     if (c === '"') {
-      if (inQuotes && text[i + 1] === '"') {
+      if (inQuotes && line[i + 1] === '"') {
         current += '"';
         i += 1;
       } else {
         inQuotes = !inQuotes;
       }
     } else if (!inQuotes && c === delimiter) {
-      row.push(current.trim());
+      out.push(current.trim());
       current = "";
-    } else if (!inQuotes && (c === "\n" || c === "\r")) {
-      if (c === "\r" && text[i + 1] === "\n") i += 1;
-      row.push(current.trim());
-      current = "";
-      if (row.some((cell) => cell.length > 0)) rows.push(row);
-      row = [];
     } else {
       current += c;
     }
   }
 
-  row.push(current.trim());
-  if (row.some((cell) => cell.length > 0)) rows.push(row);
-  return rows;
+  out.push(current.trim());
+  return out;
 }
 
 function firstNonEmpty(...values: Array<string | undefined>): string | undefined {
@@ -291,32 +300,25 @@ function buildCampaignNote(row: Record<string, string>): string | undefined {
   return parts.length ? parts.join(" · ") : undefined;
 }
 
-function toProductRows(headers: string[], rawRows: string[][]): { rows: ProductCsvRow[]; rejected: Array<{ sourceRowNumber: number; reason: string }> } {
-  const rows: ProductCsvRow[] = [];
-  const rejected: Array<{ sourceRowNumber: number; reason: string }> = [];
+function toProductRow(headers: string[], rawRow: string[], sourceRowNumber: number): { row?: ProductCsvRow; rejected?: { sourceRowNumber: number; reason: string } } {
+  if (rawRow.some((cell) => FORMULA_PREFIX_RE.test(cell))) {
+    return { rejected: { sourceRowNumber, reason: "CSV_FORMULA_INJECTION" } };
+  }
 
-  rawRows.forEach((rawRow, index) => {
-    const sourceRowNumber = index + 2;
-    if (rawRow.some((cell) => FORMULA_PREFIX_RE.test(cell))) {
-      rejected.push({ sourceRowNumber, reason: "CSV_FORMULA_INJECTION" });
-      return;
-    }
+  const row = Object.fromEntries(headers.map((header, columnIndex) => [header, rawRow[columnIndex] ?? ""]));
+  const productUrl = firstNonEmpty(row.product_url, row.origin_link, row.landing_page_url);
+  const affiliateUrl = firstNonEmpty(row.affiliate_url);
 
-    const row = Object.fromEntries(headers.map((header, columnIndex) => [header, rawRow[columnIndex] ?? ""]));
-    const productUrl = firstNonEmpty(row.product_url, row.origin_link, row.landing_page_url);
-    const affiliateUrl = firstNonEmpty(row.affiliate_url);
+  if (!productUrl || !affiliateUrl) {
+    return { rejected: { sourceRowNumber, reason: "MISSING_PRODUCT_OR_AFFILIATE_URL" } };
+  }
 
-    if (!productUrl || !affiliateUrl) {
-      rejected.push({ sourceRowNumber, reason: "MISSING_PRODUCT_OR_AFFILIATE_URL" });
-      return;
-    }
+  if (!isAllowedShopeeAffiliateUrl(productUrl) || !isAllowedShopeeAffiliateUrl(affiliateUrl)) {
+    return { rejected: { sourceRowNumber, reason: "URL_NOT_ALLOWED" } };
+  }
 
-    if (!isAllowedShopeeAffiliateUrl(productUrl) || !isAllowedShopeeAffiliateUrl(affiliateUrl)) {
-      rejected.push({ sourceRowNumber, reason: "URL_NOT_ALLOWED" });
-      return;
-    }
-
-    rows.push({
+  return {
+    row: {
       affiliateUrl,
       productUrl,
       title: firstNonEmpty(row.title, row.shop_name) ?? "Shopee Product Feed Import",
@@ -325,10 +327,8 @@ function toProductRows(headers: string[], rawRows: string[][]): { rows: ProductC
       shopName: firstNonEmpty(row.shop_name, row.seller_name),
       campaignNote: buildCampaignNote(row),
       sourceRowNumber,
-    });
-  });
-
-  return { rows, rejected };
+    },
+  };
 }
 
 async function resolveUserId(prisma: PrismaClient, options: Options): Promise<string> {
@@ -338,6 +338,61 @@ async function resolveUserId(prisma: PrismaClient, options: Options): Promise<st
   return user.id;
 }
 
+async function upsertProductRow(prisma: PrismaClient, userId: string, row: ProductCsvRow, options: Options, absoluteFile: string) {
+  const product = await prisma.product.upsert({
+    where: { userId_originalUrl: { userId, originalUrl: row.productUrl } },
+    update: {
+      title: row.title,
+      price: new Prisma.Decimal(row.price),
+      affiliateUrl: row.affiliateUrl,
+      shopName: row.shopName,
+      category: row.category,
+      rawMetadata: {
+        source: "csv_product_import",
+        sourceFile: path.basename(absoluteFile),
+        sourceRowNumber: row.sourceRowNumber,
+        campaignNote: row.campaignNote,
+      },
+      deletedAt: null,
+    },
+    create: {
+      userId,
+      title: row.title,
+      price: new Prisma.Decimal(row.price),
+      currency: "THB",
+      originalUrl: row.productUrl,
+      affiliateUrl: row.affiliateUrl,
+      shopName: row.shopName,
+      category: row.category,
+      rawMetadata: {
+        source: "csv_product_import",
+        sourceFile: path.basename(absoluteFile),
+        sourceRowNumber: row.sourceRowNumber,
+        campaignNote: row.campaignNote,
+      },
+    },
+  });
+
+  await prisma.affiliateLink.upsert({
+    where: { id: `${product.id}-${options.platform}-csv-affiliate-link` },
+    update: {
+      originalUrl: row.productUrl,
+      affiliateUrl: row.affiliateUrl,
+      trackingCode: row.campaignNote,
+      deletedAt: null,
+    },
+    create: {
+      id: `${product.id}-${options.platform}-csv-affiliate-link`,
+      userId,
+      productId: product.id,
+      platform: options.platform,
+      originalUrl: row.productUrl,
+      affiliateUrl: row.affiliateUrl,
+      trackingCode: row.campaignNote,
+    },
+  });
+}
+
 async function main() {
   const options = parseArgs(process.argv.slice(2));
   const absoluteFile = path.resolve(options.file);
@@ -345,101 +400,70 @@ async function main() {
   if (!stats.isFile()) throw new Error(`Not a file: ${absoluteFile}`);
   if (stats.size > options.maxBytes) throw new Error(`CSV_FILE_TOO_LARGE: ${stats.size} > ${options.maxBytes}`);
 
-  const text = readFileSync(absoluteFile, "utf8");
-  const delimiter = options.delimiter === "tab" ? "\t" : options.delimiter === "comma" ? "," : detectDelimiter(text);
-  const records = parseDelimited(text, delimiter);
-  if (records.length === 0) throw new Error("EMPTY_CSV");
+  const stream = createReadStream(absoluteFile, { encoding: "utf8" });
+  const reader = readline.createInterface({ input: stream, crlfDelay: Infinity });
+  const prisma = options.apply ? new PrismaClient() : undefined;
 
-  const [rawHeaders, ...rawRows] = records;
-  if (!rawHeaders?.length) throw new Error("CSV_MISSING_HEADER");
-  if (rawRows.length > options.maxRows) throw new Error(`CSV_ROW_LIMIT_EXCEEDED: ${rawRows.length} > ${options.maxRows}`);
+  let delimiter = options.delimiter === "tab" ? "\t" : options.delimiter === "comma" ? "," : "";
+  let headers: string[] | null = null;
+  let userId: string | null = null;
+  const statsOut: ImportStats = { inputRows: 0, importableRows: 0, rejectedRows: 0, productsUpserted: 0, affiliateLinksUpserted: 0, sampleRejected: [] };
 
-  const headers = rawHeaders.map(normalizeHeader);
-  const { rows, rejected } = toProductRows(headers, rawRows);
-
-  console.log(JSON.stringify({
-    file: absoluteFile,
-    userEmail: options.userEmail,
-    userId: options.userId,
-    delimiter: delimiter === "\t" ? "tab" : "comma",
-    inputRows: rawRows.length,
-    importableRows: rows.length,
-    rejectedRows: rejected.length,
-    sampleRejected: rejected.slice(0, 10),
-    dryRun: !options.apply,
-  }, null, 2));
-
-  if (!options.apply) {
-    console.log("Dry run only. Re-run with --apply to import into Product and AffiliateLink.");
-    return;
-  }
-
-  const prisma = new PrismaClient();
   try {
-    const userId = await resolveUserId(prisma, options);
-    let productsUpserted = 0;
-    let affiliateLinksUpserted = 0;
-
-    for (const row of rows) {
-      const product = await prisma.product.upsert({
-        where: { userId_originalUrl: { userId, originalUrl: row.productUrl } },
-        update: {
-          title: row.title,
-          price: new Prisma.Decimal(row.price),
-          affiliateUrl: row.affiliateUrl,
-          shopName: row.shopName,
-          category: row.category,
-          rawMetadata: {
-            source: "csv_product_import",
-            sourceFile: path.basename(absoluteFile),
-            sourceRowNumber: row.sourceRowNumber,
-            campaignNote: row.campaignNote,
-          },
-          deletedAt: null,
-        },
-        create: {
-          userId,
-          title: row.title,
-          price: new Prisma.Decimal(row.price),
-          currency: "THB",
-          originalUrl: row.productUrl,
-          affiliateUrl: row.affiliateUrl,
-          shopName: row.shopName,
-          category: row.category,
-          rawMetadata: {
-            source: "csv_product_import",
-            sourceFile: path.basename(absoluteFile),
-            sourceRowNumber: row.sourceRowNumber,
-            campaignNote: row.campaignNote,
-          },
-        },
-      });
-      productsUpserted += 1;
-
-      await prisma.affiliateLink.upsert({
-        where: { id: `${product.id}-${options.platform}-csv-affiliate-link` },
-        update: {
-          originalUrl: row.productUrl,
-          affiliateUrl: row.affiliateUrl,
-          trackingCode: row.campaignNote,
-          deletedAt: null,
-        },
-        create: {
-          id: `${product.id}-${options.platform}-csv-affiliate-link`,
-          userId,
-          productId: product.id,
-          platform: options.platform,
-          originalUrl: row.productUrl,
-          affiliateUrl: row.affiliateUrl,
-          trackingCode: row.campaignNote,
-        },
-      });
-      affiliateLinksUpserted += 1;
+    if (options.apply && prisma) {
+      userId = await resolveUserId(prisma, options);
     }
 
-    console.log(JSON.stringify({ ok: true, productsUpserted, affiliateLinksUpserted, rejectedRows: rejected.length }, null, 2));
+    console.log(JSON.stringify({
+      file: absoluteFile,
+      bytes: stats.size,
+      userEmail: options.userEmail,
+      userId: options.userId ?? userId,
+      maxRows: options.maxRows,
+      dryRun: !options.apply,
+      streaming: true,
+    }, null, 2));
+
+    for await (const line of reader) {
+      if (!line.trim()) continue;
+      if (!headers) {
+        delimiter ||= detectDelimiterFromHeader(line);
+        headers = parseDelimitedLine(line, delimiter).map(normalizeHeader);
+        console.log(JSON.stringify({ delimiter: delimiter === "\t" ? "tab" : "comma", headers }, null, 2));
+        continue;
+      }
+
+      statsOut.inputRows += 1;
+      if (statsOut.inputRows > options.maxRows) throw new Error(`CSV_ROW_LIMIT_EXCEEDED: ${statsOut.inputRows} > ${options.maxRows}`);
+
+      const rawRow = parseDelimitedLine(line, delimiter);
+      const parsed = toProductRow(headers, rawRow, statsOut.inputRows + 1);
+
+      if (parsed.rejected) {
+        statsOut.rejectedRows += 1;
+        if (statsOut.sampleRejected.length < 10) statsOut.sampleRejected.push(parsed.rejected);
+      } else if (parsed.row) {
+        statsOut.importableRows += 1;
+        if (options.apply && prisma && userId) {
+          await upsertProductRow(prisma, userId, parsed.row, options, absoluteFile);
+          statsOut.productsUpserted += 1;
+          statsOut.affiliateLinksUpserted += 1;
+        }
+      }
+
+      if (statsOut.inputRows % options.reportEvery === 0) {
+        console.log(JSON.stringify({ progress: true, ...statsOut }));
+      }
+    }
+
+    if (!headers) throw new Error("CSV_MISSING_HEADER");
+
+    console.log(JSON.stringify({ ok: true, ...statsOut, dryRun: !options.apply }, null, 2));
+    if (!options.apply) {
+      console.log("Dry run only. Re-run with --apply to import into Product and AffiliateLink.");
+    }
   } finally {
-    await prisma.$disconnect();
+    await prisma?.$disconnect();
   }
 }
 
