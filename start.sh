@@ -230,6 +230,14 @@ source_integrity_check() {
   if ! grep -q 'BACKEND_MONITOR_CONFIGURED=true' docs/runbooks/backend-monitor.md; then
     fail "Backend monitor marker missing from runbook"
   fi
+  [[ -f src/lib/observability/logger.ts ]] || fail "Missing src/lib/observability/logger.ts"
+  [[ -f src/app/api/admin/observability/summary/route.ts ]] || fail "Missing src/app/api/admin/observability/summary/route.ts"
+  [[ -f src/app/api/admin/observability/events/route.ts ]] || fail "Missing src/app/api/admin/observability/events/route.ts"
+  [[ -f src/app/dashboard/admin/observability/page.tsx ]] || fail "Missing src/app/dashboard/admin/observability/page.tsx"
+  [[ -f docs/runbooks/observability-pack.md ]] || fail "Missing docs/runbooks/observability-pack.md"
+  if ! grep -q 'OBSERVABILITY_PACK_CONFIGURED=true' docs/runbooks/observability-pack.md; then
+    fail "Observability pack marker missing from runbook"
+  fi
   local marqeta_leak
   marqeta_leak="$(rg -n "MARQETA_(APPLICATION_TOKEN|ADMIN_ACCESS_TOKEN)=.+" src docs tests 2>/dev/null || true)"
   if [[ -n "$marqeta_leak" ]]; then
