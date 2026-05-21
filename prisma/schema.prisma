@@ -80,6 +80,7 @@ model User {
   orgMemberships     OrgMembership[]
   csvImportJobs      CsvImportJob[]
   productDuplicateGroups ProductDuplicateGroup[]
+  exportJobs          ExportJob[]
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
 }
@@ -368,6 +369,29 @@ model CsvImportJob {
 
   @@index([userId, status, createdAt])
   @@index([status, createdAt])
+}
+
+
+model ExportJob {
+  id             String   @id @default(cuid())
+  userId         String
+  type           String
+  format         String
+  status         String   @default("PENDING")
+  filters        Json?
+  outputPath     String?
+  outputFileName String?
+  rowCount       Int      @default(0)
+  errorSummary   String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  completedAt    DateTime?
+  failedAt       DateTime?
+  deletedAt      DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status, createdAt])
 }
 
 model ContentGeneration {
