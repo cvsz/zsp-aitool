@@ -37,17 +37,34 @@ export interface PersistManualDraftInput {
 const FORMULA_PREFIX_RE = /^[\t\r\s]*[=+\-@]/;
 const MAX_CSV_ROWS = 1_000;
 const MAX_CSV_BYTES = 1_000_000;
-const SUPPORTED_COLUMNS = ["affiliate_url", "product_url", "title", "campaign", "category", "shop_name", "source", "price"] as const;
+const SUPPORTED_COLUMNS = [
+  "affiliate_url",
+  "product_url",
+  "title",
+  "campaign",
+  "commission_rate",
+  "commission_amount",
+  "category",
+  "shop_name",
+  "source",
+  "price",
+  "product_id",
+  "sold_count",
+] as const;
 
 type SupportedColumn = (typeof SUPPORTED_COLUMNS)[number];
 
 const DATAFEED_HEADER_MAP = new Map<string, SupportedColumn>([
+  ["รหัสสินค้า", "product_id"],
   ["ชื่อข้อเสนอ", "title"],
   ["ชื่อสินค้า", "title"],
+  ["ราคา", "price"],
+  ["ขาย", "sold_count"],
   ["ชื่อร้านค้า", "shop_name"],
-  ["อัตราค่าคอมมิชชัน", "campaign"],
-  ["ค่าคอมมิชชัน", "campaign"],
-  ["ลิงก์ข้อเสนอ", "product_url"],
+  ["อัตราค่าคอมมิชชัน", "commission_rate"],
+  ["ค่าคอมมิชชัน", "commission_amount"],
+  ["คอมมิชชัน", "commission_amount"],
+  ["ลิงก์ข้อเสนอ", "affiliate_url"],
   ["ลิงก์สินค้า", "product_url"],
   ["ลิงก์ร้านค้า", "product_url"],
   ["ลิงก์สินค้า(สั้น)", "affiliate_url"],
@@ -55,6 +72,10 @@ const DATAFEED_HEADER_MAP = new Map<string, SupportedColumn>([
   ["ลิงก์สั้น", "affiliate_url"],
   ["หมวดหมู่", "category"],
   ["หมวดหมู่สากล", "category"],
+  ["product id", "product_id"],
+  ["product_id", "product_id"],
+  ["item id", "product_id"],
+  ["item_id", "product_id"],
   ["affiliate url", "affiliate_url"],
   ["affiliate_url", "affiliate_url"],
   ["affiliate link", "affiliate_url"],
@@ -67,14 +88,14 @@ const DATAFEED_HEADER_MAP = new Map<string, SupportedColumn>([
   ["short_link", "affiliate_url"],
   ["short url", "affiliate_url"],
   ["short_url", "affiliate_url"],
+  ["offer url", "affiliate_url"],
+  ["offer_url", "affiliate_url"],
+  ["offer link", "affiliate_url"],
+  ["offer_link", "affiliate_url"],
   ["product url", "product_url"],
   ["product_url", "product_url"],
   ["product link", "product_url"],
   ["product_link", "product_url"],
-  ["offer url", "product_url"],
-  ["offer_url", "product_url"],
-  ["offer link", "product_url"],
-  ["offer_link", "product_url"],
   ["shop url", "product_url"],
   ["shop_url", "product_url"],
   ["shop link", "product_url"],
@@ -96,12 +117,17 @@ const DATAFEED_HEADER_MAP = new Map<string, SupportedColumn>([
   ["shop_name", "shop_name"],
   ["seller name", "shop_name"],
   ["seller_name", "shop_name"],
-  ["commission", "campaign"],
-  ["commission rate", "campaign"],
-  ["commission_rate", "campaign"],
-  ["commission %", "campaign"],
-  ["payout", "campaign"],
+  ["commission", "commission_amount"],
+  ["commission amount", "commission_amount"],
+  ["commission_amount", "commission_amount"],
+  ["commission rate", "commission_rate"],
+  ["commission_rate", "commission_rate"],
+  ["commission %", "commission_rate"],
+  ["payout", "commission_amount"],
   ["campaign", "campaign"],
+  ["sold", "sold_count"],
+  ["sold count", "sold_count"],
+  ["sold_count", "sold_count"],
   ["global category", "category"],
   ["global_category", "category"],
   ["all global category", "category"],
@@ -190,8 +216,12 @@ function parseDelimitedLine(line: string, delimiter: "," | "\t"): string[] {
 
 function toNumber(value: string | undefined): number | undefined {
   if (!value) return undefined;
-  const parsed = Number(value.replace(/,/g, ""));
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
+  const clean = value.replace(/[฿,\s]/g, "").replace(/\+$/, "");
+  const multiplier = clean.endsWith("พัน") ? 1_000 : clean.endsWith("หมื่น") ? 10_000 : clean.endsWith("แสน") ? 100_000 : clean.endsWith("ล้าน") ? 1_000_000 : 1;
+  const numeric = clean.replace(/(พัน|หมื่น|แสน|ล้าน)$/u, "");
+  const parsed = Number(numeric);
+  if (!Number.isFinite(parsed) || parsed < 0) return undefined;
+  return parsed * multiplier;
 }
 
 function firstNonEmpty(...values: Array<string | undefined>): string | undefined {
@@ -201,6 +231,9 @@ function firstNonEmpty(...values: Array<string | undefined>): string | undefined
 function buildCampaignNote(entry: Record<string, string>): string | undefined {
   const parts = [
     firstNonEmpty(entry.campaign),
+    firstNonEmpty(entry.commission_rate) ? `อัตราค่าคอมมิชชัน: ${firstNonEmpty(entry.commission_rate)}` : undefined,
+    firstNonEmpty(entry.commission_amount) ? `คอมมิชชัน: ${firstNonEmpty(entry.commission_amount)}` : undefined,
+    firstNonEmpty(entry.sold_count) ? `ขาย: ${firstNonEmpty(entry.sold_count)}` : undefined,
     firstNonEmpty(entry.category) ? `หมวดหมู่: ${firstNonEmpty(entry.category)}` : undefined,
     firstNonEmpty(entry.shop_name) ? `ร้านค้า: ${firstNonEmpty(entry.shop_name)}` : undefined,
   ].filter((value): value is string => Boolean(value));
