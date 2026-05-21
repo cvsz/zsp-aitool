@@ -62,7 +62,8 @@
     "imports:csv-products:status": "tsx scripts/imports/csv-product-import-status.ts",
     "ai:content-worker": "tsx scripts/ai/content-queue-worker.ts",
     "ai:content-worker:once": "tsx scripts/ai/content-queue-worker.ts --once",
-    "ai:content-queue-status": "tsx scripts/ai/content-queue-status.ts"
+    "ai:content-queue-status": "tsx scripts/ai/content-queue-status.ts",
+    "ci:local-preflight": "bash scripts/ci/local-preflight.sh"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

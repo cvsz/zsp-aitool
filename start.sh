@@ -15,6 +15,7 @@ SCRIPT_START_UTC="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 JOURNAL_SINCE="${JOURNAL_SINCE:-$SCRIPT_START_UTC}"
 BENIGN_SYSTEMD_CGROUP_RE="Failed to kill control group .*ignoring: Invalid argument"
 DEFAULT_SHOPEE_AFFILIATE_AUTH_URL="https://affiliate.shopee.co.th/"
+CICD_HARDENING_CONFIGURED=true
 ZSP_AUTO_RESET_CONFLICTS="${ZSP_AUTO_RESET_CONFLICTS:-false}"
 RECOVERY_DIR="${RECOVERY_DIR:-${HOME}/zsp-recovery}"
 
@@ -202,6 +203,10 @@ source_integrity_check() {
 
   if ! grep -q 'SHOPEE_SOCIAL_POSTING_GUIDE_CONFIGURED=true' docs/runbooks/shopee-affiliate-social-posting.md; then
     fail "Shopee social posting guide marker is missing from runbook"
+  fi
+
+  if ! grep -q 'CICD_HARDENING_CONFIGURED=true' start.sh; then
+    fail "CI/CD hardening marker is missing from start.sh"
   fi
 
 
