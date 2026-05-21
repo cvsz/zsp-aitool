@@ -44,3 +44,4 @@ prisma/dev.db-journal
 .gemini/
 .codex/
 .agents/
+.claude/
