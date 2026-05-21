@@ -27,6 +27,10 @@ type ProductCsvRow = {
   category?: string;
   shopName?: string;
   campaignNote?: string;
+  productIdRaw?: string;
+  soldCountRaw?: string;
+  commissionRate?: string;
+  commissionAmount?: string;
   sourceRowNumber: number;
 };
 
@@ -45,19 +49,27 @@ const DEFAULT_REPORT_EVERY = 1_000;
 const FORMULA_PREFIX_RE = /^[\t\r\s]*[=+\-@]/;
 
 const HEADER_MAP = new Map<string, string>([
+  ["รหัสสินค้า", "product_id"],
   ["ชื่อข้อเสนอ", "title"],
   ["ชื่อสินค้า", "title"],
+  ["ราคา", "price"],
+  ["ขาย", "sold_count"],
   ["ชื่อร้านค้า", "shop_name"],
-  ["ลิงก์ข้อเสนอ", "product_url"],
+  ["ลิงก์ข้อเสนอ", "affiliate_url"],
   ["ลิงก์สินค้า", "product_url"],
   ["ลิงก์ร้านค้า", "product_url"],
   ["ลิงก์สินค้า(สั้น)", "affiliate_url"],
   ["ลิงก์ร้านค้า(สั้น)", "affiliate_url"],
   ["ลิงก์สั้น", "affiliate_url"],
-  ["อัตราค่าคอมมิชชัน", "campaign"],
-  ["ค่าคอมมิชชัน", "campaign"],
+  ["อัตราค่าคอมมิชชัน", "commission_rate"],
+  ["ค่าคอมมิชชัน", "commission_amount"],
+  ["คอมมิชชัน", "commission_amount"],
   ["หมวดหมู่", "category"],
   ["หมวดหมู่สากล", "category"],
+  ["product id", "product_id"],
+  ["product_id", "product_id"],
+  ["item id", "product_id"],
+  ["item_id", "product_id"],
   ["affiliate url", "affiliate_url"],
   ["affiliate_url", "affiliate_url"],
   ["affiliate link", "affiliate_url"],
@@ -70,14 +82,14 @@ const HEADER_MAP = new Map<string, string>([
   ["short_link", "affiliate_url"],
   ["short url", "affiliate_url"],
   ["short_url", "affiliate_url"],
+  ["offer url", "affiliate_url"],
+  ["offer_url", "affiliate_url"],
+  ["offer link", "affiliate_url"],
+  ["offer_link", "affiliate_url"],
   ["product url", "product_url"],
   ["product_url", "product_url"],
   ["product link", "product_url"],
   ["product_link", "product_url"],
-  ["offer url", "product_url"],
-  ["offer_url", "product_url"],
-  ["offer link", "product_url"],
-  ["offer_link", "product_url"],
   ["shop url", "product_url"],
   ["shop_url", "product_url"],
   ["shop link", "product_url"],
@@ -99,12 +111,17 @@ const HEADER_MAP = new Map<string, string>([
   ["shop_name", "shop_name"],
   ["seller name", "shop_name"],
   ["seller_name", "shop_name"],
-  ["commission", "campaign"],
-  ["commission rate", "campaign"],
-  ["commission_rate", "campaign"],
-  ["commission %", "campaign"],
-  ["payout", "campaign"],
+  ["commission", "commission_amount"],
+  ["commission amount", "commission_amount"],
+  ["commission_amount", "commission_amount"],
+  ["commission rate", "commission_rate"],
+  ["commission_rate", "commission_rate"],
+  ["commission %", "commission_rate"],
+  ["payout", "commission_amount"],
   ["campaign", "campaign"],
+  ["sold", "sold_count"],
+  ["sold count", "sold_count"],
+  ["sold_count", "sold_count"],
   ["global category", "category"],
   ["global_category", "category"],
   ["all global category", "category"],
@@ -122,7 +139,7 @@ function printHelp() {
   console.log(`Import a CSV/TSV file into the main zsp-aitool Product list.
 
 Usage:
-  npm run db:import-csv-products -- --file ./SP-Product-Feed-All-Global-Category.csv --user-email user@example.com --apply
+  npm run db:import-csv-products -- --file ./100ProductSet1.csv --user-email user@example.com --apply
 
 Required:
   --file, -f <path>       CSV/TSV file path.
@@ -142,6 +159,8 @@ Notes:
   - Streams large files; it does not read the full CSV into memory.
   - Imports into Product and AffiliateLink, not a staging table.
   - Upserts Product by unique (userId, originalUrl).
+  - Supports uploaded Shopee CSV headers: รหัสสินค้า, ชื่อสินค้า, ราคา, ขาย, ชื่อร้านค้า, อัตราค่าคอมมิชชัน, คอมมิชชัน, ลิงก์สินค้า, ลิงก์ข้อเสนอ.
+  - Treats ลิงก์สินค้า as Product.originalUrl and ลิงก์ข้อเสนอ as Product.affiliateUrl / AffiliateLink.affiliateUrl.
   - Rejects formula-injection rows.
   - Rejects rows without product_url or affiliate_url.
   - URL values must pass the existing Shopee HTTPS allowlist.
@@ -294,6 +313,9 @@ function parsePrice(value: string | undefined): number {
 function buildCampaignNote(row: Record<string, string>): string | undefined {
   const parts = [
     firstNonEmpty(row.campaign),
+    firstNonEmpty(row.commission_rate) ? `อัตราค่าคอมมิชชัน: ${firstNonEmpty(row.commission_rate)}` : undefined,
+    firstNonEmpty(row.commission_amount) ? `คอมมิชชัน: ${firstNonEmpty(row.commission_amount)}` : undefined,
+    firstNonEmpty(row.sold_count) ? `ขาย: ${firstNonEmpty(row.sold_count)}` : undefined,
     firstNonEmpty(row.category) ? `หมวดหมู่: ${firstNonEmpty(row.category)}` : undefined,
     firstNonEmpty(row.shop_name) ? `ร้านค้า: ${firstNonEmpty(row.shop_name)}` : undefined,
   ].filter((value): value is string => Boolean(value));
@@ -306,8 +328,8 @@ function toProductRow(headers: string[], rawRow: string[], sourceRowNumber: numb
   }
 
   const row = Object.fromEntries(headers.map((header, columnIndex) => [header, rawRow[columnIndex] ?? ""]));
-  const productUrl = firstNonEmpty(row.product_url, row.origin_link, row.landing_page_url);
-  const affiliateUrl = firstNonEmpty(row.affiliate_url);
+  const productUrl = firstNonEmpty(row.product_url, row.shop_url, row.origin_link, row.landing_page_url);
+  const affiliateUrl = firstNonEmpty(row.affiliate_url, row.short_link, row.offer_url);
 
   if (!productUrl || !affiliateUrl) {
     return { rejected: { sourceRowNumber, reason: "MISSING_PRODUCT_OR_AFFILIATE_URL" } };
@@ -326,6 +348,10 @@ function toProductRow(headers: string[], rawRow: string[], sourceRowNumber: numb
       category: firstNonEmpty(row.category, row.global_category, row.main_category),
       shopName: firstNonEmpty(row.shop_name, row.seller_name),
       campaignNote: buildCampaignNote(row),
+      productIdRaw: firstNonEmpty(row.product_id),
+      soldCountRaw: firstNonEmpty(row.sold_count),
+      commissionRate: firstNonEmpty(row.commission_rate),
+      commissionAmount: firstNonEmpty(row.commission_amount),
       sourceRowNumber,
     },
   };
@@ -339,6 +365,17 @@ async function resolveUserId(prisma: PrismaClient, options: Options): Promise<st
 }
 
 async function upsertProductRow(prisma: PrismaClient, userId: string, row: ProductCsvRow, options: Options, absoluteFile: string) {
+  const rawMetadata = {
+    source: "csv_product_import",
+    sourceFile: path.basename(absoluteFile),
+    sourceRowNumber: row.sourceRowNumber,
+    productIdRaw: row.productIdRaw,
+    soldCountRaw: row.soldCountRaw,
+    commissionRate: row.commissionRate,
+    commissionAmount: row.commissionAmount,
+    campaignNote: row.campaignNote,
+  };
+
   const product = await prisma.product.upsert({
     where: { userId_originalUrl: { userId, originalUrl: row.productUrl } },
     update: {
@@ -347,12 +384,7 @@ async function upsertProductRow(prisma: PrismaClient, userId: string, row: Produ
       affiliateUrl: row.affiliateUrl,
       shopName: row.shopName,
       category: row.category,
-      rawMetadata: {
-        source: "csv_product_import",
-        sourceFile: path.basename(absoluteFile),
-        sourceRowNumber: row.sourceRowNumber,
-        campaignNote: row.campaignNote,
-      },
+      rawMetadata,
       deletedAt: null,
     },
     create: {
@@ -364,12 +396,7 @@ async function upsertProductRow(prisma: PrismaClient, userId: string, row: Produ
       affiliateUrl: row.affiliateUrl,
       shopName: row.shopName,
       category: row.category,
-      rawMetadata: {
-        source: "csv_product_import",
-        sourceFile: path.basename(absoluteFile),
-        sourceRowNumber: row.sourceRowNumber,
-        campaignNote: row.campaignNote,
-      },
+      rawMetadata,
     },
   });
 
