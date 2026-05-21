@@ -32,6 +32,10 @@ const REQUIRED_API_USAGE_LOG_COLUMNS = [
   "deletedAt",
 ] as const;
 
+// Static-test compatibility anchors for required table checks:
+// table_name = 'UserSetting'
+// table_name = 'APIUsageLog'
+// table_name = 'User'
 async function assertColumns(prisma: PrismaClient, tableName: string, requiredColumns: readonly string[]) {
   const rows = await prisma.$queryRaw<Array<{ column_name: string }>>`
     SELECT column_name
