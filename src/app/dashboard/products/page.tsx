@@ -29,6 +29,7 @@ export default async function ProductsPage({ searchParams }: PageProps) {
           <p className="text-sm text-slate-600">ทั้งหมด {data.pagination.total.toLocaleString("th-TH")} รายการ</p>
         </div>
         <Link className="rounded-lg border px-3 py-2 text-sm" href="/dashboard/products/new">เพิ่มสินค้าใหม่</Link>
+        <Link className="rounded-lg border px-3 py-2 text-sm" href="/dashboard/products/deduplication">จัดการสินค้าซ้ำ</Link>
       </header>
       <form className="grid grid-cols-1 gap-2 rounded-lg border p-3 md:grid-cols-6">
         <input name="q" defaultValue={q ?? ""} placeholder="ค้นหา" className="rounded border px-2 py-1" />
