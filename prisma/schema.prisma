@@ -79,6 +79,7 @@ model User {
   feedbackSubmissions FeedbackSubmission[]
   orgMemberships     OrgMembership[]
   csvImportJobs      CsvImportJob[]
+  productDuplicateGroups ProductDuplicateGroup[]
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
 }
@@ -167,6 +168,27 @@ model Product {
   @@index([userId, affiliateUrl])
   @@index([userId, createdAt, id])
   @@unique([userId, originalUrl])
+}
+
+
+
+model ProductDuplicateGroup {
+  id                 String   @id @default(cuid())
+  userId             String
+  status             String   @default("PENDING_REVIEW")
+  canonicalProductId String?
+  productIds         String[]
+  score              Decimal? @db.Decimal(5, 2)
+  reason             Json?
+  reviewedAt         DateTime?
+  mergedAt           DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  deletedAt          DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status, createdAt])
 }
 
 model ProductImage {
