@@ -26,7 +26,7 @@ Current project context:
 - Existing npm scripts include `npm run test`, `npm run typecheck`, `npm run build`, `npm run health`, and HyperFrames checks.
 - Do not change production port 3001.
 - Do not weaken auth, tenant isolation, org isolation, rate limiting, HyperFrames safety, Shopee safety, Marqeta sandbox-only safety, or security middleware.
-
+````
 Primary task list:
 1. Auth route integration tests:
    - `/api/auth/register`
@@ -320,10 +320,8 @@ Rows:
 
 Final line:
 HIGH_PRIORITY_TEST_COVERAGE_READY=true or HIGH_PRIORITY_TEST_COVERAGE_READY=false
-```
 
 ## Codex Cloud split prompts
-
 Use these when the master prompt is too large. Run them as separate Codex tasks against the same branch or sequential branches.
 
 ### Prompt A — Auth route integration tests
