@@ -1,108 +1,84 @@
-# 039 — DB Schema Drift Repair Prompt
+# 039 — Production DB Schema Drift Repair Prompt
 
-Use this prompt in Codex Cloud for `cvsz/zsp-aitool` after the current production build passes but before adding more large data features.
+Use this prompt in Codex Cloud for `cvsz/zsp-aitool`.
 
 ```text
 You are working on cvsz/zsp-aitool.
 
 Phase:
-039 — Production DB Schema Drift Repair.
+039 — Production DB Schema Drift Repair and Drift Prevention.
 
 Priority:
-Critical. A production command failed with Prisma schema drift: `The column User.planTier does not exist in the current database.` A temporary importer bypass was added, but the database/schema mismatch must be fixed permanently and safely.
+Critical.
 
-Main objective:
-Find and repair all Prisma-vs-PostgreSQL schema drift without data loss, then add drift checks that prevent this class of production issue from returning.
+Problem context:
+A production import command failed with:
 
-Current known symptom:
-- Running `npm run db:import-csv-products -- --file /home/zeazdev/SP-Product-Feed-All-Global-Category.csv --user-email sea@zeaz.dev --apply` failed because Prisma attempted to select `User.planTier`, but the real DB table `User` did not contain `planTier`.
-- A script workaround now resolves user ID with a raw query, but this is not the final fix.
+Invalid `prisma.user.findUnique()` invocation
+The column `User.planTier` does not exist in the current database.
 
-Do not do:
+A temporary importer bypass was added by resolving user ID with a narrow raw query, but the real production issue is database schema drift. Fix drift permanently and add prevention checks.
+
+Primary objective:
+Repair PostgreSQL schema drift safely so the real production database matches Prisma expectations without dropping production data.
+
+Hard constraints:
 - Do not drop production tables.
+- Do not truncate production data.
 - Do not reset the database.
-- Do not run `prisma migrate reset`.
-- Do not delete migrations.
-- Do not wipe Product, AffiliateLink, User, ContentGeneration, HyperFrames, Shopee, Marqeta, OCR, settings, or audit data.
-- Do not change production port 3001.
-- Do not weaken auth, org isolation, user isolation, security middleware, Shopee compliance, Marqeta sandbox-only guardrails, or HyperFrames controls.
+- Do not use `prisma migrate reset`.
+- Do not use `prisma db push --force-reset`.
+- Do not expose `DATABASE_URL` or secrets in logs.
+- Use production-safe migrations or explicit repair scripts only.
+- Preserve all existing Product, AffiliateLink, User, UserSetting, ShopeeAffiliateIngestion, HyperFrames, ContentHistory, and billing data.
 
 Review first:
-- `prisma/schema.prisma`
-- `prisma/migrations/**`
-- `scripts/db/check-user-settings-schema.ts`
-- `scripts/db/import-csv-to-products.ts`
-- `package.json`
-- `start.sh`
-- existing tests under `tests/scripts/**`, `tests/services/**`, `tests/api/**`, `tests/security/**`
+- prisma/schema.prisma
+- prisma/migrations/**
+- scripts/db/check-user-settings-schema.ts
+- scripts/health-zsp-aitool.sh
+- scripts/db/import-csv-to-products.ts
+- package.json
+- start.sh
+- README.md
+- docs/runbooks/production-db-drift.md if present
 
-Required audit:
-1. Inspect Prisma schema for every model expected by production.
-2. Inspect migrations for missing additions such as `User.planTier`.
-3. Create a safe drift inspection script that checks actual DB columns for critical models:
-   - User
-   - Product
-   - AffiliateLink
-   - UserSetting
-   - APIUsageLog
-   - ShopeeAffiliateIngestion
-   - ShopeeAffiliateSocialDraft
-   - HyperFrameRenderJob
-   - ContentTemplate
-   - OCRJob
-4. Compare actual columns with Prisma model fields that are required by app runtime.
-5. Report missing columns, unexpected critical type mismatches, missing indexes, and missing unique constraints.
+Required work:
+1. Audit Prisma schema vs production-sensitive drift risks.
+2. Identify all `User` fields expected by Prisma that may be missing from DB, especially `planTier`.
+3. Create a production-safe migration or drift repair SQL/script using `ADD COLUMN IF NOT EXISTS` and safe defaults/backfills.
+4. Extend drift checker to cover critical columns for `User`, `UserSetting`, `Product`, `AffiliateLink`, `ShopeeAffiliateIngestion`, and `APIUsageLog`.
+5. Add npm script such as `db:schema-drift-check:all` or upgrade existing `db:schema-drift-check` to check all critical tables.
+6. Update health script to run the expanded read-only drift check when DB is reachable.
+7. Update start.sh to fail clearly when drift remains after migrations.
+8. Add tests for the drift checker ensuring it checks `User.planTier` and does not print `DATABASE_URL`.
+9. Update docs/runbooks/production-db-drift.md with exact production repair flow and rollback notes.
 
-Implementation options:
-Prefer a forward-only Prisma migration when possible.
-If Prisma migration cannot safely represent a drift repair, add a carefully documented SQL repair migration. It must be idempotent where possible and safe on production.
-
-Known repair candidate:
-- Add missing `User.planTier` with default `FREE` if missing.
-- Ensure the enum or database type needed by Prisma exists.
-- Backfill existing rows safely.
-
-Example shape, adapt to real schema/migration style:
+Suggested production-safe SQL pattern:
 
 ```sql
-ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "planTier" "PlanTier" NOT NULL DEFAULT 'FREE';
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "planTier" TEXT;
+UPDATE "User" SET "planTier" = 'FREE' WHERE "planTier" IS NULL;
+ALTER TABLE "User" ALTER COLUMN "planTier" SET DEFAULT 'FREE';
+ALTER TABLE "User" ALTER COLUMN "planTier" SET NOT NULL;
 ```
 
-Only use the exact SQL if it matches the real generated Prisma enum/table state.
+Adjust type/default based on actual Prisma schema and generated enum mapping.
 
-Required code changes:
-1. Extend the DB drift check script so it checks `User.planTier` and other critical columns.
-2. Add tests for the drift check script.
-3. Update `start.sh` so source/integrity/runtime checks catch `User.planTier` drift before long-running imports.
-4. Keep the importer raw user-ID lookup if it improves drift tolerance, but document that the DB must still be repaired.
-5. Add a runbook:
-   - `docs/runbooks/db-schema-drift-repair.md`
+Safety acceptance criteria:
+- All schema repair is additive or safe backfill only.
+- No data loss.
+- Drift check returns PASS when required columns exist.
+- Drift check returns FAIL with clear missing-table/missing-column details when drift exists.
+- Drift check never prints secrets or raw database URLs.
+- Importer no longer relies on schema drift workaround as the only solution.
+- start.sh final success implies drift check passed.
 
-Runbook must include:
-- what drift was found.
-- exact repair applied.
-- how to verify.
-- rollback considerations.
-- no-data-loss policy.
-- how to handle future drift.
-
-Tests to add/update:
-- `tests/scripts/db-schema-drift-check-static.test.ts`
-- optional new file: `tests/scripts/db-critical-schema-drift-static.test.ts`
-- any migration/static tests already used by repo conventions.
-
-Test coverage:
-- drift script references `User.planTier`.
-- drift script checks required models/tables.
-- drift script does not print `DATABASE_URL`.
-- runbook documents no reset/no drop policy.
-- start.sh includes the drift check and relevant marker.
-
-Required commands:
-
+Verification commands:
 ```bash
 git status --short
 python3 -m json.tool package.json >/tmp/package-json-ok.json
+npm ci
 npm run prisma:generate
 npx prisma validate
 npx prisma migrate status --schema prisma/schema.prisma
@@ -110,74 +86,39 @@ npm run db:schema-drift-check
 npm run typecheck
 npm run test
 npm run build
+npm run health
 ```
 
 Production verification:
-
 ```bash
 cd ~/zsp-aitool
 bash start.sh
-psql "$DATABASE_URL" -c 'select column_name from information_schema.columns where table_name = ''User'' and column_name = ''planTier'';'
-npm run db:import-csv-products -- --file /home/zeazdev/SP-Product-Feed-All-Global-Category.csv --user-email sea@zeaz.dev --max-rows 10
+psql "$DATABASE_URL" -c 'select "planTier", count(*) from "User" group by "planTier";'
 ```
 
-Expected production result:
-- `bash start.sh` passes.
-- `User.planTier` exists.
-- `npm run db:schema-drift-check` passes.
-- dry-run or limited import no longer fails because of `User.planTier`.
-
-Commit strategy:
-- `fix(db): repair production schema drift`
-- `test(db): cover critical schema drift checks`
-- `docs(db): document production schema drift repair`
+Recommended commits:
+- `fix(db): repair production user plan tier drift`
+- `test(db): cover schema drift checker`
+- `docs(db): add production schema drift runbook`
 
 Final response format:
-Return exactly:
-
 1. Overall verdict
 - PASS / WARN / FAIL
 - DB_SCHEMA_DRIFT_REPAIRED=true/false
 - READY_FOR_NEXT_PHASE=true/false
 
-2. Drift found
-- table/column/index/type issues
-
-3. Repair applied
-- migration/script/runbook/start.sh updates
-
-4. Files reviewed
-- grouped list
-
-5. Files changed
-- file + reason
-
-6. Migration details
-- name, SQL/Prisma summary, data-safety notes
-
-7. Verification table
-Rows:
-- Prisma generate
-- Prisma validate
-- migration status
-- schema drift check
-- typecheck
-- tests
-- build
-- start.sh
-- limited CSV import dry run
-
-8. Commands run
-- exact command + PASS/WARN/FAIL
-
-9. Blocking issues
-- list or None
-
-10. Remaining risks
-- list concrete residual risks
-
-11. Commits
-- hash and message
+2. Summary
+3. Files reviewed
+4. Files changed
+5. Schema changes
+6. Drift checker behavior
+7. Production repair commands
+8. Security/data-safety behavior
+9. Commands run
+10. Blocking issues
+11. Remaining risks
+12. Commit hash
+13. PR status
 
 Final line:
 DB_SCHEMA_DRIFT_REPAIRED=true or DB_SCHEMA_DRIFT_REPAIRED=false
