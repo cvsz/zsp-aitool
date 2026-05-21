@@ -281,6 +281,7 @@ validate_install_prisma() {
   run npx prisma migrate status --schema prisma/schema.prisma
 
   if has_npm_script "db:schema-drift-check"; then
+    ok "DB_SCHEMA_DRIFT_CHECK_PLAN_TIER_GUARD=true"
     run npm run db:schema-drift-check
   else
     warn "db:schema-drift-check script not found; skipping"
