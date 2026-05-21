@@ -1,6 +1,7 @@
 "use client";
 
 import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { CsvProductImportProgressPanel } from "@/components/imports/CsvProductImportProgressPanel";
 
 type IngestionItem = {
   id: string;
@@ -244,6 +245,8 @@ export function ShopeeAffiliateRealDbDashboard() {
       </section>
 
       {message ? <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700 shadow-sm">{message}</div> : null}
+
+      <CsvProductImportProgressPanel />
 
       <section className="grid gap-4 lg:grid-cols-2">
         <form onSubmit={submitManual} className="space-y-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
