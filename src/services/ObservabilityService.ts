@@ -37,7 +37,7 @@ export async function getObservabilitySummary(): Promise<ObservabilitySummary> {
     `)),
     withDbTiming("observability.events.db-latency", () => prisma.observabilityEvent.findMany({ where: { source: "db", event: "db.timing", createdAt: { gte: from24h } }, select: { durationMs: true }, take: 500, orderBy: { createdAt: "desc" } })),
     withDbTiming("observability.imports", () => prisma.csvImportJob.groupBy({ by: ["status"], _count: { _all: true }, where: { deletedAt: null } })),
-    withDbTiming("observability.ai-queue", () => prisma.aiContentQueueJob.groupBy({ by: ["status"], _count: { _all: true }, where: { deletedAt: null } })),
+    withDbTiming("observability.ai-queue", () => prisma.aIContentQueueJob.groupBy({ by: ["status"], _count: { _all: true }, where: { deletedAt: null } })),
     getHyperFramesOperatorStatus().catch(() => null),
   ]);
 
