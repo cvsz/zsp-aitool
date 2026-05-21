@@ -62,6 +62,7 @@ model User {
   planTier           PlanTier            @default(FREE)
   products           Product[]
   contentGenerations ContentGeneration[]
+  aiContentQueueJobs AIContentQueueJob[]
   affiliateLinks     AffiliateLink[]
   shopeeAffiliateSocialDrafts ShopeeAffiliateSocialDraft[]
   shopeeAffiliateSocialDraftVersions ShopeeAffiliateSocialDraftVersion[]
@@ -151,6 +152,7 @@ model Product {
   shopeeAffiliateIngestions ShopeeAffiliateIngestion[]
   shopeeAffiliateSocialDrafts ShopeeAffiliateSocialDraft[]
   contentGenerations ContentGeneration[]
+  aiContentQueueJobs AIContentQueueJob[]
   sourceSimilarities SimilarProduct[]    @relation("SourceProduct")
   relatedSimilarTo   SimilarProduct[]    @relation("RelatedProduct")
   platformPosts      PlatformPost[]
@@ -365,6 +367,36 @@ model CsvImportJob {
   deletedAt       DateTime?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status, createdAt])
+  @@index([status, createdAt])
+}
+
+
+model AIContentQueueJob {
+  id           String   @id @default(cuid())
+  userId       String
+  productId    String?
+  status       String   @default("PENDING")
+  kind         String
+  platform     Platform?
+  tone         Tone?
+  language     Language @default(TH)
+  input        Json?
+  output       Json?
+  errorSummary String?
+  attempt      Int      @default(0)
+  maxAttempts  Int      @default(3)
+  startedAt    DateTime?
+  completedAt  DateTime?
+  failedAt     DateTime?
+  cancelledAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  deletedAt    DateTime?
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
 
   @@index([userId, status, createdAt])
   @@index([status, createdAt])
