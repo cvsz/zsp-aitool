@@ -679,3 +679,21 @@ model HyperFrameSocialExportAuditEvent {
   @@index([renderJobId])
   @@index([provider, eventType])
 }
+
+model AdminAuditLog {
+  id          String   @id @default(cuid())
+  actorUserId String?
+  action      String
+  targetType  String
+  targetId    String?
+  status      String   @default("SUCCESS")
+  ipHash      String?
+  userAgent   String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  deletedAt   DateTime?
+
+  @@index([actorUserId, createdAt])
+  @@index([action, createdAt])
+  @@index([targetType, targetId])
+}

@@ -4,6 +4,7 @@ import { createProductSchema } from "@/schemas/product.schema";
 import { productService } from "@/services/ProductService";
 import { AppError } from "@/lib/errors";
 import { withAuth } from "@/middleware/auth-middleware";
+import { AdminAuditLogService } from "@/services/AdminAuditLogService";
 
 const querySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
@@ -34,7 +35,9 @@ export const POST = withAuth(async (request) => {
   try {
     const body = await request.json();
     const input = createProductSchema.parse(body);
-    return NextResponse.json({ ok: true, data: await productService.create(request.auth.userId, input) }, { status: 201 });
+    const created = await productService.create(request.auth.userId, input);
+    await AdminAuditLogService.writeBestEffort({ actorUserId: request.auth.userId, action: "PRODUCT_CREATE", targetType: "PRODUCT", targetId: created.id, ip: request.headers.get("x-forwarded-for"), userAgent: request.headers.get("user-agent"), metadata: { title: input.title, source: "manual" } });
+    return NextResponse.json({ ok: true, data: created }, { status: 201 });
   } catch (error) {
     if (error instanceof ZodError) return NextResponse.json({ ok: false, error: error.flatten() }, { status: 422 });
     if (error instanceof AppError) return NextResponse.json({ ok: false, error: { code: error.code, message: error.message } }, { status: error.status });
