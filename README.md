@@ -1,5 +1,7 @@
 # ZSP-AITool
 
+_Last updated: 2026-05-21_
+
 ZSP-AITool is a Thai-first full-stack SaaS application for Shopee Affiliate workflows. It helps users collect product information, manage affiliate links, generate AI promotional content, export content and product data, run OCR extraction, find similar saved products, and create HyperFrames promotional video compositions and render jobs.
 
 Production domain:
@@ -65,8 +67,17 @@ scripts/
 extension/
   # Chrome Extension MV3 workspace
 docs/
-  # Architecture, runbooks, prompt packs, and HyperFrames documentation
+  # Architecture, runbooks, prompt packs, release notes, and HyperFrames documentation
 ```
+
+## Documentation Index
+
+- Project status: `docs/project-status.md`
+- Roadmap: `docs/roadmap.md`
+- Production readiness checklist: `docs/production-readiness-checklist.md`
+- HyperFrames worker operations: `docs/hyperframes-render-worker.md`
+- Runbooks: `docs/runbooks/`
+- Prompt packs: `docs/prompts/`
 
 ## Quick Start
 

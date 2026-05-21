@@ -1,8 +1,10 @@
 # Project Status
 
-## Snapshot (2026-05-17)
+## Snapshot (2026-05-21)
 
 `zsp-aitool` is currently a full-stack Next.js + Prisma + Chrome Extension workspace with runnable APIs, dashboard pages, domain services, and automated tests.
+
+Latest documentation refresh includes HyperFrames operator/runbook alignment, Shopee affiliate safe-ingestion coverage, and social-draft persistence rollout documentation.
 
 ## Completed Modules
 
@@ -35,3 +37,9 @@
 - Persisted/distributed rate-limit backend (Redis/edge) is still recommended over in-memory for multi-instance deployment.
 - Daily AI budget enforcement is currently configuration-only (budget value exposed in env) and should be backed by persisted usage accounting + alerts.
 - Several production-readiness checklist items remain operational tasks (backup drills, secret rotation, formal security monitoring/on-call process).
+
+## Documentation Maintenance Status
+
+- Canonical docs are now aligned to the latest workspace capabilities as of **2026-05-21**.
+- `README.md`, roadmap, and release notes now reflect the newest runbooks and HyperFrames operational guardrails.
+- Historical review documents (dated audits/reviews) are intentionally preserved as point-in-time artifacts.
