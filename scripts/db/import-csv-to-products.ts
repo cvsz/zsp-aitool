@@ -43,6 +43,8 @@ type ImportStats = {
   sampleRejected: Array<{ sourceRowNumber: number; reason: string }>;
 };
 
+type UserIdRow = { id: string };
+
 const DEFAULT_MAX_ROWS = 5_000_000;
 const DEFAULT_MAX_BYTES = 5 * 1024 * 1024 * 1024;
 const DEFAULT_REPORT_EVERY = 1_000;
@@ -359,9 +361,20 @@ function toProductRow(headers: string[], rawRow: string[], sourceRowNumber: numb
 
 async function resolveUserId(prisma: PrismaClient, options: Options): Promise<string> {
   if (options.userId) return options.userId;
-  const user = await prisma.user.findUnique({ where: { email: options.userEmail } });
-  if (!user) throw new Error(`USER_NOT_FOUND: ${options.userEmail}`);
-  return user.id;
+  if (!options.userEmail) throw new Error("USER_EMAIL_REQUIRED");
+
+  // Use a narrow raw query so this import utility still works when the production
+  // User table has schema drift on unrelated columns such as planTier.
+  const rows = await prisma.$queryRaw<UserIdRow[]>`
+    SELECT id
+    FROM "User"
+    WHERE lower(email) = lower(${options.userEmail})
+    LIMIT 1
+  `;
+
+  const userId = rows[0]?.id;
+  if (!userId) throw new Error(`USER_NOT_FOUND: ${options.userEmail}`);
+  return userId;
 }
 
 async function upsertProductRow(prisma: PrismaClient, userId: string, row: ProductCsvRow, options: Options, absoluteFile: string) {
