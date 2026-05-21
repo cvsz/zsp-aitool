@@ -209,6 +209,18 @@ source_integrity_check() {
   [[ -f src/services/MarqetaCoreApiService.ts ]] || fail "Missing src/services/MarqetaCoreApiService.ts"
   [[ -f src/app/api/integrations/marqeta/status/route.ts ]] || fail "Missing src/app/api/integrations/marqeta/status/route.ts"
   [[ -f docs/runbooks/marqeta-core-api-sandbox-foundation.md ]] || fail "Missing docs/runbooks/marqeta-core-api-sandbox-foundation.md"
+
+  [[ -f src/services/BackendMonitorService.ts ]] || fail "Missing src/services/BackendMonitorService.ts"
+  [[ -f src/app/api/admin/backend/status/route.ts ]] || fail "Missing src/app/api/admin/backend/status/route.ts"
+  [[ -f src/app/dashboard/admin/backend-monitor/page.tsx ]] || fail "Missing src/app/dashboard/admin/backend-monitor/page.tsx"
+  [[ -f scripts/monitor/backend-monitor.ts ]] || fail "Missing scripts/monitor/backend-monitor.ts"
+  [[ -f docs/runbooks/backend-monitor.md ]] || fail "Missing docs/runbooks/backend-monitor.md"
+  if ! has_npm_script "monitor:backend"; then
+    fail "Missing npm script monitor:backend"
+  fi
+  if ! grep -q 'BACKEND_MONITOR_CONFIGURED=true' docs/runbooks/backend-monitor.md; then
+    fail "Backend monitor marker missing from runbook"
+  fi
   local marqeta_leak
   marqeta_leak="$(rg -n "MARQETA_(APPLICATION_TOKEN|ADMIN_ACCESS_TOKEN)=.+" src docs tests 2>/dev/null || true)"
   if [[ -n "$marqeta_leak" ]]; then
@@ -474,6 +486,7 @@ main() {
 [PASS] SHOPEE_SOCIAL_POSTING_GUIDE_CONFIGURED=true
 [PASS] GIT_CONFLICT_GUARD_CONFIGURED=true
 [PASS] MARQETA_SANDBOX_FOUNDATION_CONFIGURED=true
+[PASS] BACKEND_MONITOR_CONFIGURED=true
 EOF
 }
 
