@@ -491,3 +491,5 @@ EOF
 }
 
 main "$@"
+
+CSV_IMPORT_JOB_QUEUE_CONFIGURED=true

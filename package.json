@@ -56,7 +56,10 @@
     "db:schema-drift-check": "tsx scripts/db/check-user-settings-schema.ts",
     "db:import-csv-table": "tsx scripts/db/import-csv-to-table.ts",
     "db:import-csv-products": "tsx scripts/db/import-csv-to-products.ts",
-    "monitor:backend": "tsx scripts/monitor/backend-monitor.ts"
+    "monitor:backend": "tsx scripts/monitor/backend-monitor.ts",
+    "imports:csv-products:worker": "tsx scripts/imports/csv-product-import-worker.ts",
+    "imports:csv-products:worker:once": "tsx scripts/imports/csv-product-import-worker.ts --once",
+    "imports:csv-products:status": "tsx scripts/imports/csv-product-import-status.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
