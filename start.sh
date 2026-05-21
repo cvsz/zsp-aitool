@@ -205,6 +205,15 @@ source_integrity_check() {
   fi
 
 
+  [[ -f src/components/imports/CsvProductImportProgressPanel.tsx ]] || fail "Missing src/components/imports/CsvProductImportProgressPanel.tsx"
+  [[ -f docs/runbooks/shopee-import-progress-ui.md ]] || fail "Missing docs/runbooks/shopee-import-progress-ui.md"
+  if ! grep -q 'CsvProductImportProgressPanel' src/components/shopee/ShopeeAffiliateRealDbDashboard.tsx; then
+    fail "Shopee import progress panel integration is missing"
+  fi
+  if ! grep -q 'SHOPEE_IMPORT_PROGRESS_UI_CONFIGURED=true' docs/runbooks/shopee-import-progress-ui.md; then
+    fail "Shopee import progress marker is missing"
+  fi
+
   [[ -f src/lib/marqeta/config.ts ]] || fail "Missing src/lib/marqeta/config.ts"
   [[ -f src/services/MarqetaCoreApiService.ts ]] || fail "Missing src/services/MarqetaCoreApiService.ts"
   [[ -f src/app/api/integrations/marqeta/status/route.ts ]] || fail "Missing src/app/api/integrations/marqeta/status/route.ts"
