@@ -133,6 +133,21 @@ model OrgMembership {
   @@index([userId])
 }
 
+model ObservabilityEvent {
+  id         String   @id @default(cuid())
+  level      String
+  source     String
+  event      String
+  durationMs Int?
+  status     String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+  deletedAt  DateTime?
+
+  @@index([level, createdAt])
+  @@index([source, event, createdAt])
+}
+
 model Product {
   id                 String              @id @default(cuid())
   userId             String
