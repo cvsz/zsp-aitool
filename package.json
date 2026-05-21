@@ -54,7 +54,8 @@
     "post-launch:status-summary": "bash scripts/post-launch/status-summary.sh",
     "post-launch:smoke-routes": "bash scripts/post-launch/smoke-routes.sh",
     "db:schema-drift-check": "tsx scripts/db/check-user-settings-schema.ts",
-    "db:import-csv-table": "tsx scripts/db/import-csv-to-table.ts"
+    "db:import-csv-table": "tsx scripts/db/import-csv-to-table.ts",
+    "db:import-csv-products": "tsx scripts/db/import-csv-to-products.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
