@@ -215,12 +215,12 @@ MARQETA_MAX_RETRIES=2
 Configure these as Codex Cloud secrets only. Use safe disposable/dev values unless a task explicitly requires a real provider:
 
 ```bash
-AUTH_SECRET=de50ab82d80df813c94cc62c6ef3feda610a15d99c7938d892aa0137295c844a
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/zsp_aitool?schema=public
-SHADOW_DATABASE_URL=postgresql://postgres:postgres@localhost:5433/zsp_aitool_shadow?schema=public
-OPENAI_API_KEY=<optional-only-if-task-needs-real-openai>
-HYPERFRAMES_DOWNLOAD_TOKEN_SECRET=de50ab82d80df813c94cc62c6ef3feda610a15d99c7938d892aa0137295c844a
-HYPERFRAMES_INTERNAL_TOKEN=de50ab82d80df813c94cc62c6ef3feda610a15d99c7938d892aa0137295c844a
+AUTH_SECRET=sandbox
+DATABASE_URL=postgresql://user:pass@localhost:5432/zsp_aitool?schema=public
+SHADOW_DATABASE_URL=postgresql://user:pass@localhost:5433/zsp_aitool_shadow?schema=public
+OPENAI_API_KEY=sandbox
+HYPERFRAMES_DOWNLOAD_TOKEN_SECRET=sandbox
+HYPERFRAMES_INTERNAL_TOKEN=sandbox
 SHOPEE_PARTNER_ID=sandbox
 SHOPEE_PARTNER_KEY=sandbox
 SHOPEE_API_BASE_URL=sandbox
@@ -263,8 +263,8 @@ setup_codex_db() {
 CI="${CI:-true}"
 NEXT_TELEMETRY_DISABLED="${NEXT_TELEMETRY_DISABLED:-1}"
 NODE_ENV="${NODE_ENV:-development}"
-DATABASE_URL="${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/zsp_aitool?schema=public}"
-SHADOW_DATABASE_URL="${SHADOW_DATABASE_URL:-postgresql://postgres:postgres@localhost:5433/zsp_aitool__shadow?schema=public}"
+DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/zsp_aitool?schema=public}"
+SHADOW_DATABASE_URL="${SHADOW_DATABASE_URL:-postgresql://user:pass@localhost:5433/zsp_aitool__shadow?schema=public}"
 NEXT_PUBLIC_APP_NAME="${NEXT_PUBLIC_APP_NAME:-zsp-aitool}"
 NEXT_PUBLIC_APP_URL="${NEXT_PUBLIC_APP_URL:-http://localhost:3001}"
 NEXT_PUBLIC_API_BASE_URL="${NEXT_PUBLIC_API_BASE_URL:-http://localhost:3001/api}"
