@@ -1,5 +1,11 @@
 import { PrismaClient } from "@prisma/client";
 
+const REQUIRED_USER_COLUMNS = [
+  "id",
+  "email",
+  "planTier",
+] as const;
+
 const REQUIRED_USER_SETTING_COLUMNS = [
   "brandColors",
   "fontPreference",
@@ -26,49 +32,35 @@ const REQUIRED_API_USAGE_LOG_COLUMNS = [
   "deletedAt",
 ] as const;
 
+async function assertColumns(prisma: PrismaClient, tableName: string, requiredColumns: readonly string[]) {
+  const rows = await prisma.$queryRaw<Array<{ column_name: string }>>`
+    SELECT column_name
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = ${tableName}
+  `;
+
+  const available = new Set(rows.map((row) => row.column_name));
+  const missing = requiredColumns.filter((column) => !available.has(column));
+
+  if (missing.length > 0) {
+    console.error(`[FAIL] ${tableName} schema drift detected.`);
+    console.error(`[FAIL] Missing ${tableName} columns: ${missing.join(", ")}`);
+    process.exitCode = 1;
+    return false;
+  }
+
+  console.log(`[PASS] ${tableName} schema contains all required columns.`);
+  return true;
+}
+
 async function main() {
   const prisma = new PrismaClient();
 
   try {
-    // Check UserSetting table
-    const userSettingRows = await prisma.$queryRaw<Array<{ column_name: string }>>`
-      SELECT column_name
-      FROM information_schema.columns
-      WHERE table_schema = 'public'
-        AND table_name = 'UserSetting'
-    `;
-
-    const userSettingAvailable = new Set(userSettingRows.map((row) => row.column_name));
-    const userSettingMissing = REQUIRED_USER_SETTING_COLUMNS.filter((column) => !userSettingAvailable.has(column));
-
-    if (userSettingMissing.length > 0) {
-      console.error("[FAIL] UserSetting schema drift detected.");
-      console.error(`[FAIL] Missing UserSetting columns: ${userSettingMissing.join(", ")}`);
-      process.exitCode = 1;
-      return;
-    }
-
-    console.log("[PASS] UserSetting schema contains all required columns.");
-
-    // Check APIUsageLog table
-    const apiUsageLogRows = await prisma.$queryRaw<Array<{ column_name: string }>>`
-      SELECT column_name
-      FROM information_schema.columns
-      WHERE table_schema = 'public'
-        AND table_name = 'APIUsageLog'
-    `;
-
-    const apiUsageLogAvailable = new Set(apiUsageLogRows.map((row) => row.column_name));
-    const apiUsageLogMissing = REQUIRED_API_USAGE_LOG_COLUMNS.filter((column) => !apiUsageLogAvailable.has(column));
-
-    if (apiUsageLogMissing.length > 0) {
-      console.error("[FAIL] APIUsageLog schema drift detected.");
-      console.error(`[FAIL] Missing APIUsageLog columns: ${apiUsageLogMissing.join(", ")}`);
-      process.exitCode = 1;
-      return;
-    }
-
-    console.log("[PASS] APIUsageLog schema contains all required columns.");
+    if (!(await assertColumns(prisma, "User", REQUIRED_USER_COLUMNS))) return;
+    if (!(await assertColumns(prisma, "UserSetting", REQUIRED_USER_SETTING_COLUMNS))) return;
+    if (!(await assertColumns(prisma, "APIUsageLog", REQUIRED_API_USAGE_LOG_COLUMNS))) return;
   } finally {
     await prisma.$disconnect();
   }
