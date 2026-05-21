@@ -1,0 +1,52 @@
+name: security
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  static-security:
+    name: security / static scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Ensure .env is not committed
+        run: |
+          if git ls-files --error-unmatch .env >/dev/null 2>&1; then
+            echo "[FAIL] .env must not be committed"
+            exit 1
+          fi
+
+      - name: Block backup and secret dump files
+        run: |
+          blocked="$(git ls-files | rg -n '(^|/)\.env\.|\.pem$|\.key$|\.p12$|\.bak$|\.backup$|secret|credentials' || true)"
+          if [ -n "$blocked" ]; then
+            echo "[FAIL] Potential secret/backup files tracked:"
+            echo "$blocked"
+            exit 1
+          fi
+
+      - name: Static secret and path leak scan
+        run: |
+          rg -n --hidden --glob '!node_modules/**' --glob '!.git/**' '(DATABASE_URL=|OPENAI_API_KEY=|AUTH_SECRET=|MARQETA_(APPLICATION_TOKEN|ADMIN_ACCESS_TOKEN)=|/var/lib/)' . \
+            && { echo '[FAIL] Potential secret/path leak detected'; exit 1; } || true
+
+      - name: npm audit (non-blocking)
+        run: npm audit --audit-level=high || echo "[WARN] npm audit reported findings; review required"

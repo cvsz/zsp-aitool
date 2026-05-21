@@ -1,0 +1,43 @@
+name: release-check
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  release-readiness:
+    name: release-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify start.sh hardening marker
+        run: rg -n 'CICD_HARDENING_CONFIGURED=true' start.sh
+
+      - name: Verify runbooks and prompts exist
+        run: |
+          test -f docs/runbooks/github-branch-protection.md
+          test -f docs/runbooks/production-deployment-checklist.md
+          test -f docs/prompts/README.md
+
+      - name: Verify required npm scripts exist
+        run: |
+          node -e "const p=require('./package.json'); const s=p.scripts||{}; const req=['typecheck','test','build','prisma:generate','ci:local-preflight']; const miss=req.filter((k)=>!s[k]); if(miss.length){console.error('Missing scripts:', miss.join(',')); process.exit(1);}"
+
+      - name: Upload release-check metadata
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-check-metadata
+          path: |
+            start.sh
+            package.json
+            docs/runbooks/github-branch-protection.md
+            docs/runbooks/production-deployment-checklist.md

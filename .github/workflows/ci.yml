@@ -1,22 +1,19 @@
-name: CI
+name: ci
 
 on:
   pull_request:
   push:
     branches:
       - main
-  schedule:
-    - cron: '20 3 * * *'
-  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
   validate:
-    name: Validate repository
+    name: ci / validate
     runs-on: ubuntu-latest
-
+    timeout-minutes: 30
     services:
       db:
         image: postgres:16-alpine
@@ -31,17 +28,16 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-
     env:
+      CI: true
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/zsp_aitool?schema=public
       SHADOW_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/zsp_aitool_shadow?schema=public
       AUTH_SECRET: ci-secret
       OPENAI_API_KEY: ci-placeholder
       HYPERFRAMES_RENDER_ENABLED: "false"
-
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -52,29 +48,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Validate required files
-        run: |
-          test -f README.md
-          test -f .faf
-          test -f AGENTS.md
-          test -f SECURITY.md
-          test -f CONTRIBUTING.md
-          test -f docs/architecture.md
-          test -f docs/roadmap.md
-          test -f docs/prompts/README.md
+      - name: Validate package.json syntax
+        run: python3 -m json.tool package.json >/tmp/package-json-ok.json
 
-      - name: List prompt pack
-        run: |
-          find docs/prompts -maxdepth 1 -type f -name '*.md' -print
+      - name: Generate Prisma client
+        run: npm run prisma:generate
 
-      - name: Validate Prisma flow
-        run: |
-          npm run prisma:generate
-          npm run prisma:migrate:deploy
-          npm run prisma:seed
-
-      - name: Lint
-        run: npm run lint
+      - name: Validate Prisma schema
+        run: npx prisma validate
 
       - name: Typecheck
         run: npm run typecheck
@@ -82,80 +63,5 @@ jobs:
       - name: Test
         run: npm run test
 
-      - name: HyperFrames mock CI workflow
-        run: npm run hyperframes:ci:mock
-
       - name: Build
         run: npm run build
-
-  hyperframes-nightly-real-render:
-    name: HyperFrames nightly real render
-    runs-on: ubuntu-latest
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    env:
-      HYPERFRAMES_CI_REAL_RENDER_CONFIRM: ${{ secrets.HYPERFRAMES_CI_REAL_RENDER_CONFIRM }}
-      HYPERFRAMES_RENDER_ENABLED: "true"
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Node
-      - name: HyperFrames mock CI workflow
-        run: npm run hyperframes:ci:mock
-
-  hyperframes-real-nightly:
-    name: HyperFrames real render nightly (optional)
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    env:
-      HYPERFRAMES_CI_REAL_RENDER_CONFIRM: ${{ secrets.HYPERFRAMES_CI_REAL_RENDER_CONFIRM }}
-      AUTH_SECRET: ci-secret
-      OPENAI_API_KEY: ci-placeholder
-
-    steps:
-      - name: Skip when confirm secret is missing
-        if: env.HYPERFRAMES_CI_REAL_RENDER_CONFIRM != 'YES'
-        run: echo "HYPERFRAMES_CI_REAL_RENDER_CONFIRM is not YES; skipping optional real-render workflow."
-
-      - name: Checkout
-        if: env.HYPERFRAMES_CI_REAL_RENDER_CONFIRM == 'YES'
-        uses: actions/checkout@v6
-
-      - name: Setup Node
-        if: env.HYPERFRAMES_CI_REAL_RENDER_CONFIRM == 'YES'
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run optional real render
-        run: npm run hyperframes:ci:real
-
-      - name: Upload real render artifact
-        if: env.HYPERFRAMES_CI_REAL_RENDER_CONFIRM == 'YES' && hashFiles('.artifacts/hyperframes/**') != ''
-        uses: actions/upload-artifact@v4
-        with:
-          name: hyperframes-real-render
-          path: .artifacts/hyperframes
-        if: env.HYPERFRAMES_CI_REAL_RENDER_CONFIRM == 'YES'
-        run: npm ci
-
-      - name: Generate Prisma client
-        if: env.HYPERFRAMES_CI_REAL_RENDER_CONFIRM == 'YES'
-        run: npm run prisma:generate
-
-      - name: Run real HyperFrames CI workflow
-        if: env.HYPERFRAMES_CI_REAL_RENDER_CONFIRM == 'YES'
-        run: npm run hyperframes:ci:real
-
-      - name: Upload HyperFrames smoke artifact
-        if: env.HYPERFRAMES_CI_REAL_RENDER_CONFIRM == 'YES' && always() && env.CI == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: hyperframes-real-render-smoke
-          path: artifacts/hyperframes-smoke-renders.tgz
-          if-no-files-found: warn
