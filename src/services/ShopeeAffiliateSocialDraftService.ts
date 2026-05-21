@@ -85,8 +85,10 @@ export class ShopeeAffiliateSocialDraftService {
   async update(userId: string, draftId: string, content: string, editor = "user") {
     const current = await prisma.shopeeAffiliateSocialDraft.findFirst({ where: { id: draftId, userId, deletedAt: null } });
     if (!current) throw new Error("DRAFT_NOT_FOUND");
-    const nextVersion = current.version + 1;
-    const row = await prisma.shopeeAffiliateSocialDraft.update({ where: { id: draftId }, data: { content: this.sanitizeContent(content), version: nextVersion, status: ShopeeAffiliateSocialDraftStatus.DRAFT } });
+    const row = await prisma.shopeeAffiliateSocialDraft.update({
+      where: { id: draftId },
+      data: { content: this.sanitizeContent(content), version: { increment: 1 }, status: ShopeeAffiliateSocialDraftStatus.DRAFT }
+    });
     await this.createVersion(userId, row.id, row.version, row.content, editor);
     return this.safe(row);
   }
