@@ -34,10 +34,6 @@ prisma/dev.db-journal
 /extension/dist
 /extension/.vite
 *.tsbuildinfo
-.agent/
-.agent/
-.gemini/
-.codex/
 
 # Local AI agent workspace files
 .agent/
@@ -45,3 +41,16 @@ prisma/dev.db-journal
 .codex/
 .agents/
 .claude/
+#zeazdev agents
+.zagents/
+# Local agent/session state
+.gemini/local*
+.gemini/tmp*
+.gemini/cache*
+.agy/
+.agents/local*
+.agents/tmp*
+ZSP_DEEP_DIVE_REPORT.md
+ECC_REVIEW_REPORT.md
+.next/
+node_modules/
