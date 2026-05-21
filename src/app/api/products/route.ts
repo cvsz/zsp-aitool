@@ -1,11 +1,34 @@
-import { ZodError } from "zod";
+import { ZodError, z } from "zod";
 import { NextResponse } from "next/server";
 import { createProductSchema } from "@/schemas/product.schema";
 import { productService } from "@/services/ProductService";
 import { AppError } from "@/lib/errors";
 import { withAuth } from "@/middleware/auth-middleware";
 
-export const GET = withAuth(async (request) => NextResponse.json({ ok: true, data: await productService.list(request.auth.userId) }));
+const querySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(25),
+  q: z.string().trim().optional(),
+  category: z.string().trim().optional(),
+  shopName: z.string().trim().optional(),
+  source: z.string().trim().optional(),
+  hasAffiliateUrl: z.enum(["true", "false"]).optional(),
+  sortBy: z.enum(["createdAt", "title", "price"]).default("createdAt"),
+  sortDir: z.enum(["asc", "desc"]).default("desc"),
+});
+
+export const GET = withAuth(async (request) => {
+  const parsed = querySchema.safeParse(Object.fromEntries(request.nextUrl.searchParams.entries()));
+  if (!parsed.success) {
+    return NextResponse.json({ ok: false, error: parsed.error.flatten() }, { status: 422 });
+  }
+  const query = parsed.data;
+  const data = await productService.listProductsPaginated(request.auth.userId, {
+    ...query,
+    hasAffiliateUrl: query.hasAffiliateUrl == null ? undefined : query.hasAffiliateUrl === "true",
+  });
+  return NextResponse.json({ ok: true, data });
+});
 
 export const POST = withAuth(async (request) => {
   try {
