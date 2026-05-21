@@ -389,6 +389,37 @@ model CsvImportJob {
 }
 
 
+model AIContentQueueJob {
+  id          String    @id @default(cuid())
+  userId      String
+  productId   String
+  kind        String
+  platform    Platform?
+  tone        Tone?
+  language    Language  @default(TH)
+  input       Json?
+  output      Json?
+  status      String    @default("PENDING")
+  attempt     Int       @default(0)
+  maxAttempts Int       @default(3)
+  startedAt   DateTime?
+  completedAt DateTime?
+  failedAt    DateTime?
+  cancelledAt DateTime?
+  errorSummary String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status, createdAt])
+  @@index([status, createdAt])
+  @@index([productId, createdAt])
+  @@index([deletedAt])
+}
+
 model ExportJob {
   id             String   @id @default(cuid())
   userId         String
