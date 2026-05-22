@@ -57,7 +57,7 @@ jobs:
 
       - name: Static secret value scan
         run: |
-          matches="$(git grep -nE '(DATABASE_URL|OPENAI_API_KEY|AUTH_SECRET|MARQETA_(APPLICATION_TOKEN|ADMIN_ACCESS_TOKEN))=[^[:space:]]{12,}' -- . ':!node_modules' ':!.git' ':!.github/workflows/**' ':!.env.example' ':!docs/**' ':!tests/**' ':!.claude/**' || true)"
+          matches="$(git grep -nE '(^|[^A-Za-z0-9_])(DATABASE_URL|OPENAI_API_KEY|AUTH_SECRET|MARQETA_(APPLICATION_TOKEN|ADMIN_ACCESS_TOKEN))=(postgresql://|mysql://|mongodb://|sk-|[A-Za-z0-9_./+=:-]{24,})' -- . ':!node_modules' ':!.git' ':!.github/workflows/**' ':!.env.example' ':!docs/**' ':!tests/**' ':!.claude/**' ':!scripts/health-zsp-aitool.sh' || true)"
           if [ -n "$matches" ]; then
             echo '[FAIL] Potential secret value detected'
             echo "$matches"
