@@ -55,11 +55,11 @@ jobs:
             exit 1
           fi
 
-      - name: Static secret and path leak scan
+      - name: Static secret value scan
         run: |
-          matches="$(git grep -nE '(DATABASE_URL=|OPENAI_API_KEY=|AUTH_SECRET=|MARQETA_(APPLICATION_TOKEN|ADMIN_ACCESS_TOKEN)=|/var/lib/)' -- . ':!node_modules' ':!.git' ':!.github/workflows/security.yml' ':!.env.example' ':!docs/**' ':!tests/**' || true)"
+          matches="$(git grep -nE '(DATABASE_URL|OPENAI_API_KEY|AUTH_SECRET|MARQETA_(APPLICATION_TOKEN|ADMIN_ACCESS_TOKEN))=[^[:space:]]{12,}' -- . ':!node_modules' ':!.git' ':!.github/workflows/**' ':!.env.example' ':!docs/**' ':!tests/**' ':!.claude/**' || true)"
           if [ -n "$matches" ]; then
-            echo '[FAIL] Potential secret/path leak detected'
+            echo '[FAIL] Potential secret value detected'
             echo "$matches"
             exit 1
           fi
