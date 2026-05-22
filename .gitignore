@@ -54,3 +54,19 @@ ZSP_DEEP_DIVE_REPORT.md
 ECC_REVIEW_REPORT.md
 .next/
 node_modules/
+# Local agent/runtime state
+.agents/reports/*.tmp
+.agents/reports/*.log
+.codex/local*
+.codex/tmp*
+.claude/local*
+.claude/tmp*
+ECC_SELECTED_IMPORT_REPORT.md
+# .zagents runtime reports
+.zagents/reports/*.tmp
+.zagents/reports/*.log
+.zagents/reports/ZSP_DEEP_DIVE_REPORT-*.md
+AGENTS.md.bak.*
+CLAUDE.md.bak.*
+GEMINI.md.bak.*
+*.bak.*
