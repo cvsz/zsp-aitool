@@ -75,3 +75,7 @@ logs/*.log
 .zagents/reports/ZSP_DEEP_DIVE_REPORT-*.md
 .zagents/reports/ZSP_DEEP_DIVE_REPORT.latest.md
 .zagents/reports/INDEX.md
+
+# .zagents release readiness runtime reports
+.zagents/reports/RELEASE_READINESS-*.md
+.zagents/reports/RELEASE_READINESS.latest.md
