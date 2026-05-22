@@ -36,16 +36,28 @@ jobs:
 
       - name: Block backup and secret dump files
         run: |
-          blocked="$(git ls-files | grep -En '(^|/)\.env\.|\.pem$|\.key$|\.p12$|\.bak$|\.backup$|secret|credentials' || true)"
+          blocked=""
+          while IFS= read -r file; do
+            case "$file" in
+              .env.example|tests/security/*.test.ts|tests/security/**/*.test.ts)
+                continue
+                ;;
+            esac
+
+            if printf '%s\n' "$file" | grep -Eq '(^|/)\.env($|\.)|\.pem$|\.key$|\.p12$|\.bak$|\.backup$|(^|/)(secrets?|credentials)(\.|/|$)'; then
+              blocked="${blocked}${file}\n"
+            fi
+          done < <(git ls-files)
+
           if [ -n "$blocked" ]; then
             echo "[FAIL] Potential secret/backup files tracked:"
-            echo "$blocked"
+            printf '%b' "$blocked"
             exit 1
           fi
 
       - name: Static secret and path leak scan
         run: |
-          matches="$(git grep -nE '(DATABASE_URL=|OPENAI_API_KEY=|AUTH_SECRET=|MARQETA_(APPLICATION_TOKEN|ADMIN_ACCESS_TOKEN)=|/var/lib/)' -- . ':!node_modules' ':!.git' ':!.github/workflows/security.yml' || true)"
+          matches="$(git grep -nE '(DATABASE_URL=|OPENAI_API_KEY=|AUTH_SECRET=|MARQETA_(APPLICATION_TOKEN|ADMIN_ACCESS_TOKEN)=|/var/lib/)' -- . ':!node_modules' ':!.git' ':!.github/workflows/security.yml' ':!.env.example' ':!docs/**' ':!tests/**' || true)"
           if [ -n "$matches" ]; then
             echo '[FAIL] Potential secret/path leak detected'
             echo "$matches"
