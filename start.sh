@@ -21,6 +21,7 @@ Usage:
   ./start.sh build         Run build only
   ./start.sh health        Run health only
   ./start.sh main          Run status + deep + full validation
+  ./start.sh release       Run release readiness check
   ./start.sh views         Generate report index/views
   ./start.sh view latest   Show latest deep-dive report
   ./start.sh view logs     List logs
@@ -121,6 +122,38 @@ health_cmd() {
   npm run health
 }
 
+release_cmd() {
+  local rel_report="$REPORT_DIR/RELEASE_READINESS-$TS.md"
+  local rel_latest="$REPORT_DIR/RELEASE_READINESS.latest.md"
+  {
+    echo "# ZSP-AITOOL Release Readiness Report"
+    echo "Generated: $(date -Is)"
+    echo "Branch: $(git branch --show-current 2>/dev/null || true)"
+    echo
+    echo "## 1. Validation Run"
+    npm run typecheck
+    npm run test
+    npm run build
+    npm run health
+    echo
+    echo "## 2. Deep Dive Scan"
+    .zagents/scripts/zsp-deep-dive.sh > /dev/null
+    cat "$REPORT_DIR/ZSP_DEEP_DIVE_REPORT.latest.md"
+    echo
+    echo "## 3. Checklist Verification"
+    if [ -f docs/runbooks/zsp-release-smoke-checklist.md ]; then
+      echo "- OK: docs/runbooks/zsp-release-smoke-checklist.md exists"
+    else
+      echo "- FAIL: docs/runbooks/zsp-release-smoke-checklist.md missing"
+    fi
+  } > "$rel_report"
+  cp "$rel_report" "$rel_latest"
+  echo "Release report generated:"
+  echo "  $rel_report"
+  echo "  $rel_latest"
+  generate_views
+}
+
 generate_views() {
   local index="$REPORT_DIR/INDEX.md"
 
@@ -132,6 +165,7 @@ generate_views() {
     echo "## Latest files"
     echo
     [ -f "$REPORT_DIR/ZSP_DEEP_DIVE_REPORT.latest.md" ] && echo "- Deep dive latest: \`$REPORT_DIR/ZSP_DEEP_DIVE_REPORT.latest.md\`"
+    [ -f "$REPORT_DIR/RELEASE_READINESS.latest.md" ] && echo "- Release readiness latest: \`$REPORT_DIR/RELEASE_READINESS.latest.md\`"
     [ -f "$LOG_DIR/main-validation.latest.log" ] && echo "- Main validation latest: \`$LOG_DIR/main-validation.latest.log\`"
     [ -f "$LOG_DIR/build.latest.log" ] && echo "- Build latest: \`$LOG_DIR/build.latest.log\`"
     echo
@@ -192,6 +226,9 @@ case "$cmd" in
     ;;
   health)
     run_logged "health" health_cmd
+    ;;
+  release)
+    run_logged "release" release_cmd
     ;;
   main)
     run_logged "main-validation" bash -lc '
