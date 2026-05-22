@@ -42,7 +42,6 @@ prisma/dev.db-journal
 .agents/
 .claude/
 #zeazdev agents
-.zagents/
 # Local agent/session state
 .gemini/local*
 .gemini/tmp*

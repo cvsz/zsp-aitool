@@ -1,0 +1,43 @@
+# GEMINI_CLI_COMMANDS.txt
+
+Run slash commands one line at a time. Do not paste all commands into one line. Prefer `/home/zeazdev/zsp-aitool` over `~` inside slash command arguments.
+
+## Legacy Gemini CLI sequence
+
+```text
+/permissions trust /home/zeazdev/zsp-aitool
+/directory add /home/zeazdev/zsp-aitool
+/memory reload
+/memory show
+/commands reload
+/commands list
+/agents reload
+/agents list
+/skills list all
+/mcp reload
+/mcp list
+/plan
+```
+
+## Antigravity / agy preferred prompt
+
+```text
+Read GEMINI.md, AGENTS.md, CLAUDE.md, .zagents/README.md, and .zagents/README-omnibus.md.
+Inspect current repo state only. Do not edit files.
+Return: current repo state, agent config state, missing files/routes, safety risks, exact next action.
+```
+
+## UI phase status prompt
+
+```text
+Read GEMINI.md, AGENTS.md, CLAUDE.md, and .agents/workflows/zsp-ui-phase-status.md if it exists.
+Execute UI phase status workflow. Do not edit files.
+```
+
+## Deep review from shell
+
+```bash
+cd /home/zeazdev/zsp-aitool
+.zagents/scripts/zsp-agent-status.sh
+.zagents/scripts/zsp-deep-dive.sh
+```
