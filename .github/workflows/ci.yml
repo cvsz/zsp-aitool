@@ -48,6 +48,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Validate CI/CD hardening marker
+        run: grep -n 'CICD_HARDENING_CONFIGURED=true' start.sh
+
       - name: Validate package.json syntax
         run: python3 -m json.tool package.json >/tmp/package-json-ok.json
 
@@ -64,4 +67,11 @@ jobs:
         run: npm run test
 
       - name: Build
+        env:
+          CI: true
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/zsp_aitool?schema=public
+          SHADOW_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/zsp_aitool_shadow?schema=public
+          AUTH_SECRET: ci-secret
+          OPENAI_API_KEY: ci-placeholder
+          HYPERFRAMES_RENDER_ENABLED: "false"
         run: npm run build
