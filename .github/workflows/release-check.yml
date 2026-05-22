@@ -19,7 +19,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Verify start.sh hardening marker
-        run: rg -n 'CICD_HARDENING_CONFIGURED=true' start.sh
+        run: grep -n 'CICD_HARDENING_CONFIGURED=true' start.sh
 
       - name: Verify runbooks and prompts exist
         run: |
