@@ -16,6 +16,8 @@ jobs:
     timeout-minutes: 20
     env:
       CI: true
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/zsp_aitool?schema=public
+      SHADOW_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/zsp_aitool_shadow?schema=public
       AUTH_SECRET: ci-secret
       OPENAI_API_KEY: ci-placeholder
       HYPERFRAMES_RENDER_ENABLED: "false"
@@ -33,4 +35,11 @@ jobs:
         run: npm ci
 
       - name: Build
+        env:
+          CI: true
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/zsp_aitool?schema=public
+          SHADOW_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/zsp_aitool_shadow?schema=public
+          AUTH_SECRET: ci-secret
+          OPENAI_API_KEY: ci-placeholder
+          HYPERFRAMES_RENDER_ENABLED: "false"
         run: npm run build
