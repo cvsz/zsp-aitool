@@ -36,7 +36,7 @@ jobs:
 
       - name: Block backup and secret dump files
         run: |
-          blocked="$(git ls-files | rg -n '(^|/)\.env\.|\.pem$|\.key$|\.p12$|\.bak$|\.backup$|secret|credentials' || true)"
+          blocked="$(git ls-files | grep -En '(^|/)\.env\.|\.pem$|\.key$|\.p12$|\.bak$|\.backup$|secret|credentials' || true)"
           if [ -n "$blocked" ]; then
             echo "[FAIL] Potential secret/backup files tracked:"
             echo "$blocked"
@@ -45,8 +45,12 @@ jobs:
 
       - name: Static secret and path leak scan
         run: |
-          rg -n --hidden --glob '!node_modules/**' --glob '!.git/**' '(DATABASE_URL=|OPENAI_API_KEY=|AUTH_SECRET=|MARQETA_(APPLICATION_TOKEN|ADMIN_ACCESS_TOKEN)=|/var/lib/)' . \
-            && { echo '[FAIL] Potential secret/path leak detected'; exit 1; } || true
+          matches="$(git grep -nE '(DATABASE_URL=|OPENAI_API_KEY=|AUTH_SECRET=|MARQETA_(APPLICATION_TOKEN|ADMIN_ACCESS_TOKEN)=|/var/lib/)' -- . ':!node_modules' ':!.git' ':!.github/workflows/security.yml' || true)"
+          if [ -n "$matches" ]; then
+            echo '[FAIL] Potential secret/path leak detected'
+            echo "$matches"
+            exit 1
+          fi
 
       - name: npm audit (non-blocking)
         run: npm audit --audit-level=high || echo "[WARN] npm audit reported findings; review required"
