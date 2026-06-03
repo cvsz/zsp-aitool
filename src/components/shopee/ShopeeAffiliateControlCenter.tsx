@@ -307,6 +307,13 @@ export function ShopeeAffiliateControlCenter() {
     setTiktokItemId(itemId);
     setTiktokStyle("review");
     setTiktokHashtags([...defaultTiktokHashtags]);
+    setTiktokHashtagSearch("");
+    setTiktokCustomHashtag("");
+    setTiktokSchedule("");
+    setTiktokAutoSave(true);
+    setTiktokVariationMode(false);
+    setTiktokVariations([]);
+    setTiktokEnhancing(null);
     const item = itemId ? payload.items.find((it) => it.id === itemId) ?? null : null;
     if (item) {
       setTiktokCaption(buildTikTokPostDraft(item, "review", defaultTiktokHashtags));
@@ -322,6 +329,13 @@ export function ShopeeAffiliateControlCenter() {
     setTiktokCaption("");
     setTiktokStyle("review");
     setTiktokHashtags([...defaultTiktokHashtags]);
+    setTiktokHashtagSearch("");
+    setTiktokCustomHashtag("");
+    setTiktokSchedule("");
+    setTiktokAutoSave(true);
+    setTiktokVariationMode(false);
+    setTiktokVariations([]);
+    setTiktokEnhancing(null);
   }
 
   function regenerateTiktokCaption() {
@@ -967,11 +981,17 @@ function TikTokQuickComposerCard({ selectedCount, onOpen }: { selectedCount: num
             ? `มี ${selectedCount} รายการที่เลือก — กดเพื่อสร้าง TikTok drafts แบบกลุ่ม`
             : "เขียน TikTok caption แบบไทย พร้อม hashtag เสนอแนะ และตัวนับอักขระ"}
         </p>
-        <div className="mt-4 flex gap-2">
-          <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white/80">📝 รีวิว</span>
-          <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white/80">🔥 ป้ายยา</span>
-          <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white/80">💰 โปรโมชั่น</span>
-          <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white/80">⚡ สั้น</span>
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          <span className="rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-semibold text-white/70">📝 รีวิว</span>
+          <span className="rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-semibold text-white/70">🔥 ป้ายยา</span>
+          <span className="rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-semibold text-white/70">💰 โปรโมชั่น</span>
+          <span className="rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-semibold text-white/70">⚡ สั้น</span>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          <span className="rounded-full bg-purple-500/20 px-2 py-0.5 text-[10px] font-semibold text-purple-300">🎲 3 รูปแบบ</span>
+          <span className="rounded-full bg-blue-500/20 px-2 py-0.5 text-[10px] font-semibold text-blue-300">📖 ขยาย/ย่อ</span>
+          <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-semibold text-amber-300">📅 กำหนดโพสต์</span>
+          <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">✅ ตรวจคุณภาพ</span>
         </div>
       </div>
     </button>
