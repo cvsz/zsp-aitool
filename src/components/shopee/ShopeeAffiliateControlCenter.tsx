@@ -204,7 +204,15 @@ export function ShopeeAffiliateControlCenter() {
   const [tiktokStyle, setTiktokStyle] = useState<TikTokStyle>("review");
   const [tiktokCaption, setTiktokCaption] = useState("");
   const [tiktokHashtags, setTiktokHashtags] = useState<string[]>([...defaultTiktokHashtags]);
+  const [tiktokHashtagSearch, setTiktokHashtagSearch] = useState("");
+  const [tiktokCustomHashtag, setTiktokCustomHashtag] = useState("");
+  const [tiktokSchedule, setTiktokSchedule] = useState("");
+  const [tiktokAutoSave, setTiktokAutoSave] = useState(true);
+  const [tiktokVariations, setTiktokVariations] = useState<string[]>([]);
+  const [tiktokVariationMode, setTiktokVariationMode] = useState(false);
+  const [tiktokEnhancing, setTiktokEnhancing] = useState<string | null>(null);
   const tiktokTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const tiktokAutoSaveRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [fbOpen, setFbOpen] = useState(false);
   const [fbItemId, setFbItemId] = useState<string | null>(null);
@@ -237,6 +245,18 @@ export function ShopeeAffiliateControlCenter() {
   const tiktokCharPercent = Math.min(100, Math.round((tiktokCharCount / TIKTOK_MAX_CHARS) * 100));
   const tiktokNearLimit = tiktokCharCount > TIKTOK_MAX_CHARS * 0.85;
 
+  const filteredHashtagPool = useMemo(() => {
+    if (!tiktokHashtagSearch.trim()) return tiktokHashtagPool;
+    const q = tiktokHashtagSearch.toLowerCase().replace(/^#/, "");
+    return tiktokHashtagPool.filter((tag) => tag.toLowerCase().includes(q));
+  }, [tiktokHashtagSearch]);
+
+  const tiktokHasDisclosure = tiktokCaption.includes("ค่าคอมมิชชัน") || tiktokCaption.includes("Affiliate");
+  const tiktokHashtagCount = (tiktokCaption.match(/#\w+/g) || []).length;
+  const tiktokCaptionOnlyLen = tiktokCaption.replace(/#\w+/g, "").trim().length;
+  const tiktokIsTooShort = tiktokCaptionOnlyLen > 0 && tiktokCaptionOnlyLen < 50;
+  const tiktokQualityScore = (tiktokHasDisclosure ? 40 : 0) + Math.min(tiktokHashtagCount * 5, 30) + (tiktokCaptionOnlyLen > 50 ? 20 : 0) + (tiktokCaptionOnlyLen > 0 ? 10 : 0);
+
   const fbTargetItem = useMemo(() => {
     if (!fbItemId) return null;
     return payload.items.find((it) => it.id === fbItemId) ?? null;
@@ -265,6 +285,21 @@ export function ShopeeAffiliateControlCenter() {
     }
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [autoRefresh, refresh]);
+
+  useEffect(() => {
+    if (!tiktokOpen || !tiktokTargetItem) return;
+    setTiktokCaption(buildTikTokPostDraft(tiktokTargetItem, tiktokStyle, tiktokHashtags));
+  }, [tiktokStyle]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!tiktokOpen || !tiktokAutoSave || !tiktokTargetItem || !tiktokCaption.trim()) return;
+    if (tiktokAutoSaveRef.current) clearTimeout(tiktokAutoSaveRef.current);
+    tiktokAutoSaveRef.current = setTimeout(() => {
+      const firstLine = tiktokCaption.split("\n")[0];
+      setMessage(`💾 Auto-saved draft for ${tiktokTargetItem.title ?? "current"} (${firstLine.slice(0, 30)}...)`);
+    }, 4000);
+    return () => { if (tiktokAutoSaveRef.current) clearTimeout(tiktokAutoSaveRef.current); };
+  }, [tiktokCaption, tiktokOpen, tiktokAutoSave]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const hasFilteredItems = filteredItems.length > 0;
 
@@ -346,6 +381,63 @@ export function ShopeeAffiliateControlCenter() {
         });
       }
     }
+  }
+
+  function addTiktokCustomHashtag() {
+    const tag = tiktokCustomHashtag.trim();
+    if (!tag) return;
+    const formatted = tag.startsWith("#") ? tag : `#${tag}`;
+    if (tiktokHashtags.includes(formatted)) {
+      setMessage(`⚠️ Hashtag ${formatted} มีอยู่แล้ว`);
+      setTiktokCustomHashtag("");
+      return;
+    }
+    setTiktokHashtags((prev) => prev.length >= 8 ? prev : [...prev, formatted]);
+    setTiktokCustomHashtag("");
+  }
+
+  function enhanceTiktokCaption(action: "expand" | "shorten" | "emojify") {
+    if (!tiktokCaption.trim()) return;
+    setTiktokEnhancing(action);
+    const labels: Record<string, string> = { expand: "ขยายความ", shorten: "ย่อข้อความ", emojify: "เพิ่มอีโมจิ" };
+    setTimeout(() => {
+      const lines = tiktokCaption.split("\n").filter(Boolean);
+      let enhanced = tiktokCaption;
+      if (action === "expand") {
+        const firstLine = lines[0] || "";
+        enhanced = `${firstLine}\n\n✨ สินค้าคุณภาพดี ราคาเหมาะสม คุ้มค่าคุ้มราคา\n🛒 อย่าพลาดโอกาสดีๆ รีบสั่งเลยตอนนี้\n\n${lines.slice(1).join("\n")}`;
+      } else if (action === "shorten") {
+        enhanced = lines.slice(0, 3).join("\n") + "\n\n" + lines[lines.length - 1];
+      } else if (action === "emojify") {
+        enhanced = tiktokCaption
+          .replace(/สินค้า/g, "🛍️ สินค้า")
+          .replace(/ราคา/g, "💰 ราคา")
+          .replace(/โปรโมชั่น/g, "🔥 โปรโมชั่น")
+          .replace(/Shopee/g, "🛒 Shopee")
+          .replace(/รายละเอียด/g, "📋 รายละเอียด")
+          .replace(/พิกัด/g, "📍 พิกัด")
+          .replace(/รีวิว/g, "📝 รีวิว")
+          .replace(/ดู/g, "👀 ดู");
+      }
+      setTiktokCaption(enhanced);
+      setTiktokEnhancing(null);
+      setMessage(`✅ ${labels[action]} เสร็จแล้ว — ตรวจสอบความถูกต้องก่อนโพสต์`);
+    }, 600);
+  }
+
+  function generateTiktokVariations() {
+    if (!tiktokTargetItem) return;
+    setTiktokVariationMode(true);
+    const styles: TikTokStyle[] = ["review", "recommend", "promotion"];
+    const vars = styles.map((s) => buildTikTokPostDraft(tiktokTargetItem, s, tiktokHashtags));
+    setTiktokVariations(vars);
+    setMessage(`🎬 สร้าง ${vars.length} รูปแบบ — เลือกแบบที่ชอบแล้วกด "ใช้แบบนี้"`);
+  }
+
+  function applyTiktokVariation(content: string) {
+    setTiktokCaption(content);
+    setTiktokVariationMode(false);
+    setTiktokVariations([]);
   }
 
   function openFbComposer(itemId: string | null) {
@@ -705,6 +797,19 @@ export function ShopeeAffiliateControlCenter() {
           maxChars={TIKTOK_MAX_CHARS}
           selectedCount={selected.size}
           textareaRef={tiktokTextareaRef as React.RefObject<HTMLTextAreaElement>}
+          variationMode={tiktokVariationMode}
+          variations={tiktokVariations}
+          enhancing={tiktokEnhancing}
+          hasDisclosure={tiktokHasDisclosure}
+          hashtagCount={tiktokHashtagCount}
+          captionOnlyLen={tiktokCaptionOnlyLen}
+          isTooShort={tiktokIsTooShort}
+          qualityScore={tiktokQualityScore}
+          hashtagSearch={tiktokHashtagSearch}
+          customHashtag={tiktokCustomHashtag}
+          schedule={tiktokSchedule}
+          autoSave={tiktokAutoSave}
+          filteredHashtagPool={filteredHashtagPool}
           onStyleChange={setTiktokStyle}
           onCaptionChange={setTiktokCaption}
           onRegenerate={regenerateTiktokCaption}
@@ -714,6 +819,14 @@ export function ShopeeAffiliateControlCenter() {
           onCopy={copyTiktokDraft}
           onBulkGenerate={bulkGenerateTiktokDrafts}
           onClose={closeTiktokComposer}
+          onHashtagSearchChange={setTiktokHashtagSearch}
+          onCustomHashtagChange={setTiktokCustomHashtag}
+          onAddCustomHashtag={addTiktokCustomHashtag}
+          onScheduleChange={setTiktokSchedule}
+          onAutoSaveChange={setTiktokAutoSave}
+          onEnhance={enhanceTiktokCaption}
+          onGenerateVariations={generateTiktokVariations}
+          onApplyVariation={applyTiktokVariation}
         />
       ) : fbOpen ? (
         <FacebookPostComposer
@@ -867,10 +980,15 @@ function TikTokQuickComposerCard({ selectedCount, onOpen }: { selectedCount: num
 
 function TikTokPostComposer({
   targetItem, style, caption, hashtags, charCount, charPercent, nearLimit, maxChars,
-  selectedCount, textareaRef,
+  selectedCount, textareaRef, variationMode, variations, enhancing, hasDisclosure, hashtagCount,
+  captionOnlyLen, isTooShort, qualityScore, hashtagSearch, customHashtag, schedule, autoSave,
+  filteredHashtagPool,
   onStyleChange, onCaptionChange, onRegenerate,
   onToggleHashtag, onInsertHashtag,
   onSave, onCopy, onBulkGenerate, onClose,
+  onHashtagSearchChange, onCustomHashtagChange, onAddCustomHashtag,
+  onScheduleChange, onAutoSaveChange,
+  onEnhance, onGenerateVariations, onApplyVariation,
 }: {
   targetItem: IngestionItem | null;
   style: TikTokStyle;
@@ -882,6 +1000,19 @@ function TikTokPostComposer({
   maxChars: number;
   selectedCount: number;
   textareaRef: React.RefObject<HTMLTextAreaElement>;
+  variationMode: boolean;
+  variations: string[];
+  enhancing: string | null;
+  hasDisclosure: boolean;
+  hashtagCount: number;
+  captionOnlyLen: number;
+  isTooShort: boolean;
+  qualityScore: number;
+  hashtagSearch: string;
+  customHashtag: string;
+  schedule: string;
+  autoSave: boolean;
+  filteredHashtagPool: string[];
   onStyleChange: (s: TikTokStyle) => void;
   onCaptionChange: (s: string) => void;
   onRegenerate: () => void;
@@ -891,11 +1022,17 @@ function TikTokPostComposer({
   onCopy: () => void;
   onBulkGenerate: () => void;
   onClose: () => void;
+  onHashtagSearchChange: (v: string) => void;
+  onCustomHashtagChange: (v: string) => void;
+  onAddCustomHashtag: () => void;
+  onScheduleChange: (v: string) => void;
+  onAutoSaveChange: (v: boolean) => void;
+  onEnhance: (action: "expand" | "shorten" | "emojify") => void;
+  onGenerateVariations: () => void;
+  onApplyVariation: (content: string) => void;
 }) {
   const barColor = nearLimit ? "bg-red-500" : charPercent > 70 ? "bg-amber-500" : "bg-emerald-500";
   const barColorBg = nearLimit ? "bg-red-100" : "bg-slate-100";
-
-  const hashtagPool = tiktokHashtagPool;
 
   return (
     <section className="rounded-2xl border-2 border-black/10 bg-gradient-to-br from-black via-zinc-900 to-zinc-800 p-5 shadow-xl">
@@ -914,96 +1051,208 @@ function TikTokPostComposer({
             {targetItem?.price ? <p className="text-sm font-semibold text-emerald-400">฿{targetItem.price.toLocaleString("th-TH")}</p> : null}
           </div>
         </div>
-        <button onClick={onClose} className="rounded-lg bg-white/10 px-3 py-1.5 text-xs font-semibold text-white/70 hover:bg-white/20">ปิด</button>
-      </div>
-
-      <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_280px]">
-        <div className="space-y-3">
-          <div className="flex flex-wrap gap-2">
-            {(Object.entries(tiktokStyleLabels) as [TikTokStyle, string][]).map(([key, label]) => (
-              <button key={key} onClick={() => { onStyleChange(key); }}
-                className={`rounded-xl border px-3.5 py-2 text-xs font-semibold transition-all ${
-                  style === key
-                    ? "border-white/30 bg-white/20 text-white shadow-md"
-                    : "border-white/10 bg-white/5 text-white/60 hover:border-white/20 hover:text-white/80"
-                }`}>
-                {tiktokStyleEmojis[key]} {label}
-              </button>
-            ))}
-            <button onClick={onRegenerate} className="rounded-xl border border-white/10 bg-white/5 px-3.5 py-2 text-xs font-semibold text-white/60 hover:border-white/20 hover:text-white/80">
-              🔄 สร้างใหม่
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 rounded-lg bg-white/5 px-2.5 py-1 text-[10px] text-white/50">
+            <span>Auto-save</span>
+            <button onClick={() => onAutoSaveChange(!autoSave)}
+              className={`font-semibold ${autoSave ? "text-emerald-400" : "text-white/30"}`}>
+              {autoSave ? "ON" : "OFF"}
             </button>
           </div>
+          <button onClick={onClose} className="rounded-lg bg-white/10 px-3 py-1.5 text-xs font-semibold text-white/70 hover:bg-white/20">ปิด</button>
+        </div>
+      </div>
 
-          <div className="relative">
-            <textarea ref={textareaRef}
-              className="min-h-48 w-full rounded-xl border border-white/10 bg-black/40 p-4 font-sans text-sm leading-6 text-white placeholder-white/30 outline-none focus:border-white/30"
-              placeholder="เขียน TikTok caption ของคุณ..."
-              value={caption}
-              onChange={(e) => onCaptionChange(e.target.value)}
-            />
-            <div className="mt-2 flex items-center justify-between text-xs">
-              <div className="flex items-center gap-2">
-                <div className={`h-2 w-28 rounded-full ${barColorBg}`}>
-                  <div className={`h-2 rounded-full transition-all ${barColor}`} style={{ width: `${charPercent}%` }} />
-                </div>
-              </div>
-              <span className={`font-semibold tabular-nums ${nearLimit ? "text-red-400" : "text-white/50"}`}>
-                {charCount.toLocaleString()}/{maxChars.toLocaleString()}
-              </span>
-            </div>
+      {variationMode && variations.length > 0 ? (
+        <div className="mt-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-bold text-white">🎬 เลือกรูปแบบที่ชอบ</p>
+            <button onClick={() => onApplyVariation(caption)} className="text-xs text-white/50 hover:text-white/70">ยกเลิก</button>
+          </div>
+          <div className="grid gap-3 md:grid-cols-3">
+            {variations.map((content, idx) => {
+              const varStyles: TikTokStyle[] = ["review", "recommend", "promotion"];
+              const varStyle = varStyles[idx] ?? "review";
+              return (
+                <button key={idx} onClick={() => onApplyVariation(content)}
+                  className="group relative rounded-xl border border-white/10 bg-black/40 p-3 text-left transition-all hover:border-white/30 hover:bg-black/60">
+                  <span className="mb-2 inline-block rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-white/70">
+                    {tiktokStyleEmojis[varStyle]} {tiktokStyleLabels[varStyle]}
+                  </span>
+                  <p className="line-clamp-6 text-[11px] leading-5 text-white/60 group-hover:text-white/80">{content}</p>
+                  <span className="mt-2 block text-[10px] font-semibold text-emerald-400 opacity-0 group-hover:opacity-100">ใช้แบบนี้ →</span>
+                </button>
+              );
+            })}
           </div>
         </div>
+      ) : (
+        <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_280px]">
+          <div className="space-y-3">
+            <div className="flex flex-wrap gap-2">
+              {(Object.entries(tiktokStyleLabels) as [TikTokStyle, string][]).map(([key, label]) => (
+                <button key={key} onClick={() => { onStyleChange(key); }}
+                  className={`rounded-xl border px-3.5 py-2 text-xs font-semibold transition-all ${
+                    style === key
+                      ? "border-white/30 bg-white/20 text-white shadow-md"
+                      : "border-white/10 bg-white/5 text-white/60 hover:border-white/20 hover:text-white/80"
+                  }`}>
+                  {tiktokStyleEmojis[key]} {label}
+                </button>
+              ))}
+              <button onClick={onRegenerate} disabled={enhancing !== null}
+                className="rounded-xl border border-white/10 bg-white/5 px-3.5 py-2 text-xs font-semibold text-white/60 hover:border-white/20 hover:text-white/80 disabled:opacity-40">
+                🔄 สร้างใหม่
+              </button>
+              <button onClick={onGenerateVariations}
+                className="rounded-xl border border-purple-400/30 bg-purple-500/10 px-3.5 py-2 text-xs font-semibold text-purple-400 hover:bg-purple-500/20">
+                🎲 3 รูปแบบ
+              </button>
+            </div>
 
-        <div className="space-y-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-white/50">แนะนำ Hashtag</p>
-            <p className="mt-0.5 text-[10px] text-white/30">คลิกเพื่อเปิด/ปิด — กดแทรกเพื่อใส่ในตำแหน่งเคอร์เซอร์</p>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {hashtagPool.map((tag) => {
-                const active = hashtags.includes(tag);
+            <div className="flex flex-wrap gap-1.5">
+              {(["expand", "shorten", "emojify"] as const).map((action) => {
+                const labels: Record<string, string> = { expand: "📖 ขยายความ", shorten: "✂️ ย่อ", emojify: "😊 เพิ่มอีโมจิ" };
+                const loading = enhancing === action;
                 return (
-                  <button key={tag} onClick={() => onToggleHashtag(tag)}
-                    onContextMenu={(e) => { e.preventDefault(); onInsertHashtag(tag); }}
-                    className={`rounded-lg border px-2 py-1 text-[10px] font-semibold transition-all ${
-                      active
-                        ? "border-white/30 bg-white/20 text-white"
-                        : "border-white/10 bg-white/5 text-white/40 hover:border-white/20 hover:text-white/70"
-                    }`}
-                    title="คลิกขวาเพื่อแทรกที่ตำแหน่งเคอร์เซอร์">
-                    {tag}
+                  <button key={action} onClick={() => onEnhance(action)} disabled={loading || !caption.trim()}
+                    className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-semibold text-white/50 hover:border-white/20 hover:text-white/70 disabled:opacity-30">
+                    {loading ? "⏳..." : labels[action]}
                   </button>
                 );
               })}
             </div>
-            <p className="mt-1.5 text-[10px] text-white/20">เลือกสูงสุด 8 hashtag • คลิกขวาเพื่อแทรกใน caption</p>
-          </div>
 
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-white/50">Preview</p>
-            <div className="mt-1.5 max-h-40 overflow-y-auto whitespace-pre-wrap rounded-xl border border-white/10 bg-black/60 p-3 text-xs leading-5 text-white/80">
-              {caption || "— ยังไม่มี caption —"}
+            <div className="relative">
+              <textarea ref={textareaRef}
+                className="min-h-48 w-full rounded-xl border border-white/10 bg-black/40 p-4 font-sans text-sm leading-6 text-white placeholder-white/30 outline-none focus:border-white/30"
+                placeholder="เขียน TikTok caption ของคุณ..."
+                value={caption}
+                onChange={(e) => onCaptionChange(e.target.value)}
+              />
+              <div className="mt-2 flex items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2">
+                  <div className={`h-2 w-24 rounded-full ${barColorBg}`}>
+                    <div className={`h-2 rounded-full transition-all ${barColor}`} style={{ width: `${charPercent}%` }} />
+                  </div>
+                  <div className="flex gap-3 text-[10px] text-white/40">
+                    <span>📝 {captionOnlyLen}</span>
+                    <span>#️⃣ {hashtagCount}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                    qualityScore >= 80 ? "bg-emerald-500/20 text-emerald-400" :
+                    qualityScore >= 50 ? "bg-amber-500/20 text-amber-400" :
+                    "bg-red-500/20 text-red-400"
+                  }`}>
+                    {qualityScore >= 80 ? "✅" : qualityScore >= 50 ? "⚠️" : "❌"} Quality {qualityScore}/100
+                  </div>
+                  <span className={`font-semibold tabular-nums ${nearLimit ? "text-red-400" : "text-white/50"}`}>
+                    {charCount.toLocaleString()}/{maxChars.toLocaleString()}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            <button onClick={onSave} disabled={!targetItem || !caption.trim()}
-              className="rounded-xl bg-white px-4 py-2 text-xs font-bold text-black disabled:opacity-40 hover:bg-white/90">
-              💾 Save Draft
-            </button>
-            <button onClick={onCopy} disabled={!caption.trim()}
-              className="rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold text-white disabled:opacity-40 hover:bg-white/20">
-              📋 Copy
-            </button>
-            {selectedCount > 0 ? (
-              <button onClick={onBulkGenerate}
-                className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-2 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/20">
-                🎬 สร้าง {selectedCount} drafts
+          <div className="space-y-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-white/50">แนะนำ Hashtag</p>
+              <p className="mt-0.5 text-[10px] text-white/30">คลิกเพื่อเปิด/ปิด — คลิกขวาเพื่อแทรก</p>
+              <input
+                className="mt-2 w-full rounded-lg border border-white/10 bg-black/30 px-2.5 py-1.5 text-[10px] text-white placeholder-white/20 outline-none focus:border-white/20"
+                placeholder="ค้นหา hashtag..."
+                value={hashtagSearch}
+                onChange={(e) => onHashtagSearchChange(e.target.value)}
+              />
+              <div className="mt-2 flex max-h-28 flex-wrap gap-1.5 overflow-y-auto">
+                {filteredHashtagPool.map((tag) => {
+                  const active = hashtags.includes(tag);
+                  return (
+                    <button key={tag} onClick={() => onToggleHashtag(tag)}
+                      onContextMenu={(e) => { e.preventDefault(); onInsertHashtag(tag); }}
+                      className={`rounded-lg border px-2 py-1 text-[10px] font-semibold transition-all ${
+                        active
+                          ? "border-white/30 bg-white/20 text-white"
+                          : "border-white/10 bg-white/5 text-white/40 hover:border-white/20 hover:text-white/70"
+                      }`}
+                      title="คลิกขวาเพื่อแทรกที่ตำแหน่งเคอร์เซอร์">
+                      {tag}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="mt-2 flex gap-1.5">
+                <input
+                  className="min-w-0 flex-1 rounded-lg border border-white/10 bg-black/30 px-2.5 py-1.5 text-[10px] text-white placeholder-white/20 outline-none focus:border-white/20"
+                  placeholder="เพิ่ม hashtag เอง..."
+                  value={customHashtag}
+                  onChange={(e) => onCustomHashtagChange(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); onAddCustomHashtag(); } }}
+                />
+                <button onClick={onAddCustomHashtag} disabled={!customHashtag.trim()}
+                  className="rounded-lg border border-white/10 bg-white/10 px-2 text-[10px] font-semibold text-white/60 hover:bg-white/20 disabled:opacity-30">
+                  +
+                </button>
+              </div>
+              <p className="mt-1.5 text-[10px] text-white/20">เลือกสูงสุด 8 hashtag • กด Enter เพื่อเพิ่ม</p>
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-white/50">คุณภาพ</p>
+              <div className="mt-1.5 space-y-1">
+                <div className="flex items-center gap-2 text-[10px]">
+                  <span className={hasDisclosure ? "text-emerald-400" : "text-red-400"}>
+                    {hasDisclosure ? "✅" : "❌"}
+                  </span>
+                  <span className={hasDisclosure ? "text-white/60" : "text-red-300"}>Disclosure</span>
+                </div>
+                <div className="flex items-center gap-2 text-[10px]">
+                  <span className={hashtagCount >= 3 ? "text-emerald-400" : "text-amber-400"}>
+                    {hashtagCount >= 3 ? "✅" : "⚠️"}
+                  </span>
+                  <span className="text-white/60">{hashtagCount} hashtags (แนะนำ 3-8)</span>
+                </div>
+                <div className="flex items-center gap-2 text-[10px]">
+                  <span className={isTooShort && caption.length > 0 ? "text-amber-400" : "text-emerald-400"}>
+                    {isTooShort ? "⚠️" : "✅"}
+                  </span>
+                  <span className="text-white/60">{isTooShort ? "เนื้อหาสั้นเกินไป (แนะนำ 50+ ตัวอักษร)" : "ความยาวเหมาะสม"}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-semibold text-white/40">📅 กำหนดโพสต์</span>
+                <input type="datetime-local"
+                  className="min-w-0 flex-1 rounded-lg border border-white/10 bg-black/30 px-2 py-1 text-[10px] text-white/70 outline-none focus:border-white/20"
+                  value={schedule}
+                  onChange={(e) => onScheduleChange(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <button onClick={onSave} disabled={!targetItem || !caption.trim()}
+                className="rounded-xl bg-white px-4 py-2 text-xs font-bold text-black disabled:opacity-40 hover:bg-white/90">
+                💾 Save Draft
               </button>
-            ) : null}
+              <button onClick={onCopy} disabled={!caption.trim()}
+                className="rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold text-white disabled:opacity-40 hover:bg-white/20">
+                📋 Copy
+              </button>
+              {selectedCount > 0 ? (
+                <button onClick={onBulkGenerate}
+                  className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-2 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/20">
+                  🎬 สร้าง {selectedCount} drafts
+                </button>
+              ) : null}
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </section>
   );
 }
