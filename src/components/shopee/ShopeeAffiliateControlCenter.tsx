@@ -22,6 +22,7 @@ type IngestionItem = {
 type Summary = Record<string, number>;
 type SocialChannel = "facebook" | "threads" | "x" | "instagram" | "tiktok" | "youtube_shorts";
 type TikTokStyle = "review" | "recommend" | "promotion" | "short";
+type FacebookMode = "page" | "individual" | "supporters" | "monetization";
 
 const emptySummary: Summary = { pendingReview: 0, approved: 0, rejected: 0, imported: 0, failed: 0 };
 const affiliateDisclosure = "โพสต์นี้มีลิงก์ Affiliate ผู้สร้างอาจได้รับค่าคอมมิชชันจากคำสั่งซื้อที่เข้าเงื่อนไข โดยไม่มีค่าใช้จ่ายเพิ่มเติมสำหรับผู้ซื้อ";
@@ -80,6 +81,29 @@ const socialChannelLabels: Record<SocialChannel, string> = {
 
 const defaultTiktokHashtags = ["#ShopeeFinds", "#Affiliate", "#รีวิวสินค้า", "#fyp"];
 
+const FACEBOOK_MAX_CHARS = 5000;
+
+const facebookModeLabels: Record<FacebookMode, string> = {
+  page: "โพสต์เพจ",
+  individual: "โพสต์ส่วนตัว",
+  supporters: "โพสต์ผู้สนับสนุน",
+  monetization: "สร้างรายได้",
+};
+
+const facebookModeEmojis: Record<FacebookMode, string> = {
+  page: "📄",
+  individual: "👤",
+  supporters: "⭐",
+  monetization: "💎",
+};
+
+const facebookModeDescriptions: Record<FacebookMode, string> = {
+  page: "โพสต์สำหรับ Facebook Page — เหมาะกับเพจขายของและรีวิวสินค้า",
+  individual: "โพสต์สำหรับโปรไฟล์ส่วนตัว — แบบเป็นกันเอง",
+  supporters: "โพสต์พิเศษสำหรับผู้สนับสนุน (Facebook Stars/Supporter) — เนื้อหา Exclusive",
+  monetization: "โพสต์ที่ออกแบบให้ตรงตามเงื่อนไข Content Monetization ของ Facebook",
+};
+
 function buildTikTokPostDraft(item: IngestionItem, style: TikTokStyle, customHashtags: string[]): string {
   const title = item.title ?? "สินค้าจาก Shopee";
   const link = item.affiliateUrl ?? item.productUrl ?? "";
@@ -103,6 +127,35 @@ function buildTikTokPostDraft(item: IngestionItem, style: TikTokStyle, customHas
   template = template.replace(/\n{3,}/g, "\n\n").trim();
 
   return `${template}\n\n${hashtagLine}`;
+}
+
+function buildFacebookPostDraft(item: IngestionItem, mode: FacebookMode): string {
+  const title = item.title ?? "สินค้าจาก Shopee";
+  const link = item.affiliateUrl ?? item.productUrl ?? "";
+  const priceStr = item.price && item.price > 0 ? `฿${item.price.toLocaleString("th-TH")}` : "";
+  const campaign = item.campaignNote ?? "";
+
+  const templates: Record<FacebookMode, string> = {
+    page: `📄 สินค้าแนะนำ: {title}\n\n{productInfo}\n\n{campaign}\n\n💬 {title}\n✅ สินค้าคุณภาพจาก Shopee\n🛒 ดูรายละเอียดเพิ่มเติมได้ที่ลิงก์ด้านล่าง\n\n{disclosure}\n\n{link}\n\n#ShopeeFinds #Affiliate #รีวิวสินค้า #ของดีบอกต่อ #Shopee`,
+    individual: `👋 สวัสดีครับ/คะ วันนี้ขอแนะนำ {title}\n\n{productInfo}\n\n{campaign}\n\nส่วนตัวคิดว่าเป็นสินค้าที่คุ้มค่ามากๆ ลองดูรายละเอียดกันได้นะ\n\n{disclosure}\n\n{link}\n\n#ShopeeFinds #Affiliate #ของดีบอกต่อ`,
+    supporters: `⭐ Exclusive สำหรับผู้สนับสนุนโดยเฉพาะ!\n\n{title}\n{productInfo}\n{campaign}\n\nขอบคุณที่เป็นผู้สนับสนุนครับ/คะ 🙏\n\n{disclosure}\n\n{link}`,
+    monetization: `💎 Content Monetization — {title}\n\n{productInfo}\n\n{campaign}\n\nเนื้อหานี้สร้างขึ้นตามแนวทาง Content Monetization ของ Facebook\n\n{disclosure}\n\n{link}\n\n#ShopeeFinds #Affiliate #ContentMonetization #FacebookCreator`,
+  };
+
+  const productInfo = priceStr
+    ? `📍 {title}\n💰 ราคา: ${priceStr}`
+    : `📍 {title}`;
+
+  let output = templates[mode]
+    .replace(/{title}/g, title)
+    .replace(/{productInfo}/g, productInfo)
+    .replace(/{price}/g, priceStr)
+    .replace(/{campaign}/g, campaign ? `📌 โปรโมชั่น: ${campaign}` : "")
+    .replace(/{disclosure}/g, affiliateDisclosure)
+    .replace(/{link}/g, link || "ลิงก์: ตรวจสอบรายการก่อนแนบลิงก์");
+  output = output.replace(/\n{3,}/g, "\n\n").trim();
+
+  return output;
 }
 
 function buildSocialPostDraft(item: IngestionItem, channel: SocialChannel) {
@@ -153,6 +206,12 @@ export function ShopeeAffiliateControlCenter() {
   const [tiktokHashtags, setTiktokHashtags] = useState<string[]>([...defaultTiktokHashtags]);
   const tiktokTextareaRef = useRef<HTMLTextAreaElement>(null);
 
+  const [fbOpen, setFbOpen] = useState(false);
+  const [fbItemId, setFbItemId] = useState<string | null>(null);
+  const [fbMode, setFbMode] = useState<FacebookMode>("page");
+  const [fbCaption, setFbCaption] = useState("");
+  const fbTextareaRef = useRef<HTMLTextAreaElement>(null);
+
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const filteredEndpoint = useMemo(() => {
@@ -177,6 +236,15 @@ export function ShopeeAffiliateControlCenter() {
   const tiktokCharCount = tiktokCaption.length;
   const tiktokCharPercent = Math.min(100, Math.round((tiktokCharCount / TIKTOK_MAX_CHARS) * 100));
   const tiktokNearLimit = tiktokCharCount > TIKTOK_MAX_CHARS * 0.85;
+
+  const fbTargetItem = useMemo(() => {
+    if (!fbItemId) return null;
+    return payload.items.find((it) => it.id === fbItemId) ?? null;
+  }, [fbItemId, payload.items]);
+
+  const fbCharCount = fbCaption.length;
+  const fbCharPercent = Math.min(100, Math.round((fbCharCount / FACEBOOK_MAX_CHARS) * 100));
+  const fbNearLimit = fbCharCount > FACEBOOK_MAX_CHARS * 0.85;
 
   const refresh = useCallback(async () => {
     try {
@@ -278,6 +346,86 @@ export function ShopeeAffiliateControlCenter() {
         });
       }
     }
+  }
+
+  function openFbComposer(itemId: string | null) {
+    setFbItemId(itemId);
+    setFbMode("page");
+    const item = itemId ? payload.items.find((it) => it.id === itemId) ?? null : null;
+    setFbCaption(item ? buildFacebookPostDraft(item, "page") : "");
+    setFbOpen(true);
+  }
+
+  function closeFbComposer() {
+    setFbOpen(false);
+    setFbItemId(null);
+    setFbCaption("");
+    setFbMode("page");
+  }
+
+  function regenerateFbCaption() {
+    if (fbTargetItem) {
+      setFbCaption(buildFacebookPostDraft(fbTargetItem, fbMode));
+    }
+  }
+
+  async function saveFbDraft() {
+    if (!fbTargetItem || !fbCaption.trim()) return;
+    const res = await fetch(`/api/integrations/shopee/affiliate-ingestions/${fbTargetItem.id}/social-drafts`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ channel: "facebook", content: fbCaption }),
+    });
+    const json = await res.json();
+    if (!json?.ok) return setMessage(json?.error?.message ?? "ไม่สามารถสร้าง Facebook draft ได้");
+    setDraftsById((current) => ({ ...current, [fbTargetItem.id]: { draftId: json.data.id, content: json.data.content } }));
+    setMessage(`✅ บันทึก Facebook draft แล้ว สำหรับ ${fbTargetItem.title ?? "สินค้า"} — ตรวจทานก่อนโพสต์`);
+  }
+
+  async function copyFbDraft() {
+    await navigator.clipboard.writeText(fbCaption);
+    setMessage("📋 คัดลอก Facebook post แล้ว — วางใน Facebook เพื่อโพสต์");
+    if (fbTargetItem) {
+      const existing = draftsById[fbTargetItem.id];
+      if (existing?.draftId) {
+        await fetch("/api/integrations/shopee/affiliate-ingestions/social-drafts/copy", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ draftId: existing.draftId }),
+        });
+      }
+    }
+  }
+
+  async function bulkGenerateFbDrafts() {
+    if (selected.size === 0) return;
+    setMessage(null);
+    let success = 0;
+    let fail = 0;
+    const ids = Array.from(selected);
+    for (let i = 0; i < ids.length; i++) {
+      const id = ids[i];
+      const item = payload.items.find((it) => it.id === id);
+      if (!item || !item.affiliateUrl) { fail++; continue; }
+      const content = buildFacebookPostDraft(item, fbMode);
+      try {
+        const res = await fetch(`/api/integrations/shopee/affiliate-ingestions/${id}/social-drafts`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ channel: "facebook", content }),
+        });
+        const json = await res.json();
+        if (json?.ok) {
+          success++;
+          setDraftsById((current) => ({ ...current, [id]: { draftId: json.data.id, content: json.data.content } }));
+        } else fail++;
+      } catch { fail++; }
+      setBatchProgress(`📱 สร้าง Facebook post ที่ ${i + 1}/${ids.length}... (สำเร็จ ${success}, ล้มเหลว ${fail})`);
+    }
+    setSelected(new Set());
+    setBatchProgress(null);
+    setMessage(`📱 สร้าง Facebook posts แบบกลุ่ม: สำเร็จ ${success}, ล้มเหลว ${fail}`);
+    await refresh();
   }
 
   async function bulkGenerateTiktokDrafts() {
@@ -545,15 +693,7 @@ export function ShopeeAffiliateControlCenter() {
         <div className="rounded-2xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">{batchProgress}</div>
       ) : null}
 
-      {!tiktokOpen ? (
-        <TikTokQuickComposerCard
-          selectedCount={selected.size}
-          onOpen={() => {
-            if (selected.size > 0) openTiktokComposer(null);
-            else if (filteredItems.length > 0) openTiktokComposer(filteredItems[0].id);
-          }}
-        />
-      ) : (
+      {tiktokOpen ? (
         <TikTokPostComposer
           targetItem={tiktokTargetItem}
           style={tiktokStyle}
@@ -575,6 +715,42 @@ export function ShopeeAffiliateControlCenter() {
           onBulkGenerate={bulkGenerateTiktokDrafts}
           onClose={closeTiktokComposer}
         />
+      ) : fbOpen ? (
+        <FacebookPostComposer
+          targetItem={fbTargetItem}
+          mode={fbMode}
+          caption={fbCaption}
+          charCount={fbCharCount}
+          charPercent={fbCharPercent}
+          nearLimit={fbNearLimit}
+          maxChars={FACEBOOK_MAX_CHARS}
+          selectedCount={selected.size}
+          textareaRef={fbTextareaRef as React.RefObject<HTMLTextAreaElement>}
+          onModeChange={setFbMode}
+          onCaptionChange={setFbCaption}
+          onRegenerate={regenerateFbCaption}
+          onSave={saveFbDraft}
+          onCopy={copyFbDraft}
+          onBulkGenerate={bulkGenerateFbDrafts}
+          onClose={closeFbComposer}
+        />
+      ) : (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <TikTokQuickComposerCard
+            selectedCount={selected.size}
+            onOpen={() => {
+              if (selected.size > 0) openTiktokComposer(null);
+              else if (filteredItems.length > 0) openTiktokComposer(filteredItems[0].id);
+            }}
+          />
+          <FacebookQuickComposerCard
+            selectedCount={selected.size}
+            onOpen={() => {
+              if (selected.size > 0) openFbComposer(null);
+              else if (filteredItems.length > 0) openFbComposer(filteredItems[0].id);
+            }}
+          />
+        </div>
       )}
 
       <SearchBar
@@ -590,6 +766,10 @@ export function ShopeeAffiliateControlCenter() {
         onOpenTiktok={() => {
           if (selected.size > 0) openTiktokComposer(null);
           else if (filteredItems.length > 0) openTiktokComposer(filteredItems[0].id);
+        }}
+        onOpenFacebook={() => {
+          if (selected.size > 0) openFbComposer(null);
+          else if (filteredItems.length > 0) openFbComposer(filteredItems[0].id);
         }}
       />
 
@@ -632,6 +812,7 @@ export function ShopeeAffiliateControlCenter() {
           onSelectAll={toggleSelectAll}
           allSelected={filteredItems.length > 0 && selected.size === filteredItems.length}
           onOpenTiktok={(id) => openTiktokComposer(id)}
+          onOpenFacebook={(id) => openFbComposer(id)}
         />
       ) : (
         <ListView
@@ -650,6 +831,7 @@ export function ShopeeAffiliateControlCenter() {
           onSelectAll={toggleSelectAll}
           allSelected={filteredItems.length > 0 && selected.size === filteredItems.length}
           onOpenTiktok={(id) => openTiktokComposer(id)}
+          onOpenFacebook={(id) => openFbComposer(id)}
         />
       )}
     </main>
@@ -916,7 +1098,7 @@ function ComplianceBanner() {
 
 function SearchBar({
   search, onSearchChange, showBulkUrlInput, onToggleBulkUrl,
-  hasSelected, selectedCount, onBatchAct, onBatchDraft, socialChannel, onOpenTiktok,
+  hasSelected, selectedCount, onBatchAct, onBatchDraft, socialChannel, onOpenTiktok, onOpenFacebook,
 }: {
   search: string;
   onSearchChange: (v: string) => void;
@@ -928,6 +1110,7 @@ function SearchBar({
   onBatchDraft: () => void;
   socialChannel: SocialChannel;
   onOpenTiktok: () => void;
+  onOpenFacebook: () => void;
 }) {
   return (
     <div className="flex flex-wrap items-center gap-3">
@@ -945,6 +1128,7 @@ function SearchBar({
           <button onClick={() => onBatchAct("reject")} className="rounded-lg border border-red-300 bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-900 hover:bg-red-200">Reject</button>
           <button onClick={() => onBatchAct("import")} className="rounded-lg bg-slate-950 px-2.5 py-1 text-xs font-semibold text-white hover:bg-slate-800">Import</button>
           <button onClick={onOpenTiktok} className="rounded-lg bg-black px-2.5 py-1 text-xs font-semibold text-white hover:bg-zinc-800">🎬 TikTok</button>
+          <button onClick={onOpenFacebook} className="rounded-lg bg-blue-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-blue-700">📱 Facebook</button>
         </div>
       ) : null}
     </div>
@@ -1029,7 +1213,7 @@ function CsvForm({ csv, onChange, onFileChange, onSubmit, selectedFileName, impo
 function ListView({
   items, loading, busyIds, selected, onToggleSelect, onAct,
   socialChannel, draftsById, onDraftContentChange, onCreateDraft, onSaveDraft, onCopyDraft,
-  onSelectAll, allSelected, onOpenTiktok,
+  onSelectAll, allSelected, onOpenTiktok, onOpenFacebook,
 }: {
   items: IngestionItem[];
   loading: boolean;
@@ -1046,6 +1230,7 @@ function ListView({
   onSelectAll: () => void;
   allSelected: boolean;
   onOpenTiktok: (id: string) => void;
+  onOpenFacebook: (id: string) => void;
 }) {
   if (loading) return <p className="text-sm text-slate-600">กำลังโหลดข้อมูลจาก DB...</p>;
   if (!items.length) return <p className="rounded-xl border border-dashed p-6 text-center text-sm text-slate-600">ยังไม่มีรายการใน DB queue</p>;
@@ -1096,6 +1281,8 @@ function ListView({
                     className="rounded-lg bg-slate-950 px-3 py-1.5 text-xs text-white disabled:opacity-40">Import</button>
                   <button onClick={() => onOpenTiktok(item.id)}
                     className="rounded-lg bg-black px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-zinc-800">🎬 TikTok</button>
+                  <button onClick={() => onOpenFacebook(item.id)}
+                    className="rounded-lg bg-blue-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">📱 Facebook</button>
                   <button disabled={item.status === "rejected" || !item.affiliateUrl} onClick={() => onCreateDraft(item)}
                     className="rounded-lg border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs font-semibold text-orange-900 disabled:opacity-40">Draft</button>
                   <button disabled={item.status === "rejected" || !item.affiliateUrl} onClick={() => onCopyDraft(item)}
@@ -1110,10 +1297,156 @@ function ListView({
   );
 }
 
+function FacebookQuickComposerCard({ selectedCount, onOpen }: { selectedCount: number; onOpen: () => void }) {
+  return (
+    <button onClick={onOpen}
+      className="group relative w-full overflow-hidden rounded-2xl border-2 border-blue-200 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 p-5 text-left shadow-lg transition-all hover:shadow-xl hover:brightness-110">
+      <div className="absolute right-4 top-3 text-4xl opacity-20">📱</div>
+      <div className="relative z-10">
+        <div className="flex items-center gap-2">
+          <span className="text-lg">📱</span>
+          <span className="text-xs font-semibold uppercase tracking-widest text-white/70">Facebook Post</span>
+        </div>
+        <p className="mt-2 text-xl font-bold text-white">สร้าง Facebook Post</p>
+        <p className="mt-1 text-sm text-white/60">
+          {selectedCount > 0
+            ? `มี ${selectedCount} รายการที่เลือก — กดเพื่อสร้าง Facebook drafts แบบกลุ่ม`
+            : "โพสต์ Facebook แบบไทย รองรับ Page, ส่วนตัว, ผู้สนับสนุน, Content Monetization"}
+        </p>
+        <div className="mt-4 flex gap-2">
+          <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white/80">📄 เพจ</span>
+          <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white/80">👤 ส่วนตัว</span>
+          <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white/80">⭐ ผู้สนับสนุน</span>
+          <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white/80">💎 สร้างรายได้</span>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function FacebookPostComposer({
+  targetItem, mode, caption, charCount, charPercent, nearLimit, maxChars,
+  selectedCount, textareaRef,
+  onModeChange, onCaptionChange, onRegenerate,
+  onSave, onCopy, onBulkGenerate, onClose,
+}: {
+  targetItem: IngestionItem | null;
+  mode: FacebookMode;
+  caption: string;
+  charCount: number;
+  charPercent: number;
+  nearLimit: boolean;
+  maxChars: number;
+  selectedCount: number;
+  textareaRef: React.RefObject<HTMLTextAreaElement>;
+  onModeChange: (m: FacebookMode) => void;
+  onCaptionChange: (s: string) => void;
+  onRegenerate: () => void;
+  onSave: () => void;
+  onCopy: () => void;
+  onBulkGenerate: () => void;
+  onClose: () => void;
+}) {
+  const barColor = nearLimit ? "bg-red-500" : charPercent > 70 ? "bg-amber-500" : "bg-blue-500";
+  const barColorBg = nearLimit ? "bg-red-100" : "bg-blue-100";
+
+  return (
+    <section className="rounded-2xl border-2 border-blue-200 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 p-5 shadow-xl">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <span className="text-2xl">📱</span>
+          <div>
+            <h2 className="text-lg font-bold text-white">Facebook Post Composer</h2>
+            <p className="text-xs text-white/50">
+              {targetItem
+                ? `กำลังเขียนสำหรับ: ${targetItem.title ?? "สินค้าที่เลือก"}`
+                : selectedCount > 0
+                  ? `เขียนสำหรับ ${selectedCount} รายการที่เลือก (สร้างแบบกลุ่ม)`
+                  : "เลือกรายการจาก queue ด้านล่างก่อน"}
+            </p>
+            {targetItem?.price ? <p className="text-sm font-semibold text-emerald-400">฿{targetItem.price.toLocaleString("th-TH")}</p> : null}
+          </div>
+        </div>
+        <button onClick={onClose} className="rounded-lg bg-white/10 px-3 py-1.5 text-xs font-semibold text-white/70 hover:bg-white/20">ปิด</button>
+      </div>
+
+      <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_280px]">
+        <div className="space-y-3">
+          <div className="flex flex-wrap gap-2">
+            {(Object.entries(facebookModeLabels) as [FacebookMode, string][]).map(([key, label]) => (
+              <button key={key} onClick={() => { onModeChange(key); }}
+                className={`rounded-xl border px-3.5 py-2 text-xs font-semibold transition-all ${
+                  mode === key
+                    ? "border-white/30 bg-white/20 text-white shadow-md"
+                    : "border-white/10 bg-white/5 text-white/60 hover:border-white/20 hover:text-white/80"
+                }`}>
+                {facebookModeEmojis[key]} {label}
+              </button>
+            ))}
+            <button onClick={onRegenerate} className="rounded-xl border border-white/10 bg-white/5 px-3.5 py-2 text-xs font-semibold text-white/60 hover:border-white/20 hover:text-white/80">
+              🔄 สร้างใหม่
+            </button>
+          </div>
+
+          <div className="rounded-xl border border-white/10 bg-black/30 p-3">
+            <p className="text-xs font-semibold text-white/50">โหมด: {facebookModeEmojis[mode]} {facebookModeLabels[mode]}</p>
+            <p className="mt-0.5 text-[10px] text-white/30">{facebookModeDescriptions[mode]}</p>
+          </div>
+
+          <div className="relative">
+            <textarea ref={textareaRef}
+              className="min-h-48 w-full rounded-xl border border-white/10 bg-black/40 p-4 font-sans text-sm leading-6 text-white placeholder-white/30 outline-none focus:border-white/30"
+              placeholder="เขียน Facebook post ของคุณ..."
+              value={caption}
+              onChange={(e) => onCaptionChange(e.target.value)}
+            />
+            <div className="mt-2 flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2">
+                <div className={`h-2 w-28 rounded-full ${barColorBg}`}>
+                  <div className={`h-2 rounded-full transition-all ${barColor}`} style={{ width: `${charPercent}%` }} />
+                </div>
+              </div>
+              <span className={`font-semibold tabular-nums ${nearLimit ? "text-red-400" : "text-white/50"}`}>
+                {charCount.toLocaleString()}/{maxChars.toLocaleString()}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-white/50">Preview</p>
+            <div className="mt-1.5 max-h-60 overflow-y-auto whitespace-pre-wrap rounded-xl border border-white/10 bg-black/60 p-3 text-xs leading-5 text-white/80">
+              {caption || "— ยังไม่มี caption —"}
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <button onClick={onSave} disabled={!targetItem || !caption.trim()}
+              className="rounded-xl bg-white px-4 py-2 text-xs font-bold text-black disabled:opacity-40 hover:bg-white/90">
+              💾 Save Draft
+            </button>
+            <button onClick={onCopy} disabled={!caption.trim()}
+              className="rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold text-white disabled:opacity-40 hover:bg-white/20">
+              📋 Copy
+            </button>
+            {selectedCount > 0 ? (
+              <button onClick={onBulkGenerate}
+                className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-2 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/20">
+                📱 สร้าง {selectedCount} drafts
+              </button>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function KanbanView({
   items, busyIds, selected, onToggleSelect, onAct,
   socialChannel, draftsById, onCreateDraft, onSaveDraft, onCopyDraft,
-  onSelectAll, allSelected, onOpenTiktok,
+  onSelectAll, allSelected, onOpenTiktok, onOpenFacebook,
 }: {
   items: IngestionItem[];
   busyIds: Set<string>;
@@ -1128,6 +1461,7 @@ function KanbanView({
   onSelectAll: () => void;
   allSelected: boolean;
   onOpenTiktok: (id: string) => void;
+  onOpenFacebook: (id: string) => void;
 }) {
   const columns = ["pending_review", "approved", "imported", "rejected", "failed"];
 
@@ -1173,6 +1507,8 @@ function KanbanView({
                       ) : null}
                       <button onClick={() => onOpenTiktok(item.id)}
                         className="rounded bg-black px-2 py-0.5 text-[10px] font-semibold text-white">🎬</button>
+                      <button onClick={() => onOpenFacebook(item.id)}
+                        className="rounded bg-blue-600 px-2 py-0.5 text-[10px] font-semibold text-white">📱</button>
                       {item.affiliateUrl ? (
                         <button onClick={() => onCreateDraft(item)}
                           className="rounded border border-orange-200 bg-orange-50 px-2 py-0.5 text-[10px] font-semibold text-orange-800">Draft</button>
