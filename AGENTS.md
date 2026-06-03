@@ -38,6 +38,10 @@ hyperframes (renders, batch, ops/queue), settings, shopee-affiliate, admin
 - Do not add frontend controls that run systemctl.
 - Do not run npm audit fix --force.
 - Do not upgrade Next.js or Prisma major versions without approval.
+- All commits must use GPG signing via `scripts/git/gpg-loopback.sh commit -m "message"`.
+  Do not run raw `git commit` — use the script to unlock the key with loopback pinentry.
+- Use `scripts/git/gpg-loopback.sh push` and `scripts/git/gpg-loopback.sh pull` to unlock
+  the GPG agent before the operation (push/pull don't sign but the agent must be warm).
 
 ## ECC Integration
 ECC repo at `../ecc`. Skills (249) + MCP servers (27) configured in `~/.config/opencode/opencode.jsonc`.
