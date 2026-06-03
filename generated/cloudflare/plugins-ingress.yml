@@ -1,0 +1,13 @@
+# Auto-generated ingress rules for Cloudflare Tunnel
+ingress:
+  - hostname: zdash.zeaz.dev
+    service: http://localhost:3000
+  - hostname: api-zdash.zeaz.dev
+    service: http://localhost:3000
+  - hostname: release.zeaz.dev
+    service: http://localhost:3000
+  - hostname: zveo.zeaz.dev
+    service: http://localhost:5174
+  - hostname: app.zeaz.dev
+    service: http://localhost:5175
+  - service: http_status:404

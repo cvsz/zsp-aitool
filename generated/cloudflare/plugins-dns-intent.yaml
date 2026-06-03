@@ -1,0 +1,30 @@
+# Auto-generated DNS records intent
+dns_records:
+  # Plugin: zdash
+  - name: zdash.zeaz.dev
+    type: CNAME
+    content: tunnel.zeaz.dev
+    proxied: true
+    zone: zeaz.dev
+  - name: api-zdash.zeaz.dev
+    type: CNAME
+    content: tunnel.zeaz.dev
+    proxied: true
+    zone: zeaz.dev
+  - name: release.zeaz.dev
+    type: CNAME
+    content: tunnel.zeaz.dev
+    proxied: true
+    zone: zeaz.dev
+  # Plugin: zveo
+  - name: zveo.zeaz.dev
+    type: CNAME
+    content: tunnel.zeaz.dev
+    proxied: true
+    zone: zeaz.dev
+  # Plugin: zwallet
+  - name: app.zeaz.dev
+    type: CNAME
+    content: tunnel.zeaz.dev
+    proxied: true
+    zone: zeaz.dev

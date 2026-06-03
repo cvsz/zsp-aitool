@@ -1,0 +1,88 @@
+plugins:
+  - app_id: zdash
+    repo: cvsz/zdash
+    mode: embedded
+    path: apps/zdash
+    enabled: true
+    source:
+      branch: main
+      remote: origin
+      sync_strategy: safe
+    runtime:
+      type: mixed
+      dev_ports: [5173, 8005]
+      prod_ports: [3000, 8005]
+      health_urls: ["http://localhost:5173/health", "http://localhost:8005/health"]
+      start_commands: ["make -C apps/zdash start"]
+      stop_commands: ["make -C apps/zdash stop"]
+      validate_commands: ["make -C apps/zdash validate-fast"]
+    cloudflare:
+      enabled: true
+      zone: zeaz.dev
+      hostnames: ["zdash.zeaz.dev", "api-zdash.zeaz.dev", "release.zeaz.dev"]
+      tunnel_target: "http://localhost:3000"
+      access_policy: "zeaz-team"
+      terraform_enabled: true
+      cost_lock_required: true
+    plugin_capabilities:
+      dashboard: true
+      api: true
+      cloudflare_operator: true
+    safety:
+      dry_run_default: true
+      requires_confirmation: true
+      no_paid_cloudflare_features: true
+      secret_keys_forbidden: true
+      protected_files: [".env", ".env.local"]
+
+  - app_id: zveo
+    repo: cvsz/zveo
+    mode: external
+    path: external/zveo
+    enabled: true
+    source:
+      branch: main
+      remote: origin
+      sync_strategy: pull
+    runtime:
+      type: mixed
+      dev_ports: [5174, 8006]
+      health_urls: ["http://localhost:5174/health"]
+      validate_commands: ["npm run validate --if-present", "poetry run pytest"]
+    cloudflare:
+      enabled: true
+      zone: zeaz.dev
+      hostnames: ["zveo.zeaz.dev"]
+      tunnel_target: "http://localhost:5174"
+      access_policy: "public"
+      terraform_enabled: true
+      cost_lock_required: true
+    safety:
+      dry_run_default: true
+      requires_confirmation: true
+
+  - app_id: zwallet
+    repo: cvsz/zwallet
+    mode: external
+    path: external/zwallet
+    enabled: true
+    source:
+      branch: main
+      remote: origin
+      sync_strategy: pull
+    runtime:
+      type: mixed
+      dev_ports: [5175, 8007]
+      health_urls: ["http://localhost:5175/health"]
+      validate_commands: ["npm run validate --if-present"]
+    cloudflare:
+      enabled: true
+      zone: zeaz.dev
+      hostnames: ["app.zeaz.dev"]
+      tunnel_target: "http://localhost:5175"
+      access_policy: "zeaz-team"
+      terraform_enabled: true
+      cost_lock_required: true
+    safety:
+      dry_run_default: true
+      requires_confirmation: true

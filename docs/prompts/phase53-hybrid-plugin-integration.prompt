@@ -1,0 +1,18 @@
+Implement Phase 53: Hybrid Plugin Integration Layer.
+Create manifest-based architecture for Zeaz Platform to manage embedded and external plugins.
+Provide:
+- configs/plugins/repositories.schema.json
+- scripts/plugins/plugin-lib.sh
+- scripts/plugins/plugin-list.sh
+- scripts/plugins/plugin-validate.sh
+- scripts/plugins/plugin-sync.sh
+- scripts/plugins/plugin-health.sh
+- scripts/plugins/plugin-render-cloudflare.sh
+- scripts/plugins/plugin-evidence.sh
+
+Follow rules:
+- No hardcoded secrets.
+- Dry run defaults.
+- Do not mutate Cloudflare unless APPLY=true.
+- Do not delete external repos.
+- Cost lock requires true for paid CF features.

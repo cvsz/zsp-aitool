@@ -458,3 +458,29 @@ clean:
 reset: clean
 	rm -rf node_modules extension/node_modules
 	@echo "[OK] node_modules removed — run 'make setup' to reinstall"
+
+# ──────────────────────────────────────────────────────
+#  11. HYBRID PLUGIN INTEGRATION (PHASE 53)
+# ──────────────────────────────────────────────────────
+.PHONY: plugin-list plugin-validate plugin-sync plugin-health plugin-render-cloudflare plugin-evidence phase53-validate
+
+plugin-list:
+	bash scripts/plugins/plugin-list.sh
+
+plugin-validate:
+	bash scripts/plugins/plugin-validate.sh
+
+plugin-sync:
+	bash scripts/plugins/plugin-sync.sh
+
+plugin-health:
+	bash scripts/plugins/plugin-health.sh
+
+plugin-render-cloudflare:
+	bash scripts/plugins/plugin-render-cloudflare.sh
+
+plugin-evidence:
+	bash scripts/plugins/plugin-evidence.sh
+
+phase53-validate: plugin-validate plugin-list plugin-render-cloudflare plugin-evidence
+	@echo "[OK] Phase 53 Hybrid Plugin Integration valid."
