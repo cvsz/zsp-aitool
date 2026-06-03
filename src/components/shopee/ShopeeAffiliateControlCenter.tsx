@@ -21,12 +21,37 @@ type IngestionItem = {
 
 type Summary = Record<string, number>;
 type SocialChannel = "facebook" | "threads" | "x" | "instagram" | "tiktok" | "youtube_shorts";
+type TikTokStyle = "review" | "recommend" | "promotion" | "short";
 
 const emptySummary: Summary = { pendingReview: 0, approved: 0, rejected: 0, imported: 0, failed: 0 };
 const affiliateDisclosure = "โพสต์นี้มีลิงก์ Affiliate ผู้สร้างอาจได้รับค่าคอมมิชชันจากคำสั่งซื้อที่เข้าเงื่อนไข โดยไม่มีค่าใช้จ่ายเพิ่มเติมสำหรับผู้ซื้อ";
 const shortAffiliateDisclosure = "ลิงก์นี้เป็นลิงก์ Affiliate";
 const spGlobalCategoryFileName = "SP-Product-Feed-All-Global-Category.csv";
 const AUTO_REFRESH_MS = 30_000;
+const TIKTOK_MAX_CHARS = 2200;
+
+const tiktokHashtagPool = [
+  "#ShopeeFinds", "#Affiliate", "#รีวิวสินค้า", "#ของดีบอกต่อ",
+  "#Shopee", "#ของถูกและดี", "#ป้ายยา", "#สินค้าดีบอกต่อ",
+  "#ช้อปปิ้ง", "#ติดเทรนด์", "#ซื้อซ้ำ", "#ของมันต้องมี",
+  "#ShopeeThailand", "#AffiliateMarketing", "#รายได้เสริม",
+  "#แม่ค้าออนไลน์", "#ขายดี", "#โปรโมชั่น", "#ลดราคา",
+  "#สินค้าขายดี", "#review", "#shopping", "#fyp",
+];
+
+const tiktokStyleLabels: Record<TikTokStyle, string> = {
+  review: "รีวิวสินค้า",
+  recommend: "ป้ายยาสินค้าเด็ด",
+  promotion: "แนะนำโปรโมชั่น",
+  short: "สั้นกระชับ",
+};
+
+const tiktokStyleEmojis: Record<TikTokStyle, string> = {
+  review: "📝",
+  recommend: "🔥",
+  promotion: "💰",
+  short: "⚡",
+};
 
 const statusLabels: Record<string, string> = {
   pending_review: "Pending Review",
@@ -52,6 +77,33 @@ const socialChannelLabels: Record<SocialChannel, string> = {
   tiktok: "TikTok",
   youtube_shorts: "YouTube Shorts",
 };
+
+const defaultTiktokHashtags = ["#ShopeeFinds", "#Affiliate", "#รีวิวสินค้า", "#fyp"];
+
+function buildTikTokPostDraft(item: IngestionItem, style: TikTokStyle, customHashtags: string[]): string {
+  const title = item.title ?? "สินค้าจาก Shopee";
+  const link = item.affiliateUrl ?? item.productUrl ?? "";
+  const priceStr = item.price && item.price > 0 ? `฿${item.price.toLocaleString("th-TH")}` : "";
+  const campaign = item.campaignNote ?? "";
+  const hashtagLine = customHashtags.length > 0 ? customHashtags.join(" ") : defaultTiktokHashtags.join(" ");
+
+  const hooks: Record<TikTokStyle, string> = {
+    review: `📝 รีวิว {title} {price}\n\n📍 รายละเอียดสินค้า: {title}\n{price}{campaign}\n\n💡 เหมาะกับคนที่กำลังมองหา {title}\n\n🗣️ พิกัด: ดูใน Shopee ได้เลย\n\n{link}\n\n{disclosure}`,
+    recommend: `🔥 ป้ายยา!! {title} {price}\n\nสินค้าดีบอกต่อ ของมันต้องมี! {title}\n{price}{campaign}\n\n👉 ดูรายละเอียดเพิ่มเติมได้ที่ลิงก์ด้านล่าง\n\n{link}\n\n{disclosure}`,
+    promotion: `💰 โปรเด็ด! {title} {price}\n\n{campaign}\n\n{title} ราคาพิเศษ {price}\n\nรีบด่วนก่อนโปรจะหมด! ดูรายละเอียดได้เลย\n\n{link}\n\n{disclosure}`,
+    short: `⚡ {title} {price}\n\n{campaign}\n\n{link}\n\n{disclosure}`,
+  };
+
+  let template = hooks[style];
+  template = template.replace(/{title}/g, title);
+  template = template.replace(/{price}/g, priceStr ? `ราคา ${priceStr}` : "");
+  template = template.replace(/{campaign}/g, campaign ? `📌 โปรโมชั่น: ${campaign}` : "");
+  template = template.replace(/{disclosure}/g, affiliateDisclosure);
+  template = template.replace(/{link}/g, link || "ลิงก์: ตรวจสอบรายการก่อนแนบลิงก์");
+  template = template.replace(/\n{3,}/g, "\n\n").trim();
+
+  return `${template}\n\n${hashtagLine}`;
+}
 
 function buildSocialPostDraft(item: IngestionItem, channel: SocialChannel) {
   const title = item.title ?? "สินค้า/ร้านค้าที่เลือกจาก Shopee";
@@ -94,6 +146,13 @@ export function ShopeeAffiliateControlCenter() {
   const [socialChannel, setSocialChannel] = useState<SocialChannel>("facebook");
   const [draftsById, setDraftsById] = useState<Record<string, { draftId: string; content: string }>>({});
 
+  const [tiktokOpen, setTiktokOpen] = useState(false);
+  const [tiktokItemId, setTiktokItemId] = useState<string | null>(null);
+  const [tiktokStyle, setTiktokStyle] = useState<TikTokStyle>("review");
+  const [tiktokCaption, setTiktokCaption] = useState("");
+  const [tiktokHashtags, setTiktokHashtags] = useState<string[]>([...defaultTiktokHashtags]);
+  const tiktokTextareaRef = useRef<HTMLTextAreaElement>(null);
+
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const filteredEndpoint = useMemo(() => {
@@ -109,6 +168,15 @@ export function ShopeeAffiliateControlCenter() {
         .some((f) => f?.toLowerCase().includes(q))
     );
   }, [payload.items, search]);
+
+  const tiktokTargetItem = useMemo(() => {
+    if (!tiktokItemId) return null;
+    return payload.items.find((it) => it.id === tiktokItemId) ?? null;
+  }, [tiktokItemId, payload.items]);
+
+  const tiktokCharCount = tiktokCaption.length;
+  const tiktokCharPercent = Math.min(100, Math.round((tiktokCharCount / TIKTOK_MAX_CHARS) * 100));
+  const tiktokNearLimit = tiktokCharCount > TIKTOK_MAX_CHARS * 0.85;
 
   const refresh = useCallback(async () => {
     try {
@@ -131,6 +199,117 @@ export function ShopeeAffiliateControlCenter() {
   }, [autoRefresh, refresh]);
 
   const hasFilteredItems = filteredItems.length > 0;
+
+  function openTiktokComposer(itemId: string | null) {
+    setTiktokItemId(itemId);
+    setTiktokStyle("review");
+    setTiktokHashtags([...defaultTiktokHashtags]);
+    const item = itemId ? payload.items.find((it) => it.id === itemId) ?? null : null;
+    if (item) {
+      setTiktokCaption(buildTikTokPostDraft(item, "review", defaultTiktokHashtags));
+    } else {
+      setTiktokCaption("");
+    }
+    setTiktokOpen(true);
+  }
+
+  function closeTiktokComposer() {
+    setTiktokOpen(false);
+    setTiktokItemId(null);
+    setTiktokCaption("");
+    setTiktokStyle("review");
+    setTiktokHashtags([...defaultTiktokHashtags]);
+  }
+
+  function regenerateTiktokCaption() {
+    if (tiktokTargetItem) {
+      setTiktokCaption(buildTikTokPostDraft(tiktokTargetItem, tiktokStyle, tiktokHashtags));
+    }
+  }
+
+  function toggleTiktokHashtag(tag: string) {
+    setTiktokHashtags((prev) => {
+      if (prev.includes(tag)) return prev.filter((t) => t !== tag);
+      if (prev.length >= 8) return prev;
+      return [...prev, tag];
+    });
+  }
+
+  function insertTiktokHashtag(tag: string) {
+    if (!tiktokTextareaRef.current) return;
+    const ta = tiktokTextareaRef.current;
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const before = tiktokCaption.slice(0, start);
+    const after = tiktokCaption.slice(end);
+    const spacer = before.length > 0 && !before.endsWith(" ") && !before.endsWith("\n") ? " " : "";
+    const newText = `${before}${spacer}${tag} ${after}`;
+    setTiktokCaption(newText);
+    requestAnimationFrame(() => {
+      const pos = start + spacer.length + tag.length + 1;
+      ta.setSelectionRange(pos, pos);
+      ta.focus();
+    });
+  }
+
+  async function saveTiktokDraft() {
+    if (!tiktokTargetItem || !tiktokCaption.trim()) return;
+    const res = await fetch(`/api/integrations/shopee/affiliate-ingestions/${tiktokTargetItem.id}/social-drafts`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ channel: "tiktok", content: tiktokCaption }),
+    });
+    const json = await res.json();
+    if (!json?.ok) return setMessage(json?.error?.message ?? "ไม่สามารถสร้าง TikTok draft ได้");
+    setDraftsById((current) => ({ ...current, [tiktokTargetItem.id]: { draftId: json.data.id, content: json.data.content } }));
+    setMessage(`✅ บันทึก TikTok draft แล้ว สำหรับ ${tiktokTargetItem.title ?? "สินค้า"} — ตรวจทานก่อนโพสต์`);
+  }
+
+  async function copyTiktokDraft() {
+    await navigator.clipboard.writeText(tiktokCaption);
+    setMessage("📋 คัดลอก TikTok caption แล้ว — วางใน TikTok app เพื่อโพสต์");
+    if (tiktokTargetItem) {
+      const existing = draftsById[tiktokTargetItem.id];
+      if (existing?.draftId) {
+        await fetch("/api/integrations/shopee/affiliate-ingestions/social-drafts/copy", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ draftId: existing.draftId }),
+        });
+      }
+    }
+  }
+
+  async function bulkGenerateTiktokDrafts() {
+    if (selected.size === 0) return;
+    setMessage(null);
+    let success = 0;
+    let fail = 0;
+    const ids = Array.from(selected);
+    for (let i = 0; i < ids.length; i++) {
+      const id = ids[i];
+      const item = payload.items.find((it) => it.id === id);
+      if (!item || !item.affiliateUrl) { fail++; continue; }
+      const content = buildTikTokPostDraft(item, tiktokStyle, tiktokHashtags);
+      try {
+        const res = await fetch(`/api/integrations/shopee/affiliate-ingestions/${id}/social-drafts`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ channel: "tiktok", content }),
+        });
+        const json = await res.json();
+        if (json?.ok) {
+          success++;
+          setDraftsById((current) => ({ ...current, [id]: { draftId: json.data.id, content: json.data.content } }));
+        } else fail++;
+      } catch { fail++; }
+      setBatchProgress(`🎬 สร้าง TikTok draft ที่ ${i + 1}/${ids.length}... (สำเร็จ ${success}, ล้มเหลว ${fail})`);
+    }
+    setSelected(new Set());
+    setBatchProgress(null);
+    setMessage(`🎬 สร้าง TikTok drafts แบบกลุ่ม: สำเร็จ ${success}, ล้มเหลว ${fail}`);
+    await refresh();
+  }
 
   async function submitManual(e: FormEvent) {
     e.preventDefault();
@@ -284,36 +463,6 @@ export function ShopeeAffiliateControlCenter() {
     setMessage(`สร้าง draft สำหรับ ${socialChannelLabels[socialChannel]} แล้ว โปรดตรวจทานก่อนโพสต์จริง`);
   }
 
-  async function batchCreateSocialDrafts() {
-    if (selected.size === 0) return;
-    setMessage(null);
-    let success = 0;
-    let fail = 0;
-    const ids = Array.from(selected);
-    for (let i = 0; i < ids.length; i++) {
-      const id = ids[i];
-      const item = payload.items.find((it) => it.id === id);
-      if (!item || !item.affiliateUrl) { fail++; continue; }
-      try {
-        const content = buildSocialPostDraft(item, socialChannel);
-        const res = await fetch(`/api/integrations/shopee/affiliate-ingestions/${id}/social-drafts`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ channel: socialChannel, content }),
-        });
-        const json = await res.json();
-        if (json?.ok) {
-          success++;
-          setDraftsById((current) => ({ ...current, [id]: { draftId: json.data.id, content: json.data.content } }));
-        } else fail++;
-      } catch { fail++; }
-      setBatchProgress(`สร้าง draft ที่ ${i + 1}/${ids.length}... (สำเร็จ ${success}, ล้มเหลว ${fail})`);
-    }
-    setSelected(new Set());
-    setBatchProgress(null);
-    setMessage(`สร้าง draft แบบกลุ่ม: สำเร็จ ${success}, ล้มเหลว ${fail}`);
-  }
-
   async function saveSocialDraft(item: IngestionItem, content: string) {
     const current = draftsById[item.id];
     if (!current?.draftId) return;
@@ -396,6 +545,38 @@ export function ShopeeAffiliateControlCenter() {
         <div className="rounded-2xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">{batchProgress}</div>
       ) : null}
 
+      {!tiktokOpen ? (
+        <TikTokQuickComposerCard
+          selectedCount={selected.size}
+          onOpen={() => {
+            if (selected.size > 0) openTiktokComposer(null);
+            else if (filteredItems.length > 0) openTiktokComposer(filteredItems[0].id);
+          }}
+        />
+      ) : (
+        <TikTokPostComposer
+          targetItem={tiktokTargetItem}
+          style={tiktokStyle}
+          caption={tiktokCaption}
+          hashtags={tiktokHashtags}
+          charCount={tiktokCharCount}
+          charPercent={tiktokCharPercent}
+          nearLimit={tiktokNearLimit}
+          maxChars={TIKTOK_MAX_CHARS}
+          selectedCount={selected.size}
+          textareaRef={tiktokTextareaRef as React.RefObject<HTMLTextAreaElement>}
+          onStyleChange={setTiktokStyle}
+          onCaptionChange={setTiktokCaption}
+          onRegenerate={regenerateTiktokCaption}
+          onToggleHashtag={toggleTiktokHashtag}
+          onInsertHashtag={insertTiktokHashtag}
+          onSave={saveTiktokDraft}
+          onCopy={copyTiktokDraft}
+          onBulkGenerate={bulkGenerateTiktokDrafts}
+          onClose={closeTiktokComposer}
+        />
+      )}
+
       <SearchBar
         search={search}
         onSearchChange={setSearch}
@@ -404,8 +585,12 @@ export function ShopeeAffiliateControlCenter() {
         hasSelected={selected.size > 0}
         selectedCount={selected.size}
         onBatchAct={batchAct}
-        onBatchDraft={batchCreateSocialDrafts}
+        onBatchDraft={() => {}}
         socialChannel={socialChannel}
+        onOpenTiktok={() => {
+          if (selected.size > 0) openTiktokComposer(null);
+          else if (filteredItems.length > 0) openTiktokComposer(filteredItems[0].id);
+        }}
       />
 
       {showBulkUrlInput ? (
@@ -446,6 +631,7 @@ export function ShopeeAffiliateControlCenter() {
           onCopyDraft={copySocialDraft}
           onSelectAll={toggleSelectAll}
           allSelected={filteredItems.length > 0 && selected.size === filteredItems.length}
+          onOpenTiktok={(id) => openTiktokComposer(id)}
         />
       ) : (
         <ListView
@@ -463,9 +649,180 @@ export function ShopeeAffiliateControlCenter() {
           onCopyDraft={copySocialDraft}
           onSelectAll={toggleSelectAll}
           allSelected={filteredItems.length > 0 && selected.size === filteredItems.length}
+          onOpenTiktok={(id) => openTiktokComposer(id)}
         />
       )}
     </main>
+  );
+}
+
+function TikTokQuickComposerCard({ selectedCount, onOpen }: { selectedCount: number; onOpen: () => void }) {
+  return (
+    <button onClick={onOpen}
+      className="group relative w-full overflow-hidden rounded-2xl border-2 border-black/10 bg-gradient-to-br from-black via-zinc-900 to-zinc-800 p-5 text-left shadow-lg transition-all hover:shadow-xl hover:brightness-110">
+      <div className="absolute right-4 top-3 text-4xl opacity-20">🎬</div>
+      <div className="relative z-10">
+        <div className="flex items-center gap-2">
+          <span className="text-lg">🎬</span>
+          <span className="text-xs font-semibold uppercase tracking-widest text-white/70">TikTok Post</span>
+        </div>
+        <p className="mt-2 text-xl font-bold text-white">สร้าง TikTok Post</p>
+        <p className="mt-1 text-sm text-white/60">
+          {selectedCount > 0
+            ? `มี ${selectedCount} รายการที่เลือก — กดเพื่อสร้าง TikTok drafts แบบกลุ่ม`
+            : "เขียน TikTok caption แบบไทย พร้อม hashtag เสนอแนะ และตัวนับอักขระ"}
+        </p>
+        <div className="mt-4 flex gap-2">
+          <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white/80">📝 รีวิว</span>
+          <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white/80">🔥 ป้ายยา</span>
+          <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white/80">💰 โปรโมชั่น</span>
+          <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white/80">⚡ สั้น</span>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function TikTokPostComposer({
+  targetItem, style, caption, hashtags, charCount, charPercent, nearLimit, maxChars,
+  selectedCount, textareaRef,
+  onStyleChange, onCaptionChange, onRegenerate,
+  onToggleHashtag, onInsertHashtag,
+  onSave, onCopy, onBulkGenerate, onClose,
+}: {
+  targetItem: IngestionItem | null;
+  style: TikTokStyle;
+  caption: string;
+  hashtags: string[];
+  charCount: number;
+  charPercent: number;
+  nearLimit: boolean;
+  maxChars: number;
+  selectedCount: number;
+  textareaRef: React.RefObject<HTMLTextAreaElement>;
+  onStyleChange: (s: TikTokStyle) => void;
+  onCaptionChange: (s: string) => void;
+  onRegenerate: () => void;
+  onToggleHashtag: (tag: string) => void;
+  onInsertHashtag: (tag: string) => void;
+  onSave: () => void;
+  onCopy: () => void;
+  onBulkGenerate: () => void;
+  onClose: () => void;
+}) {
+  const barColor = nearLimit ? "bg-red-500" : charPercent > 70 ? "bg-amber-500" : "bg-emerald-500";
+  const barColorBg = nearLimit ? "bg-red-100" : "bg-slate-100";
+
+  const hashtagPool = tiktokHashtagPool;
+
+  return (
+    <section className="rounded-2xl border-2 border-black/10 bg-gradient-to-br from-black via-zinc-900 to-zinc-800 p-5 shadow-xl">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <span className="text-2xl">🎬</span>
+          <div>
+            <h2 className="text-lg font-bold text-white">TikTok Post Composer</h2>
+            <p className="text-xs text-white/50">
+              {targetItem
+                ? `กำลังเขียนสำหรับ: ${targetItem.title ?? "สินค้าที่เลือก"}`
+                : selectedCount > 0
+                  ? `เขียนสำหรับ ${selectedCount} รายการที่เลือก (สร้างแบบกลุ่ม)`
+                  : "เลือกรายการจาก queue ด้านล่างก่อน"}
+            </p>
+            {targetItem?.price ? <p className="text-sm font-semibold text-emerald-400">฿{targetItem.price.toLocaleString("th-TH")}</p> : null}
+          </div>
+        </div>
+        <button onClick={onClose} className="rounded-lg bg-white/10 px-3 py-1.5 text-xs font-semibold text-white/70 hover:bg-white/20">ปิด</button>
+      </div>
+
+      <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_280px]">
+        <div className="space-y-3">
+          <div className="flex flex-wrap gap-2">
+            {(Object.entries(tiktokStyleLabels) as [TikTokStyle, string][]).map(([key, label]) => (
+              <button key={key} onClick={() => { onStyleChange(key); }}
+                className={`rounded-xl border px-3.5 py-2 text-xs font-semibold transition-all ${
+                  style === key
+                    ? "border-white/30 bg-white/20 text-white shadow-md"
+                    : "border-white/10 bg-white/5 text-white/60 hover:border-white/20 hover:text-white/80"
+                }`}>
+                {tiktokStyleEmojis[key]} {label}
+              </button>
+            ))}
+            <button onClick={onRegenerate} className="rounded-xl border border-white/10 bg-white/5 px-3.5 py-2 text-xs font-semibold text-white/60 hover:border-white/20 hover:text-white/80">
+              🔄 สร้างใหม่
+            </button>
+          </div>
+
+          <div className="relative">
+            <textarea ref={textareaRef}
+              className="min-h-48 w-full rounded-xl border border-white/10 bg-black/40 p-4 font-sans text-sm leading-6 text-white placeholder-white/30 outline-none focus:border-white/30"
+              placeholder="เขียน TikTok caption ของคุณ..."
+              value={caption}
+              onChange={(e) => onCaptionChange(e.target.value)}
+            />
+            <div className="mt-2 flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2">
+                <div className={`h-2 w-28 rounded-full ${barColorBg}`}>
+                  <div className={`h-2 rounded-full transition-all ${barColor}`} style={{ width: `${charPercent}%` }} />
+                </div>
+              </div>
+              <span className={`font-semibold tabular-nums ${nearLimit ? "text-red-400" : "text-white/50"}`}>
+                {charCount.toLocaleString()}/{maxChars.toLocaleString()}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-white/50">แนะนำ Hashtag</p>
+            <p className="mt-0.5 text-[10px] text-white/30">คลิกเพื่อเปิด/ปิด — กดแทรกเพื่อใส่ในตำแหน่งเคอร์เซอร์</p>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {hashtagPool.map((tag) => {
+                const active = hashtags.includes(tag);
+                return (
+                  <button key={tag} onClick={() => onToggleHashtag(tag)}
+                    onContextMenu={(e) => { e.preventDefault(); onInsertHashtag(tag); }}
+                    className={`rounded-lg border px-2 py-1 text-[10px] font-semibold transition-all ${
+                      active
+                        ? "border-white/30 bg-white/20 text-white"
+                        : "border-white/10 bg-white/5 text-white/40 hover:border-white/20 hover:text-white/70"
+                    }`}
+                    title="คลิกขวาเพื่อแทรกที่ตำแหน่งเคอร์เซอร์">
+                    {tag}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-1.5 text-[10px] text-white/20">เลือกสูงสุด 8 hashtag • คลิกขวาเพื่อแทรกใน caption</p>
+          </div>
+
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-white/50">Preview</p>
+            <div className="mt-1.5 max-h-40 overflow-y-auto whitespace-pre-wrap rounded-xl border border-white/10 bg-black/60 p-3 text-xs leading-5 text-white/80">
+              {caption || "— ยังไม่มี caption —"}
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <button onClick={onSave} disabled={!targetItem || !caption.trim()}
+              className="rounded-xl bg-white px-4 py-2 text-xs font-bold text-black disabled:opacity-40 hover:bg-white/90">
+              💾 Save Draft
+            </button>
+            <button onClick={onCopy} disabled={!caption.trim()}
+              className="rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold text-white disabled:opacity-40 hover:bg-white/20">
+              📋 Copy
+            </button>
+            {selectedCount > 0 ? (
+              <button onClick={onBulkGenerate}
+                className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-2 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/20">
+                🎬 สร้าง {selectedCount} drafts
+              </button>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -487,7 +844,7 @@ function Header({
         <h1 className="text-2xl font-bold text-slate-950">Shopee Affiliate Control Center</h1>
         <p className="mt-1 max-w-3xl text-sm text-slate-600">
           Import, review, approve, and publish Shopee affiliate links from your real PostgreSQL database.
-          Supports manual URLs, CSV/TSV upload, social draft generation, and batch operations.
+          Supports manual URLs, CSV/TSV upload, social draft generation, batch operations, and TikTok posts.
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
@@ -559,7 +916,7 @@ function ComplianceBanner() {
 
 function SearchBar({
   search, onSearchChange, showBulkUrlInput, onToggleBulkUrl,
-  hasSelected, selectedCount, onBatchAct, onBatchDraft, socialChannel,
+  hasSelected, selectedCount, onBatchAct, onBatchDraft, socialChannel, onOpenTiktok,
 }: {
   search: string;
   onSearchChange: (v: string) => void;
@@ -570,6 +927,7 @@ function SearchBar({
   onBatchAct: (action: "approve" | "reject" | "import") => void;
   onBatchDraft: () => void;
   socialChannel: SocialChannel;
+  onOpenTiktok: () => void;
 }) {
   return (
     <div className="flex flex-wrap items-center gap-3">
@@ -586,7 +944,7 @@ function SearchBar({
           <button onClick={() => onBatchAct("approve")} className="rounded-lg border border-emerald-300 bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-900 hover:bg-emerald-200">Approve</button>
           <button onClick={() => onBatchAct("reject")} className="rounded-lg border border-red-300 bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-900 hover:bg-red-200">Reject</button>
           <button onClick={() => onBatchAct("import")} className="rounded-lg bg-slate-950 px-2.5 py-1 text-xs font-semibold text-white hover:bg-slate-800">Import</button>
-          <button onClick={onBatchDraft} className="rounded-lg border border-orange-300 bg-orange-100 px-2.5 py-1 text-xs font-semibold text-orange-900 hover:bg-orange-200">Drafts ({socialChannelLabels[socialChannel]})</button>
+          <button onClick={onOpenTiktok} className="rounded-lg bg-black px-2.5 py-1 text-xs font-semibold text-white hover:bg-zinc-800">🎬 TikTok</button>
         </div>
       ) : null}
     </div>
@@ -670,7 +1028,8 @@ function CsvForm({ csv, onChange, onFileChange, onSubmit, selectedFileName, impo
 
 function ListView({
   items, loading, busyIds, selected, onToggleSelect, onAct,
-  socialChannel, draftsById, onDraftContentChange, onCreateDraft, onSaveDraft, onCopyDraft, onSelectAll, allSelected,
+  socialChannel, draftsById, onDraftContentChange, onCreateDraft, onSaveDraft, onCopyDraft,
+  onSelectAll, allSelected, onOpenTiktok,
 }: {
   items: IngestionItem[];
   loading: boolean;
@@ -686,6 +1045,7 @@ function ListView({
   onCopyDraft: (item: IngestionItem) => void;
   onSelectAll: () => void;
   allSelected: boolean;
+  onOpenTiktok: (id: string) => void;
 }) {
   if (loading) return <p className="text-sm text-slate-600">กำลังโหลดข้อมูลจาก DB...</p>;
   if (!items.length) return <p className="rounded-xl border border-dashed p-6 text-center text-sm text-slate-600">ยังไม่มีรายการใน DB queue</p>;
@@ -734,6 +1094,8 @@ function ListView({
                     className="rounded-lg border px-3 py-1.5 text-xs disabled:opacity-40">Reject</button>
                   <button disabled={isBusy || item.status === "imported" || item.status === "rejected"} onClick={() => onAct(item.id, "import")}
                     className="rounded-lg bg-slate-950 px-3 py-1.5 text-xs text-white disabled:opacity-40">Import</button>
+                  <button onClick={() => onOpenTiktok(item.id)}
+                    className="rounded-lg bg-black px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-zinc-800">🎬 TikTok</button>
                   <button disabled={item.status === "rejected" || !item.affiliateUrl} onClick={() => onCreateDraft(item)}
                     className="rounded-lg border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs font-semibold text-orange-900 disabled:opacity-40">Draft</button>
                   <button disabled={item.status === "rejected" || !item.affiliateUrl} onClick={() => onCopyDraft(item)}
@@ -750,7 +1112,8 @@ function ListView({
 
 function KanbanView({
   items, busyIds, selected, onToggleSelect, onAct,
-  socialChannel, draftsById, onCreateDraft, onSaveDraft, onCopyDraft, onSelectAll, allSelected,
+  socialChannel, draftsById, onCreateDraft, onSaveDraft, onCopyDraft,
+  onSelectAll, allSelected, onOpenTiktok,
 }: {
   items: IngestionItem[];
   busyIds: Set<string>;
@@ -764,6 +1127,7 @@ function KanbanView({
   onCopyDraft: (item: IngestionItem) => void;
   onSelectAll: () => void;
   allSelected: boolean;
+  onOpenTiktok: (id: string) => void;
 }) {
   const columns = ["pending_review", "approved", "imported", "rejected", "failed"];
 
@@ -807,6 +1171,8 @@ function KanbanView({
                         <button disabled={busyIds.has(item.id)} onClick={() => onAct(item.id, "import")}
                           className="rounded bg-slate-950 px-2 py-0.5 text-[10px] font-semibold text-white disabled:opacity-40">Import</button>
                       ) : null}
+                      <button onClick={() => onOpenTiktok(item.id)}
+                        className="rounded bg-black px-2 py-0.5 text-[10px] font-semibold text-white">🎬</button>
                       {item.affiliateUrl ? (
                         <button onClick={() => onCreateDraft(item)}
                           className="rounded border border-orange-200 bg-orange-50 px-2 py-0.5 text-[10px] font-semibold text-orange-800">Draft</button>
@@ -825,5 +1191,3 @@ function KanbanView({
     </section>
   );
 }
-
-
