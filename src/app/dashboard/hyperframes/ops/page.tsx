@@ -42,24 +42,24 @@ export default function HyperFramesOpsPage() {
 
   return (
     <main className="space-y-6">
-      <header className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+      <header className="cyber-card p-6 shadow-sm">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">HyperFrames Operator</p>
-        <h1 className="mt-2 text-3xl font-bold text-slate-950">HyperFrames Ops</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">ตรวจสอบสุขภาพคิว, worker, watchdog และ disk อย่างปลอดภัย หน้าเว็บนี้ไม่สั่ง start/stop/enable/disable systemd</p>
+        <h1 className="mt-2 text-3xl font-bold text-white">HyperFrames Ops</h1>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">ตรวจสอบสุขภาพคิว, worker, watchdog และ disk อย่างปลอดภัย หน้าเว็บนี้ไม่สั่ง start/stop/enable/disable systemd</p>
         <div className="mt-4 flex flex-wrap gap-2">
           <Link href="/dashboard/hyperframes/ops/queue" className="rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white">ดู Operator Queue</Link>
-          <Link href="/dashboard/hyperframes/renders" className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700">ประวัติเรนเดอร์</Link>
+          <Link href="/dashboard/hyperframes/renders" className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-slate-300">ประวัติเรนเดอร์</Link>
         </div>
       </header>
       {errorMessage ? <p className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">{errorMessage}</p> : null}
-      {status ? <HyperFramesStatusGrid cards={cards} /> : <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-6 text-sm text-slate-500">กำลังโหลดสถานะ operator...</div>}
+      {status ? <HyperFramesStatusGrid cards={cards} /> : <div className="rounded-2xl border border-dashed border-white/10 bg-cyber-surface p-6 text-sm text-slate-500">กำลังโหลดสถานะ operator...</div>}
       <OperatorWarningBanner items={warnings} />
-      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="text-lg font-bold text-slate-950">แนวทางปฏิบัติ</h2>
+      <section className="cyber-card p-5 shadow-sm">
+        <h2 className="text-lg font-bold text-white">แนวทางปฏิบัติ</h2>
         <div className="mt-4 grid gap-3 md:grid-cols-3">
-          <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-600"><b className="text-slate-950">Monitor</b><br />ดู pending/running/stale และ disk ก่อนเปิด real render เพิ่ม</div>
-          <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-600"><b className="text-slate-950">Recover</b><br />ใช้ CLI ที่มี confirmation gate สำหรับ stale jobs เท่านั้น</div>
-          <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-600"><b className="text-slate-950">Rollback</b><br />ควบคุม systemd บน production VM ผ่านคำสั่ง operator ไม่ใช่ UI</div>
+          <div className="rounded-2xl bg-white/5 p-4 text-sm text-slate-400"><b className="text-white">Monitor</b><br />ดู pending/running/stale และ disk ก่อนเปิด real render เพิ่ม</div>
+          <div className="rounded-2xl bg-white/5 p-4 text-sm text-slate-400"><b className="text-white">Recover</b><br />ใช้ CLI ที่มี confirmation gate สำหรับ stale jobs เท่านั้น</div>
+          <div className="rounded-2xl bg-white/5 p-4 text-sm text-slate-400"><b className="text-white">Rollback</b><br />ควบคุม systemd บน production VM ผ่านคำสั่ง operator ไม่ใช่ UI</div>
         </div>
       </section>
     </main>

@@ -5,11 +5,11 @@ import { SafeErrorText } from "@/components/hyperframes/SafeErrorText";
 
 export type RenderHistoryItem = { id: string; status: string; attempts: number; durationSeconds: number | null; width?: number | null; height?: number | null; createdAt: string | Date; startedAt?: string | Date | null; completedAt?: string | Date | null; failedAt?: string | Date | null; errorMessage?: string | null; downloadUrl?: string | null; thumbnailUrl?: string | null; canDownload?: boolean; canCancel?: boolean; canRetry?: boolean; metadata?: { platform?: string; aspectRatio?: string } | null };
 
-const actionClass = "rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1";
+const actionClass = "cyber-button-secondary";
 
 export function RenderJobCard({ item, onCancel, onRetry }: { item: RenderHistoryItem; onCancel: (id: string) => void; onRetry?: (id: string) => void }) {
   return (
-    <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <article className="cyber-card p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <RenderStatusBadge status={item.status as RenderJobStatus} />
         <span className="text-xs font-medium text-slate-500">#{item.id.slice(0, 8)} • พยายาม {item.attempts} ครั้ง</span>
@@ -26,7 +26,7 @@ export function RenderJobCard({ item, onCancel, onRetry }: { item: RenderHistory
       </div>
       {item.thumbnailUrl ? <Image src={item.thumbnailUrl} alt="ตัวอย่างภาพเรนเดอร์" width={240} height={136} className="mt-3 h-28 w-auto rounded-xl border border-slate-200 object-cover" unoptimized /> : null}
       <div className="mt-4 flex flex-wrap gap-2">
-        {item.canDownload && item.downloadUrl ? <a className="rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1" href={item.downloadUrl}>ดาวน์โหลด (ผ่าน API ปลอดภัย)</a> : null}
+        {item.canDownload && item.downloadUrl ? <a className="cyber-button-primary" href={item.downloadUrl}>ดาวน์โหลด (ผ่าน API ปลอดภัย)</a> : null}
         {item.canCancel ? <button className={actionClass} onClick={() => onCancel(item.id)}>ยกเลิกงาน (เฉพาะงานที่ยังไม่จบ)</button> : null}
         {item.canRetry && onRetry ? <button className={actionClass} onClick={() => onRetry(item.id)}>ลองใหม่ (ยังคง guardrails เดิม)</button> : null}
       </div>

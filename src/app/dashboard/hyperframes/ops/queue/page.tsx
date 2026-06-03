@@ -30,17 +30,17 @@ export default function HyperFramesOpsQueuePage() {
 
   return (
     <main className="space-y-6">
-      <header className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+      <header className="cyber-card p-6 shadow-sm">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Queue Monitor</p>
-        <h1 className="mt-2 text-3xl font-bold text-slate-950">Operator Queue Monitor</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">อ่านสถานะคิวแบบปลอดภัย ไม่แสดงไฟล์ภายใน ไม่แสดง secrets และไม่มีปุ่มควบคุม daemon</p>
+        <h1 className="mt-2 text-3xl font-bold text-white">Operator Queue Monitor</h1>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">อ่านสถานะคิวแบบปลอดภัย ไม่แสดงไฟล์ภายใน ไม่แสดง secrets และไม่มีปุ่มควบคุม daemon</p>
         <div className="mt-4 flex flex-wrap gap-2">
           <Link className="rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white" href="/dashboard/hyperframes/ops">กลับไป Ops</Link>
-          <Link className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700" href="/dashboard/hyperframes/renders">ประวัติเรนเดอร์</Link>
+          <Link className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-slate-300" href="/dashboard/hyperframes/renders">ประวัติเรนเดอร์</Link>
         </div>
       </header>
       {error ? <p className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">{error}</p> : null}
-      {status ? <HyperFramesStatusGrid cards={cards} /> : <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-6 text-sm text-slate-500">กำลังโหลดคิว...</div>}
+      {status ? <HyperFramesStatusGrid cards={cards} /> : <div className="rounded-2xl border border-dashed border-white/10 bg-cyber-surface p-6 text-sm text-slate-500">กำลังโหลดคิว...</div>}
       <OperatorWarningBanner items={warnings} />
     </main>
   );
