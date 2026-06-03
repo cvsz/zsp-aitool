@@ -1,8 +1,5 @@
-import { ShopeeAffiliateRealDbDashboard } from "@/components/shopee/ShopeeAffiliateRealDbDashboard";
+import { ShopeeAffiliateControlCenter } from "@/components/shopee/ShopeeAffiliateControlCenter";
 
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
-
-export default function ShopeeAffiliateDashboardPage() {
-  return <ShopeeAffiliateRealDbDashboard />;
+export default function ShopeeAffiliatePage() {
+  return <ShopeeAffiliateControlCenter />;
 }

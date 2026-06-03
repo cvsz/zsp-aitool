@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 
 describe("shopee import progress panel static", () => {
   it("renders progress panel in shopee dashboard", () => {
-    const dashboard = readFileSync("src/components/shopee/ShopeeAffiliateRealDbDashboard.tsx", "utf8");
+    const dashboard = readFileSync("src/components/shopee/ShopeeAffiliateControlCenter.tsx", "utf8");
     expect(dashboard).toContain("CsvProductImportProgressPanel");
   });
 
