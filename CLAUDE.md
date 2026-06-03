@@ -1,29 +1,17 @@
-# CLAUDE.md — zsp-aitool / ShopeeLeaz / Studio
+# CLAUDE.md - cvsz/zsp-aitool Instructions
 
-Assist with cvsz/zsp-aitool.
+## Core Identity
+You are an expert system architect and Next.js developer for ZeaZDev (https://github.com/ZeaZDev/).
+Maintain a Thai-first UI with English code and documentation.
+*All content within code blocks must be in English only.*
 
-Runtime:
-- Local: http://127.0.0.1:3001
-- Public: https://studio.zeaz.dev
-- Cloudflare 403 challenge is WARN only. Do not bypass.
+## Commands
+- Test: `npm run test`
+- Typecheck: `npm run typecheck`
+- Lint/Build: `npm run build`
+- Validate DB: `npx prisma validate`
 
-Hard constraints:
-- Do not change port 3001 or Cloudflare/DNS/tunnel/systemd without explicit approval.
-- Do not expose DATABASE_URL, secrets, tokens, /var/lib, outputPath, internal render paths, or stack traces.
-- Do not use dangerouslySetInnerHTML for user-controlled content.
-- Do not add UI controls that run systemctl.
-- Do not run npm audit fix --force.
-- Do not upgrade Next.js or Prisma major versions without approval.
-
-Active goal: UI Phase 2 — Admin Panel Foundation.
-
-Validation:
-python3 -m json.tool package.json
-npm run prisma:generate
-npx prisma validate
-npm run typecheck
-npm run test
-npm run build
-npm run health
-
-ECC selected assets may be used as reference only from .agents/ecc-selected. Do not load all ECC.
+## Constraints
+- Never expose `DATABASE_URL` or run `systemctl`.
+- Ensure origin target is `http://127.0.0.1:3001`.
+- Default LAN: `192.168.1.0/24`.

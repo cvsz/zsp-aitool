@@ -1,4 +1,9 @@
 # dependencies
+update-agy-cli.sh
+zsp-agent-agy-bootstrap-safe.sh
+zsp-agent-claude-bootstrap-safe.sh
+zsp-agent-codex-bootstrap-safe.sh
+zsp-all-agent-bootstrap-safe.sh
 /node_modules
 
 # next.js
@@ -11,6 +16,7 @@
 .env.development.local
 .env.test.local
 .env.production.local
+scripts/git/gpg-loopback.sh
 
 # logs
 npm-debug.log*
@@ -79,3 +85,4 @@ logs/*.log
 # .zagents release readiness runtime reports
 .zagents/reports/RELEASE_READINESS-*.md
 .zagents/reports/RELEASE_READINESS.latest.md
+# Multi-Agent State and Telemetry

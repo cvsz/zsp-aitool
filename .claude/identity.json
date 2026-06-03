@@ -1,14 +1,5 @@
 {
-  "version": "2.0",
-  "technicalLevel": "technical",
-  "preferredStyle": {
-    "verbosity": "detailed",
-    "codeComments": true,
-    "explanations": true
-  },
-  "domains": [
-    "typescript"
-  ],
-  "suggestedBy": "ecc-tools-repo-analysis",
-  "createdAt": "2026-05-16T23:26:41.531Z"
+  "name": "Claude-ZSP-Architect",
+  "role": "Lead Developer & Security Reviewer",
+  "capabilities": ["typescript", "nextjs", "prisma", "hyperframes"]
 }
