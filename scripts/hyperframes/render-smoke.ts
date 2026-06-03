@@ -22,6 +22,7 @@ export async function runRenderSmoke(): Promise<SmokeResult> {
     return { ok: false, skipped: true };
   }
 
+  await mkdir(config.workDir, { recursive: true });
   const smokeProjectDir = await mkdtemp(path.join(config.workDir, "smoke-"));
   const smokeOutDir = path.join(config.outputDir, "smoke");
 
