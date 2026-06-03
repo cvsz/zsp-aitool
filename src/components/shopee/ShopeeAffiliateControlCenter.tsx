@@ -81,6 +81,16 @@ const socialChannelLabels: Record<SocialChannel, string> = {
 
 const defaultTiktokHashtags = ["#ShopeeFinds", "#Affiliate", "#รีวิวสินค้า", "#fyp"];
 
+const fbHashtagPool = [
+  "#ShopeeFinds", "#Affiliate", "#รีวิวสินค้า", "#ของดีบอกต่อ",
+  "#ShopeeThailand", "#AffiliateMarketing", "#ของถูกและดี", "#ป้ายยา",
+  "#ช้อปปิ้ง", "#สินค้าดีบอกต่อ", "#ของมันต้องมี", "#โปรโมชั่น",
+  "#ลดราคา", "#แม่ค้าออนไลน์", "#รายได้เสริม", "#ContentMonetization",
+  "#FacebookCreator", "#สินค้าขายดี", "#ขายดี", "#Shopping",
+];
+
+const defaultFbHashtags = ["#ShopeeFinds", "#Affiliate", "#รีวิวสินค้า", "#ของดีบอกต่อ"];
+
 const FACEBOOK_MAX_CHARS = 5000;
 
 const facebookModeLabels: Record<FacebookMode, string> = {
@@ -218,7 +228,16 @@ export function ShopeeAffiliateControlCenter() {
   const [fbItemId, setFbItemId] = useState<string | null>(null);
   const [fbMode, setFbMode] = useState<FacebookMode>("page");
   const [fbCaption, setFbCaption] = useState("");
+  const [fbHashtags, setFbHashtags] = useState<string[]>([...defaultFbHashtags]);
+  const [fbHashtagSearch, setFbHashtagSearch] = useState("");
+  const [fbCustomHashtag, setFbCustomHashtag] = useState("");
+  const [fbSchedule, setFbSchedule] = useState("");
+  const [fbAutoSave, setFbAutoSave] = useState(true);
+  const [fbVariations, setFbVariations] = useState<string[]>([]);
+  const [fbVariationMode, setFbVariationMode] = useState(false);
+  const [fbEnhancing, setFbEnhancing] = useState<string | null>(null);
   const fbTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const fbAutoSaveRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -266,6 +285,18 @@ export function ShopeeAffiliateControlCenter() {
   const fbCharPercent = Math.min(100, Math.round((fbCharCount / FACEBOOK_MAX_CHARS) * 100));
   const fbNearLimit = fbCharCount > FACEBOOK_MAX_CHARS * 0.85;
 
+  const filteredFbHashtagPool = useMemo(() => {
+    if (!fbHashtagSearch.trim()) return fbHashtagPool;
+    const q = fbHashtagSearch.toLowerCase().replace(/^#/, "");
+    return fbHashtagPool.filter((tag) => tag.toLowerCase().includes(q));
+  }, [fbHashtagSearch]);
+
+  const fbHasDisclosure = fbCaption.includes("ค่าคอมมิชชัน") || fbCaption.includes("Affiliate") || fbCaption.includes("affiliate");
+  const fbHashtagCount = (fbCaption.match(/#\w+/g) || []).length;
+  const fbCaptionOnlyLen = fbCaption.replace(/#\w+/g, "").trim().length;
+  const fbIsTooShort = fbCaptionOnlyLen > 0 && fbCaptionOnlyLen < 50;
+  const fbQualityScore = (fbHasDisclosure ? 40 : 0) + Math.min(fbHashtagCount * 5, 30) + (fbCaptionOnlyLen > 50 ? 20 : 0) + (fbCaptionOnlyLen > 0 ? 10 : 0);
+
   const refresh = useCallback(async () => {
     try {
       setLoading(true);
@@ -300,6 +331,21 @@ export function ShopeeAffiliateControlCenter() {
     }, 4000);
     return () => { if (tiktokAutoSaveRef.current) clearTimeout(tiktokAutoSaveRef.current); };
   }, [tiktokCaption, tiktokOpen, tiktokAutoSave]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!fbOpen || !fbTargetItem) return;
+    setFbCaption(buildFacebookPostDraft(fbTargetItem, fbMode));
+  }, [fbMode]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!fbOpen || !fbAutoSave || !fbTargetItem || !fbCaption.trim()) return;
+    if (fbAutoSaveRef.current) clearTimeout(fbAutoSaveRef.current);
+    fbAutoSaveRef.current = setTimeout(() => {
+      const firstLine = fbCaption.split("\n")[0];
+      setMessage(`💾 Auto-saved FB draft for ${fbTargetItem.title ?? "current"} (${firstLine.slice(0, 30)}...)`);
+    }, 4000);
+    return () => { if (fbAutoSaveRef.current) clearTimeout(fbAutoSaveRef.current); };
+  }, [fbCaption, fbOpen, fbAutoSave]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const hasFilteredItems = filteredItems.length > 0;
 
@@ -457,6 +503,14 @@ export function ShopeeAffiliateControlCenter() {
   function openFbComposer(itemId: string | null) {
     setFbItemId(itemId);
     setFbMode("page");
+    setFbHashtags([...defaultFbHashtags]);
+    setFbHashtagSearch("");
+    setFbCustomHashtag("");
+    setFbSchedule("");
+    setFbAutoSave(true);
+    setFbVariationMode(false);
+    setFbVariations([]);
+    setFbEnhancing(null);
     const item = itemId ? payload.items.find((it) => it.id === itemId) ?? null : null;
     setFbCaption(item ? buildFacebookPostDraft(item, "page") : "");
     setFbOpen(true);
@@ -467,6 +521,14 @@ export function ShopeeAffiliateControlCenter() {
     setFbItemId(null);
     setFbCaption("");
     setFbMode("page");
+    setFbHashtags([]);
+    setFbHashtagSearch("");
+    setFbCustomHashtag("");
+    setFbSchedule("");
+    setFbAutoSave(true);
+    setFbVariationMode(false);
+    setFbVariations([]);
+    setFbEnhancing(null);
   }
 
   function regenerateFbCaption() {
@@ -501,6 +563,88 @@ export function ShopeeAffiliateControlCenter() {
         });
       }
     }
+  }
+
+  function toggleFbHashtag(tag: string) {
+    setFbHashtags((prev) => {
+      if (prev.includes(tag)) return prev.filter((t) => t !== tag);
+      if (prev.length >= 8) return prev;
+      return [...prev, tag];
+    });
+  }
+
+  function insertFbHashtag(tag: string) {
+    if (!fbTextareaRef.current) return;
+    const ta = fbTextareaRef.current;
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const before = fbCaption.slice(0, start);
+    const after = fbCaption.slice(end);
+    const spacer = before.length > 0 && !before.endsWith(" ") && !before.endsWith("\n") ? " " : "";
+    const newText = `${before}${spacer}${tag} ${after}`;
+    setFbCaption(newText);
+    requestAnimationFrame(() => {
+      const pos = start + spacer.length + tag.length + 1;
+      ta.setSelectionRange(pos, pos);
+      ta.focus();
+    });
+  }
+
+  function addFbCustomHashtag() {
+    const tag = fbCustomHashtag.trim();
+    if (!tag) return;
+    const formatted = tag.startsWith("#") ? tag : `#${tag}`;
+    if (fbHashtags.includes(formatted)) {
+      setMessage(`⚠️ Hashtag ${formatted} มีอยู่แล้ว`);
+      setFbCustomHashtag("");
+      return;
+    }
+    setFbHashtags((prev) => prev.length >= 8 ? prev : [...prev, formatted]);
+    setFbCustomHashtag("");
+  }
+
+  function enhanceFbCaption(action: "expand" | "shorten" | "emojify") {
+    if (!fbCaption.trim()) return;
+    setFbEnhancing(action);
+    const labels: Record<string, string> = { expand: "ขยายความ", shorten: "ย่อข้อความ", emojify: "เพิ่มอีโมจิ" };
+    setTimeout(() => {
+      const lines = fbCaption.split("\n").filter(Boolean);
+      let enhanced = fbCaption;
+      if (action === "expand") {
+        const firstLine = lines[0] || "";
+        enhanced = `${firstLine}\n\n✨ สินค้าคุณภาพดี ราคาเหมาะสม คุ้มค่า\n👍 อย่าพลาด! สั่งเลยวันนี้\n\n${lines.slice(1).join("\n")}`;
+      } else if (action === "shorten") {
+        enhanced = lines.slice(0, 3).join("\n") + "\n\n" + lines[lines.length - 1];
+      } else if (action === "emojify") {
+        enhanced = fbCaption
+          .replace(/สินค้า/g, "🛍️ สินค้า")
+          .replace(/ราคา/g, "💰 ราคา")
+          .replace(/โปรโมชั่น/g, "🔥 โปรโมชั่น")
+          .replace(/Shopee/g, "🛒 Shopee")
+          .replace(/รายละเอียด/g, "📋 รายละเอียด")
+          .replace(/แนะนำ/g, "💡 แนะนำ")
+          .replace(/รีวิว/g, "📝 รีวิว")
+          .replace(/โพสต์/g, "📢 โพสต์");
+      }
+      setFbCaption(enhanced);
+      setFbEnhancing(null);
+      setMessage(`✅ ${labels[action]} เสร็จแล้ว — ตรวจสอบความถูกต้องก่อนโพสต์`);
+    }, 600);
+  }
+
+  function generateFbVariations() {
+    if (!fbTargetItem) return;
+    setFbVariationMode(true);
+    const modes: FacebookMode[] = ["page", "individual", "supporters"];
+    const vars = modes.map((m) => buildFacebookPostDraft(fbTargetItem, m));
+    setFbVariations(vars);
+    setMessage(`📱 สร้าง ${vars.length} รูปแบบ — เลือกแบบที่ชอบแล้วกด "ใช้แบบนี้"`);
+  }
+
+  function applyFbVariation(content: string) {
+    setFbCaption(content);
+    setFbVariationMode(false);
+    setFbVariations([]);
   }
 
   async function bulkGenerateFbDrafts() {
@@ -847,19 +991,43 @@ export function ShopeeAffiliateControlCenter() {
           targetItem={fbTargetItem}
           mode={fbMode}
           caption={fbCaption}
+          hashtags={fbHashtags}
           charCount={fbCharCount}
           charPercent={fbCharPercent}
           nearLimit={fbNearLimit}
           maxChars={FACEBOOK_MAX_CHARS}
           selectedCount={selected.size}
           textareaRef={fbTextareaRef as React.RefObject<HTMLTextAreaElement>}
+          variationMode={fbVariationMode}
+          variations={fbVariations}
+          enhancing={fbEnhancing}
+          hasDisclosure={fbHasDisclosure}
+          hashtagCount={fbHashtagCount}
+          captionOnlyLen={fbCaptionOnlyLen}
+          isTooShort={fbIsTooShort}
+          qualityScore={fbQualityScore}
+          hashtagSearch={fbHashtagSearch}
+          customHashtag={fbCustomHashtag}
+          schedule={fbSchedule}
+          autoSave={fbAutoSave}
+          filteredHashtagPool={filteredFbHashtagPool}
           onModeChange={setFbMode}
           onCaptionChange={setFbCaption}
           onRegenerate={regenerateFbCaption}
+          onToggleHashtag={toggleFbHashtag}
+          onInsertHashtag={insertFbHashtag}
           onSave={saveFbDraft}
           onCopy={copyFbDraft}
           onBulkGenerate={bulkGenerateFbDrafts}
           onClose={closeFbComposer}
+          onHashtagSearchChange={setFbHashtagSearch}
+          onCustomHashtagChange={setFbCustomHashtag}
+          onAddCustomHashtag={addFbCustomHashtag}
+          onScheduleChange={setFbSchedule}
+          onAutoSaveChange={setFbAutoSave}
+          onEnhance={enhanceFbCaption}
+          onGenerateVariations={generateFbVariations}
+          onApplyVariation={applyFbVariation}
         />
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">
@@ -1584,24 +1752,45 @@ function ListView({
 function FacebookQuickComposerCard({ selectedCount, onOpen }: { selectedCount: number; onOpen: () => void }) {
   return (
     <button onClick={onOpen}
-      className="group relative w-full overflow-hidden rounded-2xl border-2 border-blue-200 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 p-5 text-left shadow-lg transition-all hover:shadow-xl hover:brightness-110">
-      <div className="absolute right-4 top-3 text-4xl opacity-20">📱</div>
+      className="group relative w-full overflow-hidden rounded-2xl border-2 border-transparent bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 p-5 text-left shadow-lg transition-all duration-300 hover:shadow-[0_0_30px_-5px_rgba(59,130,246,0.3)] hover:brightness-110 hover:[border-image:linear-gradient(135deg,#3b82f6,#8b5cf6,#06b6d4)_1]">
+      <div className="pointer-events-none absolute -inset-1 rounded-2xl bg-gradient-to-r from-blue-500/0 via-purple-500/0 to-cyan-500/0 opacity-0 blur-xl transition-all duration-500 group-hover:from-blue-500/20 group-hover:via-purple-500/20 group-hover:to-cyan-500/20 group-hover:opacity-100" />
+      <div className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-[10px] font-semibold text-white/50">
+        <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+        {selectedCount > 0 ? `${selectedCount} selected` : "พร้อมใช้งาน"}
+      </div>
+      <div className="absolute -right-6 -top-6 text-6xl opacity-[0.08]">📱</div>
       <div className="relative z-10">
         <div className="flex items-center gap-2">
-          <span className="text-lg">📱</span>
-          <span className="text-xs font-semibold uppercase tracking-widest text-white/70">Facebook Post</span>
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 text-base">📱</span>
+          <div>
+            <span className="text-xs font-semibold uppercase tracking-widest text-white/70">Facebook Post</span>
+            <p className="text-[10px] text-white/30">Shopee Affiliate • Thai Captions</p>
+          </div>
         </div>
-        <p className="mt-2 text-xl font-bold text-white">สร้าง Facebook Post</p>
-        <p className="mt-1 text-sm text-white/60">
+        <p className="mt-3 text-xl font-bold text-white">
+          {selectedCount > 0 ? `สร้าง ${selectedCount} Facebook posts` : "สร้าง Facebook Post"}
+        </p>
+        <p className="mt-1 text-sm leading-5 text-white/60">
           {selectedCount > 0
-            ? `มี ${selectedCount} รายการที่เลือก — กดเพื่อสร้าง Facebook drafts แบบกลุ่ม`
+            ? `กดเพื่อสร้าง Facebook drafts แบบกลุ่ม ${selectedCount} รายการ`
             : "โพสต์ Facebook แบบไทย รองรับ Page, ส่วนตัว, ผู้สนับสนุน, Content Monetization"}
         </p>
-        <div className="mt-4 flex gap-2">
-          <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white/80">📄 เพจ</span>
-          <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white/80">👤 ส่วนตัว</span>
-          <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white/80">⭐ ผู้สนับสนุน</span>
-          <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white/80">💎 สร้างรายได้</span>
+        <div className="mt-4 flex flex-wrap gap-1.5">
+          <span className="rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-semibold text-white/70 ring-1 ring-white/10">📄 เพจ</span>
+          <span className="rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-semibold text-white/70 ring-1 ring-white/10">👤 ส่วนตัว</span>
+          <span className="rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-semibold text-white/70 ring-1 ring-white/10">⭐ ผู้สนับสนุน</span>
+          <span className="rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-semibold text-white/70 ring-1 ring-white/10">💎 สร้างรายได้</span>
+        </div>
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          <span className="rounded-full bg-purple-500/15 px-2 py-0.5 text-[10px] font-semibold text-purple-300 ring-1 ring-purple-500/20">🎲 3 รูปแบบ</span>
+          <span className="rounded-full bg-blue-500/15 px-2 py-0.5 text-[10px] font-semibold text-blue-300 ring-1 ring-blue-500/20">📖 ขยาย/ย่อ</span>
+          <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold text-amber-300 ring-1 ring-amber-500/20">😊 เพิ่มอีโมจิ</span>
+          <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-300 ring-1 ring-emerald-500/20">✅ ตรวจคุณภาพ</span>
+          <span className="rounded-full bg-cyan-500/15 px-2 py-0.5 text-[10px] font-semibold text-cyan-300 ring-1 ring-cyan-500/20">📅 กำหนดโพสต์</span>
+        </div>
+        <div className="mt-4 flex items-center gap-2 text-xs font-semibold text-white/40 group-hover:text-white/60">
+          <span>คลิกเพื่อเริ่ม →</span>
+          <svg className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
         </div>
       </div>
     </button>
@@ -1609,27 +1798,57 @@ function FacebookQuickComposerCard({ selectedCount, onOpen }: { selectedCount: n
 }
 
 function FacebookPostComposer({
-  targetItem, mode, caption, charCount, charPercent, nearLimit, maxChars,
-  selectedCount, textareaRef,
+  targetItem, mode, caption, hashtags, charCount, charPercent, nearLimit, maxChars,
+  selectedCount, textareaRef, variationMode, variations, enhancing, hasDisclosure, hashtagCount,
+  captionOnlyLen, isTooShort, qualityScore, hashtagSearch, customHashtag, schedule, autoSave,
+  filteredHashtagPool,
   onModeChange, onCaptionChange, onRegenerate,
+  onToggleHashtag, onInsertHashtag,
   onSave, onCopy, onBulkGenerate, onClose,
+  onHashtagSearchChange, onCustomHashtagChange, onAddCustomHashtag,
+  onScheduleChange, onAutoSaveChange,
+  onEnhance, onGenerateVariations, onApplyVariation,
 }: {
   targetItem: IngestionItem | null;
   mode: FacebookMode;
   caption: string;
+  hashtags: string[];
   charCount: number;
   charPercent: number;
   nearLimit: boolean;
   maxChars: number;
   selectedCount: number;
   textareaRef: React.RefObject<HTMLTextAreaElement>;
+  variationMode: boolean;
+  variations: string[];
+  enhancing: string | null;
+  hasDisclosure: boolean;
+  hashtagCount: number;
+  captionOnlyLen: number;
+  isTooShort: boolean;
+  qualityScore: number;
+  hashtagSearch: string;
+  customHashtag: string;
+  schedule: string;
+  autoSave: boolean;
+  filteredHashtagPool: string[];
   onModeChange: (m: FacebookMode) => void;
   onCaptionChange: (s: string) => void;
   onRegenerate: () => void;
+  onToggleHashtag: (tag: string) => void;
+  onInsertHashtag: (tag: string) => void;
   onSave: () => void;
   onCopy: () => void;
   onBulkGenerate: () => void;
   onClose: () => void;
+  onHashtagSearchChange: (v: string) => void;
+  onCustomHashtagChange: (v: string) => void;
+  onAddCustomHashtag: () => void;
+  onScheduleChange: (v: string) => void;
+  onAutoSaveChange: (v: boolean) => void;
+  onEnhance: (action: "expand" | "shorten" | "emojify") => void;
+  onGenerateVariations: () => void;
+  onApplyVariation: (content: string) => void;
 }) {
   const barColor = nearLimit ? "bg-red-500" : charPercent > 70 ? "bg-amber-500" : "bg-blue-500";
   const barColorBg = nearLimit ? "bg-red-100" : "bg-blue-100";
@@ -1651,78 +1870,213 @@ function FacebookPostComposer({
             {targetItem?.price ? <p className="text-sm font-semibold text-emerald-400">฿{targetItem.price.toLocaleString("th-TH")}</p> : null}
           </div>
         </div>
-        <button onClick={onClose} className="rounded-lg bg-white/10 px-3 py-1.5 text-xs font-semibold text-white/70 hover:bg-white/20">ปิด</button>
-      </div>
-
-      <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_280px]">
-        <div className="space-y-3">
-          <div className="flex flex-wrap gap-2">
-            {(Object.entries(facebookModeLabels) as [FacebookMode, string][]).map(([key, label]) => (
-              <button key={key} onClick={() => { onModeChange(key); }}
-                className={`rounded-xl border px-3.5 py-2 text-xs font-semibold transition-all ${
-                  mode === key
-                    ? "border-white/30 bg-white/20 text-white shadow-md"
-                    : "border-white/10 bg-white/5 text-white/60 hover:border-white/20 hover:text-white/80"
-                }`}>
-                {facebookModeEmojis[key]} {label}
-              </button>
-            ))}
-            <button onClick={onRegenerate} className="rounded-xl border border-white/10 bg-white/5 px-3.5 py-2 text-xs font-semibold text-white/60 hover:border-white/20 hover:text-white/80">
-              🔄 สร้างใหม่
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 rounded-lg bg-white/5 px-2.5 py-1 text-[10px] text-white/50">
+            <span>Auto-save</span>
+            <button onClick={() => onAutoSaveChange(!autoSave)}
+              className={`font-semibold ${autoSave ? "text-emerald-400" : "text-white/30"}`}>
+              {autoSave ? "ON" : "OFF"}
             </button>
           </div>
+          <button onClick={onClose} className="rounded-lg bg-white/10 px-3 py-1.5 text-xs font-semibold text-white/70 hover:bg-white/20">ปิด</button>
+        </div>
+      </div>
 
-          <div className="rounded-xl border border-white/10 bg-black/30 p-3">
-            <p className="text-xs font-semibold text-white/50">โหมด: {facebookModeEmojis[mode]} {facebookModeLabels[mode]}</p>
-            <p className="mt-0.5 text-[10px] text-white/30">{facebookModeDescriptions[mode]}</p>
+      {variationMode && variations.length > 0 ? (
+        <div className="mt-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-bold text-white">📱 เลือกรูปแบบที่ชอบ</p>
+            <button onClick={() => onApplyVariation(caption)} className="text-xs text-white/50 hover:text-white/70">ยกเลิก</button>
           </div>
+          <div className="grid gap-3 md:grid-cols-3">
+            {variations.map((content, idx) => {
+              const varModes: FacebookMode[] = ["page", "individual", "supporters"];
+              const varMode = varModes[idx] ?? "page";
+              return (
+                <button key={idx} onClick={() => onApplyVariation(content)}
+                  className="group relative rounded-xl border border-white/10 bg-black/40 p-3 text-left transition-all hover:border-white/30 hover:bg-black/60">
+                  <span className="mb-2 inline-block rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-white/70">
+                    {facebookModeEmojis[varMode]} {facebookModeLabels[varMode]}
+                  </span>
+                  <p className="line-clamp-6 text-[11px] leading-5 text-white/60 group-hover:text-white/80">{content}</p>
+                  <span className="mt-2 block text-[10px] font-semibold text-emerald-400 opacity-0 group-hover:opacity-100">ใช้แบบนี้ →</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_280px]">
+          <div className="space-y-3">
+            <div className="flex flex-wrap gap-2">
+              {(Object.entries(facebookModeLabels) as [FacebookMode, string][]).map(([key, label]) => (
+                <button key={key} onClick={() => { onModeChange(key); }}
+                  className={`rounded-xl border px-3.5 py-2 text-xs font-semibold transition-all ${
+                    mode === key
+                      ? "border-white/30 bg-white/20 text-white shadow-md"
+                      : "border-white/10 bg-white/5 text-white/60 hover:border-white/20 hover:text-white/80"
+                  }`}>
+                  {facebookModeEmojis[key]} {label}
+                </button>
+              ))}
+              <button onClick={onRegenerate} disabled={enhancing !== null}
+                className="rounded-xl border border-white/10 bg-white/5 px-3.5 py-2 text-xs font-semibold text-white/60 hover:border-white/20 hover:text-white/80 disabled:opacity-40">
+                🔄 สร้างใหม่
+              </button>
+              <button onClick={onGenerateVariations}
+                className="rounded-xl border border-purple-400/30 bg-purple-500/10 px-3.5 py-2 text-xs font-semibold text-purple-400 hover:bg-purple-500/20">
+                🎲 3 รูปแบบ
+              </button>
+            </div>
 
-          <div className="relative">
-            <textarea ref={textareaRef}
-              className="min-h-48 w-full rounded-xl border border-white/10 bg-black/40 p-4 font-sans text-sm leading-6 text-white placeholder-white/30 outline-none focus:border-white/30"
-              placeholder="เขียน Facebook post ของคุณ..."
-              value={caption}
-              onChange={(e) => onCaptionChange(e.target.value)}
-            />
-            <div className="mt-2 flex items-center justify-between text-xs">
-              <div className="flex items-center gap-2">
-                <div className={`h-2 w-28 rounded-full ${barColorBg}`}>
-                  <div className={`h-2 rounded-full transition-all ${barColor}`} style={{ width: `${charPercent}%` }} />
+            <div className="rounded-xl border border-white/10 bg-black/30 p-3">
+              <p className="text-xs font-semibold text-white/50">โหมด: {facebookModeEmojis[mode]} {facebookModeLabels[mode]}</p>
+              <p className="mt-0.5 text-[10px] text-white/30">{facebookModeDescriptions[mode]}</p>
+            </div>
+
+            <div className="flex flex-wrap gap-1.5">
+              {(["expand", "shorten", "emojify"] as const).map((action) => {
+                const labels: Record<string, string> = { expand: "📖 ขยายความ", shorten: "✂️ ย่อ", emojify: "😊 เพิ่มอีโมจิ" };
+                const loading = enhancing === action;
+                return (
+                  <button key={action} onClick={() => onEnhance(action)} disabled={loading || !caption.trim()}
+                    className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-semibold text-white/50 hover:border-white/20 hover:text-white/70 disabled:opacity-30">
+                    {loading ? "⏳..." : labels[action]}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="relative">
+              <textarea ref={textareaRef}
+                className="min-h-48 w-full rounded-xl border border-white/10 bg-black/40 p-4 font-sans text-sm leading-6 text-white placeholder-white/30 outline-none focus:border-white/30"
+                placeholder="เขียน Facebook post ของคุณ..."
+                value={caption}
+                onChange={(e) => onCaptionChange(e.target.value)}
+              />
+              <div className="mt-2 flex items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2">
+                  <div className={`h-2 w-24 rounded-full ${barColorBg}`}>
+                    <div className={`h-2 rounded-full transition-all ${barColor}`} style={{ width: `${charPercent}%` }} />
+                  </div>
+                  <div className="flex gap-3 text-[10px] text-white/40">
+                    <span>📝 {captionOnlyLen}</span>
+                    <span>#️⃣ {hashtagCount}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                    qualityScore >= 80 ? "bg-emerald-500/20 text-emerald-400" :
+                    qualityScore >= 50 ? "bg-amber-500/20 text-amber-400" :
+                    "bg-red-500/20 text-red-400"
+                  }`}>
+                    {qualityScore >= 80 ? "✅" : qualityScore >= 50 ? "⚠️" : "❌"} Quality {qualityScore}/100
+                  </div>
+                  <span className={`font-semibold tabular-nums ${nearLimit ? "text-red-400" : "text-white/50"}`}>
+                    {charCount.toLocaleString()}/{maxChars.toLocaleString()}
+                  </span>
                 </div>
               </div>
-              <span className={`font-semibold tabular-nums ${nearLimit ? "text-red-400" : "text-white/50"}`}>
-                {charCount.toLocaleString()}/{maxChars.toLocaleString()}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-white/50">Preview</p>
-            <div className="mt-1.5 max-h-60 overflow-y-auto whitespace-pre-wrap rounded-xl border border-white/10 bg-black/60 p-3 text-xs leading-5 text-white/80">
-              {caption || "— ยังไม่มี caption —"}
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            <button onClick={onSave} disabled={!targetItem || !caption.trim()}
-              className="rounded-xl bg-white px-4 py-2 text-xs font-bold text-black disabled:opacity-40 hover:bg-white/90">
-              💾 Save Draft
-            </button>
-            <button onClick={onCopy} disabled={!caption.trim()}
-              className="rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold text-white disabled:opacity-40 hover:bg-white/20">
-              📋 Copy
-            </button>
-            {selectedCount > 0 ? (
-              <button onClick={onBulkGenerate}
-                className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-2 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/20">
-                📱 สร้าง {selectedCount} drafts
+          <div className="space-y-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-white/50">แนะนำ Hashtag</p>
+              <p className="mt-0.5 text-[10px] text-white/30">คลิกเพื่อเปิด/ปิด — คลิกขวาเพื่อแทรก</p>
+              <input
+                className="mt-2 w-full rounded-lg border border-white/10 bg-black/30 px-2.5 py-1.5 text-[10px] text-white placeholder-white/20 outline-none focus:border-white/20"
+                placeholder="ค้นหา hashtag..."
+                value={hashtagSearch}
+                onChange={(e) => onHashtagSearchChange(e.target.value)}
+              />
+              <div className="mt-2 flex max-h-28 flex-wrap gap-1.5 overflow-y-auto">
+                {filteredHashtagPool.map((tag) => {
+                  const active = hashtags.includes(tag);
+                  return (
+                    <button key={tag} onClick={() => onToggleHashtag(tag)}
+                      onContextMenu={(e) => { e.preventDefault(); onInsertHashtag(tag); }}
+                      className={`rounded-lg border px-2 py-1 text-[10px] font-semibold transition-all ${
+                        active
+                          ? "border-white/30 bg-white/20 text-white"
+                          : "border-white/10 bg-white/5 text-white/40 hover:border-white/20 hover:text-white/70"
+                      }`}
+                      title="คลิกขวาเพื่อแทรกที่ตำแหน่งเคอร์เซอร์">
+                      {tag}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="mt-2 flex gap-1.5">
+                <input
+                  className="min-w-0 flex-1 rounded-lg border border-white/10 bg-black/30 px-2.5 py-1.5 text-[10px] text-white placeholder-white/20 outline-none focus:border-white/20"
+                  placeholder="เพิ่ม hashtag เอง..."
+                  value={customHashtag}
+                  onChange={(e) => onCustomHashtagChange(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); onAddCustomHashtag(); } }}
+                />
+                <button onClick={onAddCustomHashtag} disabled={!customHashtag.trim()}
+                  className="rounded-lg border border-white/10 bg-white/10 px-2 text-[10px] font-semibold text-white/60 hover:bg-white/20 disabled:opacity-30">
+                  +
+                </button>
+              </div>
+              <p className="mt-1.5 text-[10px] text-white/20">เลือกสูงสุด 8 hashtag • กด Enter เพื่อเพิ่ม</p>
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-white/50">คุณภาพ</p>
+              <div className="mt-1.5 space-y-1">
+                <div className="flex items-center gap-2 text-[10px]">
+                  <span className={hasDisclosure ? "text-emerald-400" : "text-red-400"}>
+                    {hasDisclosure ? "✅" : "❌"}
+                  </span>
+                  <span className={hasDisclosure ? "text-white/60" : "text-red-300"}>Disclosure</span>
+                </div>
+                <div className="flex items-center gap-2 text-[10px]">
+                  <span className={hashtagCount >= 3 ? "text-emerald-400" : "text-amber-400"}>
+                    {hashtagCount >= 3 ? "✅" : "⚠️"}
+                  </span>
+                  <span className="text-white/60">{hashtagCount} hashtags (แนะนำ 3-8)</span>
+                </div>
+                <div className="flex items-center gap-2 text-[10px]">
+                  <span className={isTooShort && caption.length > 0 ? "text-amber-400" : "text-emerald-400"}>
+                    {isTooShort ? "⚠️" : "✅"}
+                  </span>
+                  <span className="text-white/60">{isTooShort ? "เนื้อหาสั้นเกินไป (แนะนำ 50+ ตัวอักษร)" : "ความยาวเหมาะสม"}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-semibold text-white/40">📅 กำหนดโพสต์</span>
+                <input type="datetime-local"
+                  className="min-w-0 flex-1 rounded-lg border border-white/10 bg-black/30 px-2 py-1 text-[10px] text-white/70 outline-none focus:border-white/20"
+                  value={schedule}
+                  onChange={(e) => onScheduleChange(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <button onClick={onSave} disabled={!targetItem || !caption.trim()}
+                className="rounded-xl bg-white px-4 py-2 text-xs font-bold text-black disabled:opacity-40 hover:bg-white/90">
+                💾 Save Draft
               </button>
-            ) : null}
+              <button onClick={onCopy} disabled={!caption.trim()}
+                className="rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold text-white disabled:opacity-40 hover:bg-white/20">
+                📋 Copy
+              </button>
+              {selectedCount > 0 ? (
+                <button onClick={onBulkGenerate}
+                  className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-2 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/20">
+                  📱 สร้าง {selectedCount} drafts
+                </button>
+              ) : null}
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </section>
   );
 }
