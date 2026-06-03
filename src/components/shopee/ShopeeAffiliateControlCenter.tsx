@@ -968,30 +968,45 @@ export function ShopeeAffiliateControlCenter() {
 function TikTokQuickComposerCard({ selectedCount, onOpen }: { selectedCount: number; onOpen: () => void }) {
   return (
     <button onClick={onOpen}
-      className="group relative w-full overflow-hidden rounded-2xl border-2 border-black/10 bg-gradient-to-br from-black via-zinc-900 to-zinc-800 p-5 text-left shadow-lg transition-all hover:shadow-xl hover:brightness-110">
-      <div className="absolute right-4 top-3 text-4xl opacity-20">🎬</div>
+      className="group relative w-full overflow-hidden rounded-2xl border-2 border-transparent bg-gradient-to-br from-black via-zinc-900 to-zinc-800 p-5 text-left shadow-lg transition-all duration-300 hover:shadow-[0_0_30px_-5px_rgba(236,72,153,0.3)] hover:brightness-110 hover:[border-image:linear-gradient(135deg,#ec4899,#8b5cf6, #06b6d4)_1]">
+      <div className="pointer-events-none absolute -inset-1 rounded-2xl bg-gradient-to-r from-pink-500/0 via-purple-500/0 to-cyan-500/0 opacity-0 blur-xl transition-all duration-500 group-hover:from-pink-500/20 group-hover:via-purple-500/20 group-hover:to-cyan-500/20 group-hover:opacity-100" />
+      <div className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-[10px] font-semibold text-white/50">
+        <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+        {selectedCount > 0 ? `${selectedCount} selected` : "พร้อมใช้งาน"}
+      </div>
+      <div className="absolute -right-6 -top-6 text-6xl opacity-[0.08]">🎬</div>
       <div className="relative z-10">
         <div className="flex items-center gap-2">
-          <span className="text-lg">🎬</span>
-          <span className="text-xs font-semibold uppercase tracking-widest text-white/70">TikTok Post</span>
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 text-base">🎬</span>
+          <div>
+            <span className="text-xs font-semibold uppercase tracking-widest text-white/70">TikTok Post</span>
+            <p className="text-[10px] text-white/30">Shopee Affiliate • Thai Captions</p>
+          </div>
         </div>
-        <p className="mt-2 text-xl font-bold text-white">สร้าง TikTok Post</p>
-        <p className="mt-1 text-sm text-white/60">
-          {selectedCount > 0
-            ? `มี ${selectedCount} รายการที่เลือก — กดเพื่อสร้าง TikTok drafts แบบกลุ่ม`
-            : "เขียน TikTok caption แบบไทย พร้อม hashtag เสนอแนะ และตัวนับอักขระ"}
+        <p className="mt-3 text-xl font-bold text-white">
+          {selectedCount > 0 ? `สร้าง ${selectedCount} TikTok posts` : "สร้าง TikTok Post"}
         </p>
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          <span className="rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-semibold text-white/70">📝 รีวิว</span>
-          <span className="rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-semibold text-white/70">🔥 ป้ายยา</span>
-          <span className="rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-semibold text-white/70">💰 โปรโมชั่น</span>
-          <span className="rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-semibold text-white/70">⚡ สั้น</span>
+        <p className="mt-1 text-sm leading-5 text-white/60">
+          {selectedCount > 0
+            ? `กดเพื่อสร้าง TikTok drafts แบบกลุ่ม ${selectedCount} รายการ`
+            : "เขียน TikTok caption แบบไทย พร้อม hashtag เสนอแนะ ตัวนับอักขระ และตรวจสอบคุณภาพอัตโนมัติ"}
+        </p>
+        <div className="mt-4 flex flex-wrap gap-1.5">
+          <span className="rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-semibold text-white/70 ring-1 ring-white/10">📝 รีวิว</span>
+          <span className="rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-semibold text-white/70 ring-1 ring-white/10">🔥 ป้ายยา</span>
+          <span className="rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-semibold text-white/70 ring-1 ring-white/10">💰 โปรโมชั่น</span>
+          <span className="rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-semibold text-white/70 ring-1 ring-white/10">⚡ สั้น</span>
         </div>
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          <span className="rounded-full bg-purple-500/20 px-2 py-0.5 text-[10px] font-semibold text-purple-300">🎲 3 รูปแบบ</span>
-          <span className="rounded-full bg-blue-500/20 px-2 py-0.5 text-[10px] font-semibold text-blue-300">📖 ขยาย/ย่อ</span>
-          <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-semibold text-amber-300">📅 กำหนดโพสต์</span>
-          <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">✅ ตรวจคุณภาพ</span>
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          <span className="rounded-full bg-purple-500/15 px-2 py-0.5 text-[10px] font-semibold text-purple-300 ring-1 ring-purple-500/20">🎲 3 รูปแบบ</span>
+          <span className="rounded-full bg-blue-500/15 px-2 py-0.5 text-[10px] font-semibold text-blue-300 ring-1 ring-blue-500/20">📖 ขยาย/ย่อ</span>
+          <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold text-amber-300 ring-1 ring-amber-500/20">😊 เพิ่มอีโมจิ</span>
+          <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-300 ring-1 ring-emerald-500/20">✅ ตรวจคุณภาพ</span>
+          <span className="rounded-full bg-cyan-500/15 px-2 py-0.5 text-[10px] font-semibold text-cyan-300 ring-1 ring-cyan-500/20">📅 กำหนดโพสต์</span>
+        </div>
+        <div className="mt-4 flex items-center gap-2 text-xs font-semibold text-white/40 group-hover:text-white/60">
+          <span>คลิกเพื่อเริ่ม →</span>
+          <svg className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
         </div>
       </div>
     </button>
