@@ -17,7 +17,7 @@ export class ShopeeOpenApiService {
       if (config.eligibility === "blocked") return { ok: true, code: "MANAGED_SELLER_BLOCKED", data: safeStatus };
 
       try {
-        buildShopeeSignature({ path: "/placeholder", timestamp: Math.floor(Date.now() / 1000) });
+        buildShopeeSignature({ path: "/api/v2/auth/token/get", timestamp: Math.floor(Date.now() / 1000) });
       } catch (error) {
         if (error instanceof ShopeeSignatureUnsupportedError) {
           return { ok: true, code: "FOUNDATION_ONLY", data: safeStatus };

@@ -3,23 +3,27 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: light;
+  color-scheme: dark;
 }
 
 body {
-  @apply bg-slate-50 text-slate-900;
+  @apply bg-cyber-bg text-slate-100 font-sans selection:bg-cyber-violet selection:text-white;
 }
 
-html.dark body {
-  @apply bg-slate-950 text-slate-100;
+.glass-panel {
+  @apply bg-glass-gradient backdrop-blur-md border border-white/10 rounded-2xl shadow-2xl;
 }
 
+.cyber-card {
+  @apply bg-cyber-surface border border-cyber-cyan/30 rounded-xl hover:border-cyber-cyan/80 transition-colors shadow-[0_0_15px_rgba(0,240,255,0.1)] hover:shadow-[0_0_20px_rgba(0,240,255,0.2)];
+}
 
-:root[data-bg-theme="default"] body { @apply bg-slate-50 dark:bg-slate-950; }
-:root[data-bg-theme="slate"] body { @apply bg-slate-100 dark:bg-slate-900; }
-:root[data-bg-theme="indigo"] body { @apply bg-indigo-50 dark:bg-indigo-950; }
-:root[data-bg-theme="emerald"] body { @apply bg-emerald-50 dark:bg-emerald-950; }
-:root[data-bg-theme="amber"] body { @apply bg-amber-50 dark:bg-amber-950; }
-:root[data-bg-theme="rose"] body { @apply bg-rose-50 dark:bg-rose-950; }
-:root[data-bg-theme="zinc"] body { @apply bg-zinc-100 dark:bg-zinc-900; }
-:root[data-bg-theme="neutral"] body { @apply bg-neutral-100 dark:bg-neutral-900; }
+.cyber-button-primary {
+  @apply bg-cyber-cyan text-cyber-bg font-bold py-2 px-4 rounded-lg hover:bg-white hover:shadow-[0_0_15px_rgba(0,240,255,0.8)] transition-all;
+}
+
+.cyber-button-secondary {
+  @apply bg-cyber-surface2 text-cyber-cyan border border-cyber-cyan/50 font-bold py-2 px-4 rounded-lg hover:bg-cyber-cyan/10 transition-all;
+}
+
+/* Remove old light theme variables to force dark mode universally across the app during this migration */

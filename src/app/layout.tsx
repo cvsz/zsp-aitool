@@ -12,27 +12,27 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: {
-    template: "%s | ZSP AI Studio",
-    default: "ZSP AI Studio - Thai-first Shopee Affiliate Content Workspace",
+    template: "%s | Zeaz Platform",
+    default: "zDash | Zeaz Platform Operations Center",
   },
   description:
-    "แพลตฟอร์ม AI ผู้ช่วยอัจฉริยะสำหรับนักทำ Affiliate ชาวไทย จัดการคลังสินค้า สร้างแคปชั่นอัตโนมัติ รองรับ Facebook, TikTok, X, Threads และ Instagram",
-  keywords: ["Shopee Affiliate", "AI Content", "Social Media", "Thai Affiliate", "Content Generator", "ZSP AI"],
-  authors: [{ name: "Zeaz Dev", url: "https://studio.zeaz.dev" }],
+    "Zeaz Platform - The ultimate Cloudflare operator and AI operations platform. Featuring zDash, Risk Guardian, and AI command center.",
+  keywords: ["Zeaz Platform", "zDash", "Cloudflare Operator", "AI Operations", "Terraform", "Risk Guardian"],
+  authors: [{ name: "Zeaz Dev", url: "https://zeaz.dev" }],
   creator: "Zeaz Dev",
   openGraph: {
     type: "website",
-    locale: "th_TH",
-    url: "https://studio.zeaz.dev",
-    title: "ZSP AI Studio - Thai-first Shopee Affiliate Content Workspace",
+    locale: "en_US",
+    url: "https://zeaz.dev",
+    title: "zDash | Zeaz Platform Operations Center",
     description:
-      "แพลตฟอร์ม AI ผู้ช่วยอัจฉริยะสำหรับนักทำ Affiliate ชาวไทย จัดการคลังสินค้า สร้างแคปชั่นอัตโนมัติด้วย AI",
-    siteName: "ZSP AI Studio",
+      "Zeaz Platform - The ultimate Cloudflare operator and AI operations platform.",
+    siteName: "Zeaz Platform",
   },
   twitter: {
     card: "summary_large_image",
-    title: "ZSP AI Studio - Thai-first Shopee Affiliate Content Workspace",
-    description: "แพลตฟอร์ม AI ผู้ช่วยอัจฉริยะสำหรับนักทำ Affiliate ชาวไทย",
+    title: "zDash | Zeaz Platform Operations Center",
+    description: "The ultimate Cloudflare operator and AI operations platform.",
     creator: "@zeazdev",
   },
   robots: {
