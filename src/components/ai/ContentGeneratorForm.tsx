@@ -6,6 +6,9 @@ import { PlatformSelector } from "./PlatformSelector";
 import { ToneSelector } from "./ToneSelector";
 import { GeneratedContentCard } from "./GeneratedContentCard";
 
+type OutputItem = { title: string; body: string; language: string; version: number };
+type ResultEntry = { platform: string; outputs: OutputItem[] };
+
 export function ContentGeneratorForm() {
   const [products, setProducts] = useState<{ id: string; title: string; description?: string | null }[]>([]);
   const [productId, setProductId] = useState("");
@@ -14,7 +17,7 @@ export function ContentGeneratorForm() {
   const [language, setLanguage] = useState("th");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [results, setResults] = useState<any[]>([]);
+  const [results, setResults] = useState<ResultEntry[]>([]);
   const [versions, setVersions] = useState(1);
 
   useEffect(() => { fetch("/api/products").then((r) => r.json()).then((d) => { const list = d?.data ?? []; setProducts(list); if (list[0]) setProductId(list[0].id); }); }, []);
@@ -36,6 +39,6 @@ export function ContentGeneratorForm() {
     <button className="rounded bg-slate-900 px-3 py-2 text-white" onClick={submit} disabled={loading}>{loading ? "กำลังสร้างคอนเทนต์..." : "สร้างคอนเทนต์"}</button>
     {error && <div className="text-sm text-red-600">{error}</div>}
     {!loading && results.length === 0 && <div className="text-sm text-slate-500">ยังไม่มีผลลัพธ์คอนเทนต์</div>}
-    <div className="space-y-3">{results.map((r, idx) => <div key={idx} className="space-y-2"><div className="font-bold">{r.platform}</div><p className="text-xs text-slate-500">Preview ก่อนบันทึก/คัดลอก/ส่งออก: ตรวจสอบว่าไม่มีคำอวดอ้างเกินจริง, ไม่มีรีวิวปลอม และมี disclosure ครบ</p>{(r.outputs ?? []).map((o: any) => <GeneratedContentCard key={o.version} item={o} />)}</div>)}</div>
+    <div className="space-y-3">{results.map((r, idx) => <div key={idx} className="space-y-2"><div className="font-bold">{r.platform}</div><p className="text-xs text-slate-500">Preview ก่อนบันทึก/คัดลอก/ส่งออก: ตรวจสอบว่าไม่มีคำอวดอ้างเกินจริง, ไม่มีรีวิวปลอม และมี disclosure ครบ</p>{(r.outputs ?? []).map((o: OutputItem) => <GeneratedContentCard key={String(o.version)} item={o} />)}</div>)}</div>
   </div>;
 }

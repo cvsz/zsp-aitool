@@ -27,27 +27,45 @@ const WEIGHTS = {
   price: 0.2
 } as const;
 
-export class SimilarProductService {
-  private productDelegate = (prisma as any).product;
-  private similarDelegate = (prisma as any).similarProduct;
+function toProductRecord(p: { id: string; userId: string; title: string; category: string | null; description: string | null; price: { toNumber: () => number }; currency: string }): ProductRecord {
+  return {
+    id: p.id,
+    userId: p.userId,
+    title: p.title,
+    category: p.category,
+    description: p.description,
+    price: p.price.toNumber(),
+    currency: p.currency,
+  };
+}
 
+export class SimilarProductService {
   async getRecommendations(productId: string, userId: string, forceRefresh = false): Promise<SimilarProductRecommendation[]> {
-    const source = (await this.productDelegate.findFirst({ where: { id: productId, userId, deletedAt: null } })) as ProductRecord | null;
-    if (!source) return [];
+    const sourceRaw = await prisma.product.findFirst({ where: { id: productId, userId, deletedAt: null } });
+    if (!sourceRaw) return [];
+    const source = toProductRecord(sourceRaw);
 
     if (!forceRefresh) {
-      const cached = await this.similarDelegate.findMany({
-        where: { sourceProductId: productId, userId },
+      const cached = await prisma.similarProduct.findMany({
+        where: { sourceProductId: productId, sourceProduct: { userId } },
         orderBy: { score: "desc" },
         take: 12
       });
-      if (cached.length > 0) return cached;
+      if (cached.length > 0) {
+        return cached.map((c) => ({
+          sourceProductId: c.sourceProductId,
+          relatedProductId: c.relatedProductId,
+          score: c.score,
+          reasons: c.reason ? c.reason.split(" | ") : [],
+        }));
+      }
     }
 
-    const candidates = (await this.productDelegate.findMany({
+    const candidatesRaw = await prisma.product.findMany({
       where: { userId, deletedAt: null, id: { not: productId } },
       take: 100
-    })) as ProductRecord[];
+    });
+    const candidates = candidatesRaw.map(toProductRecord);
 
     if (candidates.length < 1) return [];
 
@@ -57,16 +75,15 @@ export class SimilarProductService {
       .sort((a, b) => b.score - a.score)
       .slice(0, 12);
 
-    await this.similarDelegate.deleteMany({ where: { sourceProductId: productId, userId } });
+    await prisma.similarProduct.deleteMany({ where: { sourceProductId: productId, sourceProduct: { userId } } });
 
     if (recommendations.length > 0) {
-      await this.similarDelegate.createMany({
+      await prisma.similarProduct.createMany({
         data: recommendations.map((item) => ({
           sourceProductId: item.sourceProductId,
           relatedProductId: item.relatedProductId,
           score: item.score,
           reason: item.reasons.join(" | "),
-          userId
         }))
       });
     }

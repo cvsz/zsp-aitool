@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import type { OCRResult } from "@/components/ocr/OCRResultReview";
 import { OCRResultReview } from "@/components/ocr/OCRResultReview";
 import { OCRUploadBox } from "@/components/ocr/OCRUploadBox";
 
 export default function OCRDashboardPage() {
   const [jobId, setJobId] = useState<string | null>(null);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<OCRResult | null>(null);
 
   return (
     <main className="mx-auto max-w-3xl space-y-4 p-6">
@@ -14,7 +15,7 @@ export default function OCRDashboardPage() {
       <OCRUploadBox
         onExtracted={(payload) => {
           setJobId(payload.jobId);
-          setResult(payload.result);
+          setResult(payload.result as OCRResult | null);
         }}
       />
       {jobId ? <p className="text-xs text-gray-500">OCR Job ID: {jobId}</p> : null}

@@ -6,6 +6,7 @@ export interface ApiErrorPayload {
 
 export interface ApiSuccess<T> {
   ok: true;
+  success: true;
   data: T;
   meta?: Record<string, unknown>;
 }

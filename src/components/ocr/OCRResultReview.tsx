@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 
-type OCRResult = {
+export type OCRResult = {
   confidence?: number;
   rawText?: string;
   fields?: {
