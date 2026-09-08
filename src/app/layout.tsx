@@ -51,6 +51,13 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="th" suppressHydrationWarning>
+      <head>
+        <script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4971034675329740"
+          crossOrigin="anonymous"
+        />
+      </head>
       <body className="antialiased text-slate-900 bg-slate-50 min-h-screen">
         <ThemeProvider>{children}</ThemeProvider>
       </body>
