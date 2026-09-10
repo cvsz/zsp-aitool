@@ -1,10 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-
 import { TemplateCard } from "@/components/templates/TemplateCard";
 import { TemplateEditorModal } from "@/components/templates/TemplateEditorModal";
 import type { PromptTemplate } from "@/schemas/template.schema";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Button } from "@/components/ui/Button";
+import { Card, CardContent } from "@/components/ui/Card";
 
 type ApiResponse<T> = { ok: boolean; data: T };
 type BrandKit = { brandColors: string[]; fontPreference: string | null; logoUrl: string | null; watermarkText: string | null; defaultCTA: string | null; defaultAspectRatio: "9:16" | "1:1" | "16:9" | null };
@@ -50,109 +52,115 @@ export default function TemplatesPage() {
   );
 
   return (
-    <main className="mx-auto max-w-6xl space-y-6 p-6">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Template Studio</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            จัดการและสร้างเทมเพลตสำหรับคอนเทนต์ Affiliate
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            className="rounded-xl border border-slate-200 px-3.5 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
-            onClick={() => setShowBrandKit((v) => !v)}
-          >
-            Brand Kit
-          </button>
-          <button
-            type="button"
-            className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-800"
-            onClick={() => setEditing({} as PromptTemplate)}
-          >
-            + เทมเพลตใหม่
-          </button>
-          <button
-            type="button"
-            className="rounded-xl border border-slate-200 px-3.5 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
-            onClick={async () => { await fetch("/api/templates/restore-defaults", { method: "POST" }); await loadTemplates(); }}
-          >
-            คืนค่าเริ่มต้น
-          </button>
-        </div>
-      </header>
+    <div className="space-y-6">
+      <PageHeader
+        title="Prompt Template Studio"
+        subtitle="จัดการและสร้างเทมเพลตคำสั่ง AI สำหรับคอนเทนต์รีวิวสินค้าและสคริปต์วิดีโอ"
+        actions={
+          <div className="flex gap-2">
+            <Button
+              variant="secondary"
+              size="md"
+              onClick={() => setShowBrandKit((v) => !v)}
+            >
+              🎨 Brand Kit
+            </Button>
+            <Button
+              variant="primary"
+              size="md"
+              onClick={() => setEditing({} as PromptTemplate)}
+            >
+              ➕ เทมเพลตใหม่
+            </Button>
+            <Button
+              variant="secondary"
+              size="md"
+              onClick={async () => {
+                await fetch("/api/templates/restore-defaults", { method: "POST" });
+                await loadTemplates();
+              }}
+            >
+              🔄 คืนค่าเริ่มต้น
+            </Button>
+          </div>
+        }
+      />
 
       {showBrandKit && (
-        <section className="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-semibold text-emerald-900">Brand Kit Defaults</h3>
-              <p className="mt-0.5 text-xs text-emerald-700">ตั้งค่าให้เทมเพลตสอดคล้องแบรนด์</p>
+        <Card tone="success">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h3 className="text-sm font-bold text-emerald-950 dark:text-emerald-300">Brand Kit Defaults</h3>
+                <p className="text-xs text-emerald-800 dark:text-emerald-400">ตั้งค่าเพื่อให้คอนเทนต์และวิดีโอสอดคล้องกับแบรนด์</p>
+              </div>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={async () => {
+                  await fetch("/api/hyperframes/brand-kit", {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(brandKit),
+                  });
+                }}
+              >
+                บันทึก Brand Kit
+              </Button>
             </div>
-            <button
-              type="button"
-              className="rounded-lg border border-emerald-200 bg-white px-3 py-1.5 text-xs font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
-              onClick={async () => { await fetch("/api/hyperframes/brand-kit", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(brandKit) }); }}
-            >
-              บันทึก
-            </button>
-          </div>
-          <div className="mt-4 grid gap-3 sm:grid-cols-3">
-            <div className="space-y-1">
-              <label className="text-xs text-emerald-800">Brand Colors</label>
-              <input className="w-full rounded-lg border border-emerald-200 bg-white px-3 py-2 text-sm" value={brandKit.brandColors.join(",")} onChange={(e) => setBrandKit((v) => ({ ...v, brandColors: e.target.value.split(",").map((x) => x.trim()).filter(Boolean) }))} placeholder="#22C55E,#0F172A" />
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Brand Colors</label>
+                <input
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-slate-100"
+                  value={brandKit.brandColors.join(",")}
+                  onChange={(e) => setBrandKit((v) => ({ ...v, brandColors: e.target.value.split(",").map((x) => x.trim()).filter(Boolean) }))}
+                  placeholder="#22C55E,#0F172A"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Font</label>
+                <input
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-slate-100"
+                  value={brandKit.fontPreference ?? ""}
+                  onChange={(e) => setBrandKit((v) => ({ ...v, fontPreference: e.target.value || null }))}
+                  placeholder="Prompt, Kanit"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Logo URL</label>
+                <input
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-slate-100"
+                  value={brandKit.logoUrl ?? ""}
+                  onChange={(e) => setBrandKit((v) => ({ ...v, logoUrl: e.target.value || null }))}
+                  placeholder="https://..."
+                />
+              </div>
             </div>
-            <div className="space-y-1">
-              <label className="text-xs text-emerald-800">Font</label>
-              <input className="w-full rounded-lg border border-emerald-200 bg-white px-3 py-2 text-sm" value={brandKit.fontPreference ?? ""} onChange={(e) => setBrandKit((v) => ({ ...v, fontPreference: e.target.value || null }))} placeholder="Font preference" />
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs text-emerald-800">Logo URL</label>
-              <input className="w-full rounded-lg border border-emerald-200 bg-white px-3 py-2 text-sm" value={brandKit.logoUrl ?? ""} onChange={(e) => setBrandKit((v) => ({ ...v, logoUrl: e.target.value || null }))} placeholder="https://..." />
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs text-emerald-800">Watermark</label>
-              <input className="w-full rounded-lg border border-emerald-200 bg-white px-3 py-2 text-sm" value={brandKit.watermarkText ?? ""} onChange={(e) => setBrandKit((v) => ({ ...v, watermarkText: e.target.value || null }))} placeholder="Watermark text" />
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs text-emerald-800">Default CTA</label>
-              <input className="w-full rounded-lg border border-emerald-200 bg-white px-3 py-2 text-sm" value={brandKit.defaultCTA ?? ""} onChange={(e) => setBrandKit((v) => ({ ...v, defaultCTA: e.target.value || null }))} placeholder="Default CTA" />
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs text-emerald-800">Aspect Ratio</label>
-              <select className="w-full rounded-lg border border-emerald-200 bg-white px-3 py-2 text-sm" value={brandKit.defaultAspectRatio ?? "9:16"} onChange={(e) => setBrandKit((v) => ({ ...v, defaultAspectRatio: e.target.value as BrandKit["defaultAspectRatio"] }))}>
-                <option value="9:16">9:16</option>
-                <option value="1:1">1:1</option>
-                <option value="16:9">16:9</option>
-              </select>
-            </div>
-          </div>
-        </section>
+          </CardContent>
+        </Card>
       )}
 
-      <div className="relative">
-        <svg className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-        </svg>
-        <input
-          className="w-full rounded-2xl border border-slate-200 bg-white py-2.5 pl-11 pr-4 text-sm placeholder:text-slate-400 focus:border-slate-400 focus:outline-none"
-          placeholder="ค้นหาเทมเพลต..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </div>
+      {/* Search Filter */}
+      <Card>
+        <CardContent className="p-3">
+          <input
+            className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500"
+            placeholder="🔍 ค้นหาเทมเพลตคำสั่ง..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </CardContent>
+      </Card>
 
       {filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-3xl border-2 border-dashed border-slate-200 p-12">
-          <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-xl">
-            📄
-          </div>
-          <p className="text-sm font-medium text-slate-600">
-            {search ? "ไม่พบเทมเพลตที่ค้นหา" : "ยังไม่มีเทมเพลต"}
+        <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 p-12 text-center">
+          <span className="text-3xl mb-2">📚</span>
+          <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+            {search ? "ไม่พบเทมเพลตที่ตรงกับคำค้นหา" : "ยังไม่มีเทมเพลต"}
           </p>
-          <p className="mt-1 text-xs text-slate-400">
-            {search ? "ลองเปลี่ยนคำค้นหา" : "กด + เทมเพลตใหม่ เพื่อเริ่มสร้าง"}
+          <p className="text-xs text-slate-400 mt-1">
+            กดปุ่ม "+ เทมเพลตใหม่" หรือ "คืนค่าเริ่มต้น" เพื่อเริ่มต้นใช้งาน
           </p>
         </div>
       ) : (
@@ -182,6 +190,6 @@ export default function TemplatesPage() {
           onClose={() => setEditing(null)}
         />
       )}
-    </main>
+    </div>
   );
 }

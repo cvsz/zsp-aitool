@@ -131,16 +131,20 @@ check_public_code "https://studio.zeaz.dev/"
 check_public_code "https://studio.zeaz.dev/dashboard"
 check_public_code "https://studio.zeaz.dev/dashboard/products"
 
-# 7) systemd only if usable
-if require_cmd systemctl && [[ -d /run/systemd/system ]]; then
+# 7) systemd only if usable and unit exists
+if require_cmd systemctl && [[ -d /run/systemd/system ]] && systemctl list-unit-files zsp-aitool.service >/dev/null 2>&1; then
   status="$(systemctl is-active zsp-aitool 2>/dev/null || true)"
   if [[ "$status" == "active" ]]; then
     ok "zsp-aitool service is active"
+  elif is_port_listening; then
+    ok "zsp-aitool running via direct process/container (port 3001 listening)"
   else
     fail "zsp-aitool service is not active (status: ${status:-unknown})"
   fi
+elif is_port_listening; then
+  ok "zsp-aitool running via direct process/container (port 3001 listening)"
 else
-  skip "systemctl/systemd not usable in this environment; skipping service check"
+  skip "systemctl/systemd not usable or unit not present; skipping service check"
 fi
 
 # 8) prisma migration status only when DB URL set and reachable

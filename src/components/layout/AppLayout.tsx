@@ -5,7 +5,7 @@ import { Sidebar } from "./Sidebar";
 
 export function AppLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_#e0f2fe_0,_transparent_32rem),linear-gradient(180deg,_#f8fafc_0%,_#eef2ff_100%)] text-slate-900">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors">
       <div className="mx-auto flex min-h-screen max-w-[1800px]">
         <Sidebar />
         <div className="min-w-0 flex-1 pb-20 md:pb-0">

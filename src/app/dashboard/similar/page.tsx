@@ -1,27 +1,66 @@
 "use client";
+
 import { EmptyState } from "@/components/ui/EmptyState";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
-import { PageTitle } from "@/components/ui/PageTitle";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { Toast } from "@/components/ui/Toast";
 import { SimilarProductCard } from "@/components/products/SimilarProductCard";
 import { useApi } from "@/hooks/use-api";
 import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/Button";
+import { AlertBanner } from "@/components/ui/AlertBanner";
 
 type SimilarItem = { relatedProductId: string; score: number; reasons: string[] };
 
-export default function Page() {
+export default function SimilarProductsPage() {
   const { data, loading, error, refetch } = useApi<SimilarItem[]>("/api/products/similar");
   const { toast, showToast } = useToast();
 
   return (
-    <section>
-      <PageTitle title="สินค้าที่คล้ายกัน" subtitle="แนะนำจากข้อมูลสินค้าที่คุณบันทึกไว้" />
-      <button className="mb-4 rounded border px-3 py-2 text-sm" onClick={() => { void refetch(); showToast("รีเฟรชข้อมูลแล้ว", "success"); }}>รีเฟรช</button>
-      {loading ? <LoadingSpinner /> : null}
-      {error ? <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">เกิดข้อผิดพลาด: {error}</div> : null}
-      {!loading && !error && (!data || data.length === 0) ? <EmptyState title="ข้อมูลยังไม่พอสำหรับจับคู่" description="เพิ่มรายละเอียดสินค้าให้ครบเพื่อให้ระบบวิเคราะห์ความคล้ายได้ดีขึ้น" /> : null}
-      {!loading && !error && data && data.length > 0 ? <div className="grid gap-3">{data.map((item) => <SimilarProductCard key={item.relatedProductId} recommendation={item} />)}</div> : null}
+    <div className="space-y-6">
+      <PageHeader
+        title="สินค้าที่คล้ายกัน (Similar Products)"
+        subtitle="ตรวจจับความซ้ำซ้อนและจัดกลุ่มสินค้าที่มีสเปกใกล้เคียงกันเพื่อวางแผนคอนเทนต์ Cross-Selling"
+        actions={
+          <Button
+            variant="secondary"
+            size="md"
+            onClick={() => {
+              void refetch();
+              showToast("รีเฟรชข้อมูลสินค้าที่คล้ายกันเรียบร้อยแล้ว", "success");
+            }}
+          >
+            🔄 รีเฟรชข้อมูล
+          </Button>
+        }
+      />
+
+      {loading ? <LoadingSpinner label="กำลังวิเคราะห์ความคล้ายของสินค้า..." /> : null}
+      {error ? (
+        <AlertBanner
+          title="เกิดข้อผิดพลาดในการดึงข้อมูล"
+          description={error}
+          variant="error"
+        />
+      ) : null}
+
+      {!loading && !error && (!data || data.length === 0) ? (
+        <EmptyState
+          title="ข้อมูลยังไม่เพียงพอสำหรับการจับคู่"
+          description="เพิ่มรายละเอียดสเปกสินค้าและภาพถ่ายให้ครบถ้วน เพื่อให้ระบบวิเคราะห์ความคล้ายได้แม่นยำยิ่งขึ้น"
+          tone="muted"
+        />
+      ) : null}
+
+      {!loading && !error && data && data.length > 0 ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {data.map((item) => (
+            <SimilarProductCard key={item.relatedProductId} recommendation={item} />
+          ))}
+        </div>
+      ) : null}
+
       {toast ? <Toast message={toast.message} type={toast.type} /> : null}
-    </section>
+    </div>
   );
 }

@@ -1,6 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 
 export type OCRResult = {
   confidence?: number;
@@ -32,23 +35,96 @@ export function OCRResultReview({ result }: { result: OCRResult | null }) {
 
   if (!result) return null;
 
+  const confidencePercent = result.confidence ? Math.round(result.confidence * 100) : null;
+
   return (
-    <div className="rounded-lg border p-4">
-      <h3 className="font-semibold">ตรวจและแก้ไขผล OCR ก่อนบันทึก</h3>
-      <p className="text-sm text-gray-600">ความมั่นใจโดยรวม: {result.confidence ? `${Math.round(result.confidence * 100)}%` : "ไม่มีข้อมูล"}</p>
-      <div className="mt-3 grid gap-2">
-        {Object.entries(form).map(([k, v]) => (
-          <label key={k} className="text-sm">
-            <span className="mb-1 block capitalize">{k}</span>
-            <textarea
-              className="w-full rounded border p-2"
-              value={v}
-              onChange={(e) => setForm((prev) => ({ ...prev, [k]: e.target.value }))}
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle>ผลการสแกน OCR และตรวจสอบข้อมูล</CardTitle>
+          {confidencePercent !== null ? (
+            <StatusBadge
+              label={`ความมั่นใจ: ${confidencePercent}%`}
+              tone={confidencePercent > 80 ? "success" : "warning"}
+            />
+          ) : null}
+        </div>
+        <CardDescription>
+          กรุณาตรวจทานและแก้ไขข้อมูลให้ตรงกับภาพจริงก่อนบันทึกเข้าสู่คลังสินค้า
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400">
+            ชื่อสินค้า (Title)
+            <input
+              className="mt-1 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-slate-100"
+              value={form.title}
+              onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
             />
           </label>
-        ))}
-      </div>
-      <p className="mt-3 text-xs text-amber-700">หมายเหตุ: ห้ามเชื่อผล OCR โดยไม่ตรวจสอบด้วยสายตา</p>
-    </div>
+          <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400">
+            ราคา (Price ฿)
+            <input
+              className="mt-1 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-slate-100"
+              value={form.price}
+              onChange={(e) => setForm((prev) => ({ ...prev, price: e.target.value }))}
+            />
+          </label>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-3">
+          <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400">
+            ส่วนลด (Discount)
+            <input
+              className="mt-1 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-slate-100"
+              value={form.discount}
+              onChange={(e) => setForm((prev) => ({ ...prev, discount: e.target.value }))}
+            />
+          </label>
+          <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400">
+            คะแนนรีวิว (Rating)
+            <input
+              className="mt-1 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-slate-100"
+              value={form.rating}
+              onChange={(e) => setForm((prev) => ({ ...prev, rating: e.target.value }))}
+            />
+          </label>
+          <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400">
+            จำนวนขายแล้ว (Sold)
+            <input
+              className="mt-1 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-slate-100"
+              value={form.soldCount}
+              onChange={(e) => setForm((prev) => ({ ...prev, soldCount: e.target.value }))}
+            />
+          </label>
+        </div>
+
+        <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400">
+          รายละเอียดและสเปกที่ดึงได้ (Description Snippets)
+          <textarea
+            rows={4}
+            className="mt-1 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 text-sm text-slate-900 dark:text-slate-100"
+            value={form.descriptionSnippets}
+            onChange={(e) => setForm((prev) => ({ ...prev, descriptionSnippets: e.target.value }))}
+          />
+        </label>
+
+        <div className="flex gap-2 pt-2">
+          <Button variant="primary" size="md">
+            บันทึกเป็นสินค้าใหม่ 🛍️
+          </Button>
+          <Button
+            variant="secondary"
+            size="md"
+            onClick={() => {
+              navigator.clipboard.writeText(JSON.stringify(form, null, 2));
+            }}
+          >
+            📋 คัดลอก JSON สเปก
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

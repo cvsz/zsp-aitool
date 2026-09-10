@@ -1,22 +1,36 @@
 "use client";
+
 import { ThemeMode, useTheme } from "@/components/theme/ThemeProvider";
-const options: { value: ThemeMode; label: string }[] = [
-  { value: "light", label: "สว่าง" },
-  { value: "dark", label: "มืด" },
-  { value: "system", label: "ตามระบบ" },
+
+const options: { value: ThemeMode; label: string; icon: string }[] = [
+  { value: "light", label: "สว่าง", icon: "☀️" },
+  { value: "dark", label: "มืด", icon: "🌙" },
+  { value: "system", label: "ระบบ", icon: "💻" },
 ];
+
 export function ThemeToggle() {
   const { mode, setMode } = useTheme();
+
   return (
-    <fieldset className="space-y-2" aria-label="โหมดการแสดงผล">
-      <legend className="text-sm font-semibold text-slate-700 dark:text-slate-200">ธีมการแสดงผล</legend>
-      <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1 dark:border-slate-700 dark:bg-slate-900">
-        {options.map((option) => (
-          <button key={option.value} type="button" onClick={() => setMode(option.value)} className={`rounded-lg px-3 py-1.5 text-sm transition ${mode === option.value ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-950" : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"}`}>
-            {option.label}
+    <div className="inline-flex rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-1 shadow-sm">
+      {options.map((option) => {
+        const active = mode === option.value;
+        return (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => setMode(option.value)}
+            className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold transition-all ${
+              active
+                ? "bg-slate-900 text-white dark:bg-sky-500 dark:text-slate-950 shadow-sm"
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-700/50"
+            }`}
+          >
+            <span>{option.icon}</span>
+            <span>{option.label}</span>
           </button>
-        ))}
-      </div>
-    </fieldset>
+        );
+      })}
+    </div>
   );
 }
