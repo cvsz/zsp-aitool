@@ -1,26 +1,48 @@
-import Link from "next/link";
+"use client";
 
-const links = [
-  { href: "/dashboard", label: "ภาพรวม" },
-  { href: "/dashboard/products/new", label: "เพิ่มสินค้า" },
-  { href: "/dashboard/generator", label: "สร้างโพสต์" },
-  { href: "/dashboard/ocr", label: "OCR" },
-  { href: "/dashboard/similar", label: "สินค้าใกล้เคียง" },
-  { href: "/dashboard/settings", label: "ตั้งค่า" },
-  { href: "/dashboard/hyperframes", label: "วิดีโอ" },
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+
+const mobileLinks = [
+  { href: "/dashboard", label: "ภาพรวม", icon: "🏠" },
+  { href: "/dashboard/products", label: "สินค้า", icon: "🛍️" },
+  { href: "/dashboard/generator", label: "เขียนรีวิว", icon: "✍️" },
+  { href: "/dashboard/hyperframes", label: "วิดีโอ", icon: "🎬" },
+  { href: "/dashboard/settings", label: "ตั้งค่า", icon: "⚙️" },
 ];
 
 export function MobileNav() {
+  const pathname = usePathname() ?? "";
+
+  const isActive = (href: string) => {
+    if (href === "/dashboard") return pathname === href;
+    return pathname === href || pathname.startsWith(`${href}/`);
+  };
+
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-white/70 bg-white/90 px-2 py-2 shadow-[0_-12px_30px_rgba(15,23,42,0.08)] backdrop-blur-xl md:hidden" aria-label="เมนูหลักบนมือถือ">
-      <div className="grid grid-cols-4 gap-1 text-center text-[11px] font-medium text-slate-600">
-        {links.map((link) => (
-          <Link key={link.href} href={link.href} className="rounded-xl px-2 py-2 transition hover:bg-slate-100 hover:text-slate-950 focus:outline-none focus:ring-2 focus:ring-slate-300">
-            {link.label}
-          </Link>
-        ))}
+    <nav
+      className="fixed bottom-0 left-0 right-0 z-30 border-t border-slate-200/80 bg-white/90 dark:border-slate-800 dark:bg-slate-900/90 px-3 py-2 shadow-lg backdrop-blur-xl md:hidden transition-colors"
+      aria-label="เมนูหลักบนมือถือ"
+    >
+      <div className="grid grid-cols-5 gap-1 text-center">
+        {mobileLinks.map((link) => {
+          const active = isActive(link.href);
+          return (
+            <Link
+              key={link.href}
+              href={link.href}
+              className={`flex flex-col items-center justify-center rounded-xl py-1.5 transition ${
+                active
+                  ? "bg-slate-100 text-sky-600 dark:bg-slate-800 dark:text-sky-400 font-bold"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
+              }`}
+            >
+              <span className="text-base">{link.icon}</span>
+              <span className="text-[10px] mt-0.5">{link.label}</span>
+            </Link>
+          );
+        })}
       </div>
-      <p className="mt-1 px-1 text-[10px] text-slate-500">เมนูนี้เน้นงานเก็บสินค้า, สร้างคอนเทนต์, OCR และวิดีโอ สำหรับมือถือ</p>
     </nav>
   );
 }

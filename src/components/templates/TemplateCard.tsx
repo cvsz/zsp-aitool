@@ -1,6 +1,8 @@
 "use client";
 
 import type { PromptTemplate } from "@/schemas/template.schema";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import { Button } from "@/components/ui/Button";
 
 type Props = {
   template: PromptTemplate;
@@ -9,63 +11,57 @@ type Props = {
   onDuplicate: (t: PromptTemplate) => void;
 };
 
-function hashColor(name: string): string {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const hue = Math.abs(hash % 360);
-  return `hsl(${hue}, 70%, 60%)`;
-}
-
 export function TemplateCard({ template, onSelect, onDelete, onDuplicate }: Props) {
-  const color = hashColor(template.name);
-
   return (
     <div
-      className="group relative cursor-pointer overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg"
+      className="group relative cursor-pointer overflow-hidden rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-sky-500/40 hover:shadow-md flex flex-col justify-between"
       onClick={() => onSelect(template)}
       onKeyDown={(e) => { if (e.key === "Enter") onSelect(template); }}
       tabIndex={0}
       role="button"
       aria-label={template.name}
     >
-      <div className="h-2" style={{ background: `linear-gradient(90deg, ${color}, ${color}88)` }} />
-      <div className="space-y-2 p-4">
+      <div className="p-4 space-y-2.5">
         <div className="flex items-center justify-between gap-2">
-          <h3 className="truncate text-sm font-semibold text-slate-900">{template.name}</h3>
-          <div className="flex shrink-0 gap-1">
-            {template.isDefault && (
-              <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-medium text-blue-700">
-                Default
-              </span>
-            )}
-          </div>
+          <h3 className="truncate text-sm font-bold text-slate-900 dark:text-slate-100 group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
+            {template.name}
+          </h3>
+          {template.isDefault ? (
+            <StatusBadge label="Default" tone="info" />
+          ) : null}
         </div>
-        <p className="line-clamp-2 text-xs leading-relaxed text-slate-500">{template.content}</p>
+        <p className="line-clamp-3 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+          {template.content}
+        </p>
       </div>
-      <div className="absolute inset-x-0 bottom-0 flex translate-y-full justify-end gap-1 bg-white/90 p-2 backdrop-blur-sm transition-transform group-hover:translate-y-0">
-        <button
-          type="button"
-          className="rounded-lg bg-slate-900 px-3 py-1.5 text-[11px] font-medium text-white transition-colors hover:bg-slate-700"
+
+      <div className="flex items-center justify-between p-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40">
+        <Button
+          size="sm"
+          variant="secondary"
+          className="text-xs"
           onClick={(e) => { e.stopPropagation(); onSelect(template); }}
         >
-          แก้ไข
-        </button>
-        <button
-          type="button"
-          className="rounded-lg border border-slate-200 px-3 py-1.5 text-[11px] font-medium text-slate-600 transition-colors hover:bg-slate-50"
-          onClick={(e) => { e.stopPropagation(); onDuplicate(template); }}
-        >
-          Copy
-        </button>
-        <button
-          type="button"
-          className="rounded-lg border border-red-100 px-3 py-1.5 text-[11px] font-medium text-red-600 transition-colors hover:bg-red-50"
-          onClick={(e) => { e.stopPropagation(); onDelete(template); }}
-        >
-          ลบ
-        </button>
+          ✏️ แก้ไข
+        </Button>
+        <div className="flex gap-1.5">
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-xs"
+            onClick={(e) => { e.stopPropagation(); onDuplicate(template); }}
+          >
+            📋 Copy
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-xs text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+            onClick={(e) => { e.stopPropagation(); onDelete(template); }}
+          >
+            🗑️
+          </Button>
+        </div>
       </div>
     </div>
   );

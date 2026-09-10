@@ -28,13 +28,13 @@ type TabsProps = {
 };
 
 const toneClasses = {
-  default: "bg-slate-100 text-slate-700",
-  muted: "bg-slate-50 text-slate-600",
-  info: "bg-sky-50 text-sky-700",
-  success: "bg-emerald-50 text-emerald-700",
-  warning: "bg-amber-50 text-amber-700",
-  danger: "bg-rose-50 text-rose-700",
-  dark: "bg-slate-900 text-slate-100",
+  default: "bg-slate-900 text-white dark:bg-sky-500 dark:text-slate-950 shadow-sm",
+  muted: "bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-200",
+  info: "bg-sky-500 text-slate-950 dark:bg-sky-400 dark:text-slate-950 shadow-sm",
+  success: "bg-emerald-600 text-white dark:bg-emerald-500 dark:text-slate-950 shadow-sm",
+  warning: "bg-amber-500 text-slate-950 dark:bg-amber-400 dark:text-slate-950 shadow-sm",
+  danger: "bg-rose-600 text-white dark:bg-rose-500 dark:text-slate-950 shadow-sm",
+  dark: "bg-slate-950 text-white dark:bg-slate-100 dark:text-slate-950 shadow-sm",
 };
 
 export function Tabs({ items, defaultKey, className = "", tone = "default", tabs, activeKey, onChange, ariaLabel = "แท็บข้อมูล" }: TabsProps) {
@@ -63,10 +63,18 @@ export function Tabs({ items, defaultKey, className = "", tone = "default", tabs
               }
               onChange?.(tab.key);
             }}
-            className={`inline-flex items-center gap-2 rounded-2xl border px-3 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${selectedKey === tab.key ? `${toneClasses[tone]} border-transparent` : "border-slate-200 bg-white text-slate-600 hover:bg-slate-100"}`}
+            className={`inline-flex items-center gap-2 rounded-xl border px-3.5 py-1.5 text-xs font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 disabled:cursor-not-allowed disabled:opacity-50 ${
+              selectedKey === tab.key
+                ? `${toneClasses[tone]} border-transparent`
+                : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60"
+            }`}
           >
             <span>{tab.label}</span>
-            {typeof tab.count === "number" ? <span className="rounded-full bg-black/10 px-2 py-0.5 text-xs">{tab.count}</span> : null}
+            {typeof tab.count === "number" ? (
+              <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${selectedKey === tab.key ? "bg-black/20 text-current" : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"}`}>
+                {tab.count}
+              </span>
+            ) : null}
           </button>
         ))}
       </div>
@@ -76,9 +84,7 @@ export function Tabs({ items, defaultKey, className = "", tone = "default", tabs
   const actualItems = items ?? [];
   const active = actualItems.find((item) => item.key === internalActiveKey) ?? actualItems[0];
 
-  if (!active) {
-    return null;
-  }
+  if (!active) return null;
 
   return (
     <div className={`space-y-4 ${className}`.trim()}>
@@ -92,13 +98,17 @@ export function Tabs({ items, defaultKey, className = "", tone = "default", tabs
             aria-controls={`tab-panel-${item.key}`}
             disabled={item.disabled}
             onClick={() => setInternalActiveKey(item.key)}
-            className={`rounded-2xl px-3 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${active.key === item.key ? toneClasses[tone] : "bg-white text-slate-600 hover:bg-slate-100"}`}
+            className={`rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 disabled:cursor-not-allowed disabled:opacity-50 ${
+              active.key === item.key
+                ? toneClasses[tone]
+                : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60 border border-slate-200 dark:border-slate-800"
+            }`}
           >
             {item.label}
           </button>
         ))}
       </div>
-      <div id={`tab-panel-${active.key}`} role="tabpanel" className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div id={`tab-panel-${active.key}`} role="tabpanel" className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm">
         {active.content}
       </div>
     </div>

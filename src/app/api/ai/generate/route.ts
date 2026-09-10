@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { JobStatus } from "@prisma/client";
 import { MockAIProvider } from "@/services/ai/MockAIProvider";
+import { OpenAICompatibleProvider } from "@/services/ai/OpenAICompatibleProvider";
 import { AIContentService } from "@/services/AIContentService";
 import { productService } from "@/services/ProductService";
 import { BudgetService } from "@/services/BudgetService";
@@ -22,7 +23,14 @@ export const POST = withAuth(async (request) => {
     await BudgetService.checkBudget(request.auth.userId);
 
     const product = await productService.getById(request.auth.userId, payload.productId);
-    const service = new AIContentService(new MockAIProvider());
+    const provider = process.env.OPENAI_API_BASE_URL
+      ? new OpenAICompatibleProvider({
+          baseURL: process.env.OPENAI_API_BASE_URL,
+          apiKey: process.env.OPENAI_API_KEY || "bootstrap-enterprise-key",
+          model: process.env.DEFAULT_AI_MODEL || "anthropic/claude-fable-5",
+        })
+      : new MockAIProvider();
+    const service = new AIContentService(provider);
     const generationInput = {
       ...payload,
       contentLength: "medium" as const,
