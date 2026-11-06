@@ -1,0 +1,154 @@
+name: Auto Fix Open PRs
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # Daily at 02:00 UTC
+  workflow_dispatch:      # Manual trigger
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+concurrency:
+  group: auto-fix-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+env:
+  GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+  GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
+
+jobs:
+  auto-fix-prs:
+    name: Auto-fix open PRs
+    runs-on: ubuntu-latest
+    if: github.actor != 'dependabot[bot]'
+
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+          token: ${{ secrets.POLIEDBC_PAT }}
+
+      - name: Configure git identity
+        run: |
+          git config user.name "cvsz"
+          git config user.email "cvsz@seaza.com"
+          git config user.signingkey "${{ secrets.GPG_SIGNING_KEY }}"
+          git config commit.gpgsign true
+          git config gpg.program /home/cvsz/.local/bin/gpg-loopback.sh
+          git config --global gpg.program /home/cvsz/.local/bin/gpg-loopback.sh
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -y && sudo apt-get install -y ruby python3-pip
+          pip3 install pyyaml
+
+      - name: Run auto-fix loop
+        id: autofix
+        run: |
+          chmod +x scripts/auto-fix-loop.sh
+          echo "FIX_COUNT=0" >> $GITHUB_ENV
+
+          # Check for secret-bearing files
+          SECRET_FILES="$(git ls-files | grep -E '(^|/)(\.env$|id_rsa|id_ed25519|.*\.pem|.*\.key)$' | grep -v '^\.env\.example$' || true)"
+          if [ -n "$SECRET_FILES" ]; then
+            echo "Found secret-bearing files: $SECRET_FILES"
+            echo "$SECRET_FILES" | while IFS= read -r f; do
+              [ -z "$f" ] && continue
+              git rm --cached "$f" >/dev/null 2>&1 && echo "Removed $f from tracking"
+            done
+            echo "FIX_COUNT=$(( $(echo "$SECRET_FILES" | wc -l) + ${FIX_COUNT:-0} ))" >> $GITHUB_ENV
+          fi
+
+          # Check for missing .gitignore
+          if [ ! -f .gitignore ]; then
+            echo "Creating .gitignore"
+            cat > .gitignore <<'EOF'
+# Environment files
+.env
+.env.local
+.env.*
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+.ENV
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.coverage
+.coverage.*
+.cache
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.tmp
+EOF
+            echo "FIX_COUNT=$((1 + ${FIX_COUNT:-0}))" >> $GITHUB_ENV
+          fi
+
+          # Validate YAML files
+          YAML_BAD="$(python3 -c "
+import yaml, glob, sys
+bad = []
+for f in glob.glob('.github/**/*.{yml,yaml}', recursive=True):
+    try:
+        yaml.safe_load(open(f))
+    except Exception:
+        bad.append(f)
+print('\n'.join(bad))
+" 2>/dev/null || true)"
+          if [ -n "$YAML_BAD" ]; then
+            echo "Found invalid YAML files (manual fix needed):"
+            echo "$YAML_BAD"
+          fi
+
+          # Run repo validation
+          if [ -f scripts/validate_repo.py ]; then
+            python3 scripts/validate_repo.py || true
+          fi
+
+      - name: Commit and push fixes
+        if: env.FIX_COUNT > 0
+        run: |
+          git add -A
+          if ! git diff --cached --quiet; then
+            git -c gpg.program=/home/cvsz/.local/bin/gpg-loopback.sh commit -m "fix: auto-fix PR issues
+
+- Remove tracked secret-bearing files
+- Add .gitignore for environment and cache files
+- Auto-fixed by policedbc automation" >/dev/null 2>&1
+            git push origin HEAD 2>/dev/null && echo "Pushed fixes to PR branch" || echo "Push failed (protected branch - PR needs manual update)"
+          else
+            echo "No changes to commit"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.POLIEDBC_PAT }}
+
+      - name: Report results
+        run: |
+          echo "Auto-fix completed. Fixes applied: ${FIX_COUNT:-0}"
+          if [ "${FIX_COUNT:-0}" -gt 0 ]; then
+            echo "## Auto-fix Results" >> $GITHUB_STEP_SUMMARY
+            echo "- Fixes applied: ${FIX_COUNT}" >> $GITHUB_STEP_SUMMARY
+            echo "- PR: ${{ github.event.pull_request.number }}" >> $GITHUB_STEP_SUMMARY
+            echo "- Repo: ${{ github.repository }}" >> $GITHUB_STEP_SUMMARY
+          fi
