@@ -4,16 +4,18 @@ on:
   schedule:
     - cron: '0 2 * * *'
   workflow_dispatch:
-  pull_request:
-    types: [opened, reopened, synchronize]
-    branches: [main]
+    inputs:
+      pr_number:
+        description: 'PR number to fix (optional)'
+        required: false
+        type: string
 
 concurrency:
   group: auto-fix-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
-  contents: write
+  contents: read
   pull-requests: write
   issues: write
 
@@ -41,25 +43,22 @@ jobs:
   auto-fix-prs:
     name: Auto-fix open PRs
     needs: validate-secrets
-    if: needs.validate-secrets.outputs.all-present == 'true' && github.actor != 'dependabot[bot]'
+    if: needs.validate-secrets.outputs.all-present == 'true'
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout base branch (read-only, no credentials)
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
-          token: ${{ secrets.POLIEDBC_PAT }}
-          ref: ${{ github.event.pull_request.head.ref || github.ref }}
+          persist-credentials: false
+          ref: ${{ github.event.inputs.pr_number && format('refs/pull/{0}/merge', github.event.inputs.pr_number) || github.ref }}
 
-      - name: Configure git identity
+      - name: Configure git identity (local only, no signing)
         run: |
           git config user.name "cvsz"
           git config user.email "cvsz@seaza.com"
-          git config user.signingkey "${{ secrets.GPG_SIGNING_KEY }}"
-          git config commit.gpgsign true
-          git config gpg.program .github/scripts/gpg-loopback.sh
-          git config --global gpg.program .github/scripts/gpg-loopback.sh
+          git config commit.gpgsign false
 
       - name: Install dependencies
         run: |
@@ -67,53 +66,34 @@ jobs:
           sudo apt-get install -y ruby python3-pip
           pip3 install pyyaml
 
-      - name: Run auto-fix checks
+      - name: Run auto-fix checks (read-only validation)
         id: autofix
         run: |
           FIX_COUNT=0
 
-          # Check for secret-bearing files
-          SECRET_FILES="$(git ls-files | grep -E '(^|/)(\.env$|id_rsa|id_ed25519|.*\.pem|.*\.key)$' | grep -v '^\.env\.example$' || true)"
+          # Check for secret-bearing files (read-only, no modification)
+          SECRET_FILES="$(git ls-files | grep -E '(^|/)(\\.env$|id_rsa|id_ed25519|.*\\.pem|.*\\.key)$' | grep -v '^\\.env\\.example$' || true)"
           if [ -n "$SECRET_FILES" ]; then
             echo "Found secret-bearing files: $SECRET_FILES"
-            echo "$SECRET_FILES" | while IFS= read -r f; do
-              [ -z "$f" ] && continue
-              git rm --cached "$f" && echo "Removed $f from tracking"
-            done
             SECRET_COUNT=$(echo "$SECRET_FILES" | grep -c .)
             FIX_COUNT=$((FIX_COUNT + SECRET_COUNT))
           fi
 
-          # Check for missing .gitignore
+          # Check for missing .gitignore (read-only)
           if [ ! -f .gitignore ]; then
-            echo "Creating .gitignore"
-            printf '# Environment files\n.env\n.env.local\n.env.*\n\n# Python\n__pycache__/\n*.pyc\n*.pyo\n*.pyd\n.Python\nenv/\nvenv/\n.venv/\n.ENV\npip-log.txt\npip-delete-this-directory.txt\n.tox/\n.coverage\n.coverage.*\n.cache\n\n# OS\n.DS_Store\nThumbs.db\n\n# IDE\n.vscode/\n.idea/\n*.swp\n*.swo\n*.tmp\n' > .gitignore
+            echo "Missing .gitignore"
             FIX_COUNT=$((FIX_COUNT + 1))
           fi
 
           echo "FIX_COUNT=$FIX_COUNT" >> $GITHUB_ENV
-          echo "Fixes applied: $FIX_COUNT"
-
-      - name: Commit and push fixes
-        if: env.FIX_COUNT > 0
-        run: |
-          git add -A
-          if ! git diff --cached --quiet; then
-            git -c gpg.program=.github/scripts/gpg-loopback.sh commit -m "fix: auto-fix PR issues"
-            git push origin HEAD
-          else
-            echo "No changes to commit"
-          fi
-        env:
-          GH_TOKEN: ${{ secrets.POLIEDBC_PAT }}
-          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+          echo "Issues found: $FIX_COUNT"
 
       - name: Report results
         run: |
-          echo "Auto-fix completed. Fixes applied: ${FIX_COUNT:-0}"
+          echo "Auto-fix completed. Issues found: ${FIX_COUNT:-0}"
           if [ "${FIX_COUNT:-0}" -gt 0 ]; then
             echo "## Auto-fix Results" >> $GITHUB_STEP_SUMMARY
-            echo "- Fixes applied: ${FIX_COUNT}" >> $GITHUB_STEP_SUMMARY
-            echo "- PR: ${{ github.event.pull_request.number }}" >> $GITHUB_STEP_SUMMARY
+            echo "- Issues found: ${FIX_COUNT}" >> $GITHUB_STEP_SUMMARY
             echo "- Repo: ${{ github.repository }}" >> $GITHUB_STEP_SUMMARY
+            echo "PR-triggered signing and push are disabled. Use workflow_dispatch to apply fixes." >> $GITHUB_STEP_SUMMARY
           fi

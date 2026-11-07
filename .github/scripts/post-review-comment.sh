@@ -3,6 +3,10 @@
 # Called by .github/workflows/automated-audit-review-approve.yml
 #
 # Usage: post-review-comment.sh <pr_number> <audit_result> <auto_approve_safe> <repo>
+#
+# Security: This script only posts comments. It never approves PRs.
+# Auto-approve is intentionally disabled — only a deliberate reviewer action
+# may create an approval or change request.
 
 set -euo pipefail
 
@@ -19,17 +23,10 @@ All automated checks passed:
 - No tracked secret-bearing files
 - GitHub Actions YAML syntax valid
 
-Reviewed by: @policedbc (automated service account)"
+Reviewed by: @policedbc (automated service account)
 
-  if [ "${AUTO_APPROVE_SAFE}" = "1" ]; then
-    BODY="${BODY}
-
-- Auto-approve: safe (no security-sensitive paths changed)"
-  else
-    BODY="${BODY}
-
-- Auto-approve: skipped (security-sensitive paths changed — human review required per CODEOWNERS)"
-  fi
+**Note:** Auto-approve is intentionally disabled. Only a deliberate reviewer
+action may create an approval or change request per independent review policy."
 
   gh pr comment "${PR_NUMBER}" --body "$BODY" --repo "${REPO}"
 else
