@@ -21,10 +21,23 @@ env:
   GH_TOKEN: ${{ secrets.POLIEDBC_PAT }}
 
 jobs:
+  validate-secrets:
+    name: Validate required secrets
+    runs-on: ubuntu-latest
+    outputs:
+      all-present: ${{ steps.check.outputs.all-present }}
+    steps:
+      - name: Check required secrets
+        id: check
+        run: |
+          [ -z "${{ secrets.POLIEDBC_PAT }}" ] && { echo "::error::POLIEDBC_PAT secret is not set."; echo "all-present=false" >> $GITHUB_OUTPUT; exit 1; }
+          echo "all-present=true" >> $GITHUB_OUTPUT
+
   audit-and-review:
     name: Audit, Review & Approve (policedbc)
+    needs: validate-secrets
+    if: needs.validate-secrets.outputs.all-present == 'true' && github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
-    if: "${{ github.actor != 'dependabot[bot]' }}"
 
     steps:
       - name: Checkout PR branch
@@ -33,53 +46,54 @@ jobs:
           ref: ${{ github.head_ref }}
           fetch-depth: 0
 
-      - name: Verify policedbc PAT is configured
-        run: |
-          if [ -z "${POLIEDBC_PAT}" ]; then
-            echo "::error::POLIEDBC_PAT secret is not set. Auto-review/approve disabled."
-            echo "AUTO_APPROVE=disabled" >> $GITHUB_ENV
-            exit 0
-          fi
-          echo "AUTO_APPROVE=enabled" >> $GITHUB_ENV
-
       - name: Run repository validation audit
         id: audit
         run: |
           echo "=== Running validate_repo.py ==="
-          python3 scripts/validate_repo.py || { echo "AUDIT_FAILED=1" >> $GITHUB_ENV; }
+          if ! python3 scripts/validate_repo.py; then
+            echo "AUDIT_RESULT=FAILED" >> $GITHUB_ENV
+            echo "::error::Repository validation failed."
+            exit 1
+          fi
 
           echo "=== Checking for tracked secret-bearing files ==="
           if git ls-files | grep -E '(^|/)(\.env$|id_rsa|id_ed25519|.*\.pem|.*\.key)$' | grep -v '^\.env\.example$'; then
+            echo "AUDIT_RESULT=FAILED" >> $GITHUB_ENV
             echo "::error::Potential secret-bearing file is tracked."
-            echo "AUDIT_FAILED=1" >> $GITHUB_ENV
+            exit 1
           fi
 
           echo "=== Validating GitHub workflow YAML ==="
-          ruby -e 'require "yaml"; Dir.glob(".github/**/*.{yml,yaml}").each { |f| YAML.load_file(f); puts "ok #{f}" }' || { echo "AUDIT_FAILED=1" >> $GITHUB_ENV; }
-
-          echo "=== Audit complete ==="
-          if [ -n "${AUDIT_FAILED:-}" ]; then
+          if ! ruby -e 'require "yaml"; Dir.glob(".github/**/*.{yml,yaml}").each { |f| YAML.load_file(f); puts "ok #{f}" }'; then
             echo "AUDIT_RESULT=FAILED" >> $GITHUB_ENV
-          else
-            echo "AUDIT_RESULT=PASSED" >> $GITHUB_ENV
+            echo "::error::Invalid GitHub Actions YAML detected."
+            exit 1
           fi
+
+          echo "AUDIT_RESULT=PASSED" >> $GITHUB_ENV
+          echo "=== Audit complete: PASSED ==="
 
       - name: Determine if auto-approve is safe
         id: safety
-        env:
-          GH_TOKEN: ${{ secrets.POLIEDBC_PAT }}
         run: |
           # Security-sensitive paths require human review (per CODEOWNERS).
           # Auto-approve ONLY if audit passed AND no security-sensitive paths changed.
           SECURE_PATHS='^(\.github/|SECURITY\.md|AGENTS\.md|installer\.nsi|install\.ps1|install-full-auto\.ps1|build\.ps1|config\.toml|config\.example\.toml)'
           
-          # Use GitHub API to get changed files (more reliable than git diff in PR context)
+          # Use GitHub API to get changed files (fail-safe: default to SECURITY_CHANGED=1 on error)
           CHANGED_FILES="$(gh api /repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files --jq '.[].filename' 2>/dev/null || true)"
           
-          SECURITY_CHANGED=0
-          if echo "$CHANGED_FILES" | grep -Eq "$SECURE_PATHS"; then
-            SECURITY_CHANGED=1
-            echo "Security-sensitive files changed — human review required."
+          SECURITY_CHANGED=1  # Default to safe (require human review) if we can't determine
+          if [ -n "$CHANGED_FILES" ]; then
+            if echo "$CHANGED_FILES" | grep -Eq "$SECURE_PATHS"; then
+              SECURITY_CHANGED=1
+              echo "Security-sensitive files changed — human review required."
+            else
+              SECURITY_CHANGED=0
+              echo "No security-sensitive files changed."
+            fi
+          else
+            echo "WARNING: Could not retrieve changed files via API — defaulting to human review."
           fi
 
           if [ "${AUDIT_RESULT}" = "PASSED" ] && [ "$SECURITY_CHANGED" = "0" ]; then
@@ -91,7 +105,6 @@ jobs:
           fi
 
       - name: Post audit review comment (policedbc)
-        if: env.AUTO_APPROVE == 'enabled'
         run: |
           chmod +x .github/scripts/post-review-comment.sh
           .github/scripts/post-review-comment.sh \
@@ -102,22 +115,12 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.POLIEDBC_PAT }}
 
-      - name: Auto-approve PR (policedbc)
-        if: env.AUTO_APPROVE_SAFE == '1'
-        run: |
-          gh pr review ${{ github.event.pull_request.number }} \
-            --approve \
-            --body "Automated approval by @policedbc — audit passed, no security-sensitive paths changed." \
-            --repo ${{ github.repository }}
-        env:
-          GH_TOKEN: ${{ secrets.POLIEDBC_PAT }}
-
-      - name: Request human review (security paths)
-        if: env.AUTO_APPROVE_SAFE == '0' && env.AUTO_APPROVE == 'enabled'
+      - name: Request human review (security paths or audit failed)
+        if: env.AUTO_APPROVE_SAFE == '0'
         run: |
           gh pr review ${{ github.event.pull_request.number }} \
             --request-changes \
-            --body "Security-sensitive paths changed. Human review by @policedbc required per CODEOWNERS before merge." \
+            --body "Security-sensitive paths changed or audit failed. Human review by @policedbc required per CODEOWNERS before merge." \
             --repo ${{ github.repository }}
         env:
           GH_TOKEN: ${{ secrets.POLIEDBC_PAT }}
